@@ -1,0 +1,134 @@
+{
+  "name": "PayPerViews - Watch Videos & Earn Money",
+  "short_name": "PayPerViews",
+  "description": "The world's leading video earning platform. Watch videos and earn real money!",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#667eea",
+  "theme_color": "#667eea",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "categories": ["entertainment", "finance", "productivity"],
+  "lang": "en-US",
+  "icons": [
+    {
+      "src": "/assets/images/logo/payperviews-icon-72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/images/logo/payperviews-icon-96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/images/logo/payperviews-icon-128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/images/logo/payperviews-icon-144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/images/logo/payperviews-icon-152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/images/logo/payperviews-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/images/logo/payperviews-icon-384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/images/logo/payperviews-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/assets/images/screenshots/desktop-home.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "platform": "wide",
+      "label": "PayPerViews Desktop Home"
+    },
+    {
+      "src": "/assets/images/screenshots/mobile-gallery.png",
+      "sizes": "640x1136",
+      "type": "image/png",
+      "platform": "narrow",
+      "label": "PayPerViews Mobile Gallery"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Video Gallery",
+      "short_name": "Videos",
+      "description": "Browse and watch earning videos",
+      "url": "/videos",
+      "icons": [
+        {
+          "src": "/assets/images/logo/payperviews-icon-96.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "View your earnings and stats",
+      "url": "/home",
+      "icons": [
+        {
+          "src": "/assets/images/logo/payperviews-icon-96.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Join Now",
+      "short_name": "Register",
+      "description": "Create your free account",
+      "url": "/register",
+      "icons": [
+        {
+          "src": "/assets/images/logo/payperviews-icon-96.png",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ],
+  "related_applications": [
+    {
+      "platform": "play",
+      "url": "https://play.google.com/store/apps/details?id=com.payperviews.app",
+      "id": "com.payperviews.app"
+    },
+    {
+      "platform": "itunes",
+      "url": "https://apps.apple.com/app/payperviews/id123456789"
+    }
+  ],
+  "prefer_related_applications": false,
+  "dir": "ltr",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "edge_side_panel": {
+    "preferred_width": 400
+  }
+}

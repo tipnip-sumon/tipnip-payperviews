@@ -1,0 +1,49 @@
+﻿# Laravel
+/vendor
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Laravel 5 & Lumen specific
+public/storage
+public/hot
+public/mix-manifest.json
+
+# Laravel 5 & Lumen specific with changed public path
+public_html/storage
+public_html/hot
+public_html/mix-manifest.json
+
+/storage/*.key
+/vendor
+.env
+.env.backup
+.phpunit.result.cache
+Homestead.json
+Homestead.yaml
+auth.json
+npm-debug.log
+yarn-error.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Custom
+debug_sessions.php
+test_models.php
+auto-git-fix.bat
+git-sync-fix.bat
+git-sync-protection.bat
+*.log

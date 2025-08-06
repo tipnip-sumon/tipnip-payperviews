@@ -1,0 +1,121 @@
+/* Font Fallback System for Network Issues */
+
+/* Primary Google Fonts with fallbacks */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* Font Face Fallbacks */
+@font-face {
+  font-family: 'Inter Fallback';
+  src: local('Inter'), local('Inter-Regular'), 
+       local('Segoe UI'), local('Roboto'), local('Arial'), 
+       local('Helvetica Neue'), local('Helvetica'), local('sans-serif');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Inter Fallback';
+  src: local('Inter Medium'), local('Inter-Medium'),
+       local('Segoe UI Semibold'), local('Roboto Medium'), local('Arial Bold'),
+       local('Helvetica Neue Medium'), local('Helvetica Medium'), local('sans-serif');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Inter Fallback';
+  src: local('Inter SemiBold'), local('Inter-SemiBold'),
+       local('Segoe UI Bold'), local('Roboto Bold'), local('Arial Bold'),
+       local('Helvetica Neue Bold'), local('Helvetica Bold'), local('sans-serif');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Inter Fallback';
+  src: local('Inter Bold'), local('Inter-Bold'),
+       local('Segoe UI Bold'), local('Roboto Bold'), local('Arial Bold'),
+       local('Helvetica Neue Bold'), local('Helvetica Bold'), local('sans-serif');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Robust Font Stack */
+:root {
+  --font-primary: 'Inter', 'Inter Fallback', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', sans-serif;
+  --font-system: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+}
+
+/* Base font application */
+body,
+html {
+  font-family: var(--font-primary);
+  font-feature-settings: 'kern' 1, 'liga' 1, 'calt' 1, 'ss01' 1;
+  font-variant-ligatures: common-ligatures;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Font loading detection and fallback */
+.font-loading {
+  font-family: var(--font-system);
+  visibility: hidden;
+}
+
+.font-loaded {
+  font-family: var(--font-primary);
+  visibility: visible;
+}
+
+.font-failed {
+  font-family: var(--font-system);
+  visibility: visible;
+}
+
+/* Specific weight classes */
+.font-light { font-weight: 300; }
+.font-normal { font-weight: 400; }
+.font-medium { font-weight: 500; }
+.font-semibold { font-weight: 600; }
+.font-bold { font-weight: 700; }
+
+/* Performance optimizations */
+* {
+  font-feature-settings: inherit;
+}
+
+/* Font loading states for better UX */
+@keyframes fontLoadingPulse {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 0.4; }
+}
+
+.font-loading-pulse {
+  animation: fontLoadingPulse 1.5s ease-in-out infinite;
+}
+
+/* Critical font metrics for layout stability */
+.inter-metrics {
+  font-size: 16px;
+  line-height: 1.5;
+  letter-spacing: -0.011em;
+}
+
+/* Media queries for different screen densities */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 2dppx) {
+  body {
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+}
+
+/* Ensure consistent spacing across different fonts */
+.consistent-spacing {
+  letter-spacing: -0.01em;
+  word-spacing: 0.05em;
+}

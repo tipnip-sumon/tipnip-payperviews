@@ -1,0 +1,66 @@
+# Git Line Ending Configuration
+# Prevent CRLF issues that can cause synchronization problems
+
+# Set default behavior to automatically normalize line endings
+* text=auto eol=lf
+
+# Explicitly declare text files you want to always be normalized and converted
+# to native line endings on checkout
+*.blade.php text diff=html
+*.css text diff=css
+*.scss text
+*.js text
+*.json text
+*.html text diff=html
+*.md text diff=markdown
+*.php text diff=php
+*.txt text
+*.yml text
+*.yaml text
+*.xml text
+*.sql text
+
+# Declare files that will always have CRLF line endings on checkout
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Declare files that will always have LF line endings on checkout
+*.sh text eol=lf
+
+# Denote all files that are truly binary and should not be modified
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.svg binary
+*.pdf binary
+*.zip binary
+*.tar binary
+*.gz binary
+*.7z binary
+*.mp4 binary
+*.mov binary
+*.avi binary
+*.mp3 binary
+*.wav binary
+
+# Laravel specific
+storage/** binary
+vendor/** linguist-vendored
+node_modules/** linguist-vendored
+public/storage/** binary
+
+# Asset files
+public/assets/images/** binary
+public/assets/video/** binary
+public/assets/fonts/** binary
+
+# Export ignore
+/.github export-ignore
+CHANGELOG.md export-ignore
+.styleci.yml export-ignore

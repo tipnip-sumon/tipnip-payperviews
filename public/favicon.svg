@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <defs>
+    <linearGradient id="faviconGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#764ba2;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f093fb;stop-opacity:1" />
+    </linearGradient>
+    
+    <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffd700;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#ffed4e;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="32" height="32" rx="6" ry="6" fill="url(#faviconGradient)"/>
+  
+  <!-- Play button -->
+  <polygon points="12,8 12,24 24,16" fill="white" opacity="0.9"/>
+  
+  <!-- Dollar sign -->
+  <text x="26" y="12" font-family="Arial, sans-serif" font-size="8" font-weight="bold" fill="url(#goldGradient)">$</text>
+  
+  <!-- View indicator -->
+  <circle cx="16" cy="26" r="1.5" fill="white" opacity="0.7"/>
+</svg>

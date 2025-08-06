@@ -1,0 +1,17 @@
+compiled.php
+config.php
+down
+events.scanned.php
+maintenance.php
+routes.php
+routes.scanned.php
+schedule-*
+services.json
+
+# Cache and view files (auto-generated)
+cache/*
+!cache/.gitignore
+views/*
+!views/.gitignore
+sessions/*
+!sessions/.gitignore

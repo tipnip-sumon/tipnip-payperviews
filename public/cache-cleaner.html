@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Browser Cache Cleaner - PayPerViews</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .cache-cleaner {
+            padding: 3rem 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+        }
+        .cache-card {
+            background: rgba(255,255,255,0.95);
+            border-radius: 20px;
+            padding: 3rem;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+            animation: slideUp 0.6s ease-out;
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .domain-display {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 1rem;
+            border-radius: 15px;
+            margin: 1.5rem 0;
+            text-align: center;
+            font-weight: bold;
+        }
+        .progress-bar-custom {
+            height: 30px;
+            border-radius: 15px;
+            background: linear-gradient(45deg, #FF6B6B, #4ECDC4);
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 0.7; }
+            50% { opacity: 1; }
+            100% { opacity: 0.7; }
+        }
+        .status-item {
+            display: flex;
+            align-items: center;
+            margin: 0.5rem 0;
+            padding: 0.5rem;
+            border-radius: 8px;
+            transition: background-color 0.3s;
+        }
+        .status-pending { background-color: #fff3cd; }
+        .status-success { background-color: #d1edff; }
+        .status-error { background-color: #f8d7da; }
+        .btn-custom {
+            background: linear-gradient(45deg, #FF6B6B, #4ECDC4);
+            border: none;
+            color: white;
+            padding: 0.8rem 2rem;
+            border-radius: 25px;
+            font-weight: bold;
+            margin: 0.5rem;
+            transition: all 0.3s ease;
+        }
+        .btn-custom:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="cache-cleaner">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-md-8 col-lg-6">
+                    <div class="cache-card">
+                        <div class="text-center mb-4">
+                            <i class="fas fa-broom fa-4x text-primary mb-3"></i>
+                            <h1 class="h2">🧹 Browser Cache Cleaner</h1>
+                            <p class="text-muted">Clear browser cache for the current domain only</p>
+                        </div>
+                        
+                        <div class="domain-display" id="domainDisplay">
+                            <i class="fas fa-globe me-2"></i>
+                            Domain: <span id="currentDomain">Loading...</span>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <div class="progress mb-3" style="display: none;" id="progressContainer">
+                                <div class="progress-bar progress-bar-custom" role="progressbar" style="width: 0%" id="progressBar">
+                                    <span id="progressText">Starting...</span>
+                                </div>
+                            </div>
+                            
+                            <div id="statusContainer">
+                                <div class="status-item status-pending" id="status-localStorage">
+                                    <i class="fas fa-clock text-warning me-2"></i>
+                                    <span>Local Storage - Pending</span>
+                                </div>
+                                <div class="status-item status-pending" id="status-sessionStorage">
+                                    <i class="fas fa-clock text-warning me-2"></i>
+                                    <span>Session Storage - Pending</span>
+                                </div>
+                                <div class="status-item status-pending" id="status-indexedDB">
+                                    <i class="fas fa-clock text-warning me-2"></i>
+                                    <span>IndexedDB - Pending</span>
+                                </div>
+                                <div class="status-item status-pending" id="status-serviceWorker">
+                                    <i class="fas fa-clock text-warning me-2"></i>
+                                    <span>Service Worker Cache - Pending</span>
+                                </div>
+                                <div class="status-item status-pending" id="status-cacheAPI">
+                                    <i class="fas fa-clock text-warning me-2"></i>
+                                    <span>Cache API - Pending</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="text-center">
+                            <button onclick="startCacheClearing()" class="btn-custom" id="clearButton">
+                                <i class="fas fa-play me-2"></i>Start Cache Clearing
+                            </button>
+                            <button onclick="window.location.href='/'" class="btn-custom" style="background: linear-gradient(45deg, #4ECDC4, #44A08D);">
+                                <i class="fas fa-home me-2"></i>Return Home
+                            </button>
+                        </div>
+                        
+                        <div class="mt-4" id="resultsContainer" style="display: none;">
+                            <div class="alert alert-success">
+                                <i class="fas fa-check-circle me-2"></i>
+                                <strong>Cache Clearing Completed!</strong>
+                                <div class="mt-2">
+                                    <small>Domain: <span id="resultDomain"></span></small><br>
+                                    <small>Timestamp: <span id="resultTimestamp"></span></small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-3" id="errorContainer" style="display: none;">
+                            <div class="alert alert-danger">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <strong>Cache Clearing Failed!</strong>
+                                <div class="mt-2">
+                                    <small id="errorMessage"></small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4" id="browserSupport">
+                            <details>
+                                <summary class="btn btn-outline-secondary btn-sm">
+                                    <i class="fas fa-info-circle me-1"></i>Browser Support Information
+                                </summary>
+                                <div class="mt-3" id="supportDetails"></div>
+                            </details>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/browser-cache-service.js"></script>
+    <script>
+        let clearingInProgress = false;
+        
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            // Display current domain
+            const domain = window.location.hostname;
+            const protocol = window.location.protocol;
+            document.getElementById('currentDomain').textContent = `${protocol}//${domain}`;
+            
+            // Show browser support information
+            showBrowserSupport();
+            
+            // Auto-start clearing if URL parameter is present
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('auto') === 'true') {
+                setTimeout(startCacheClearing, 1000);
+            }
+        });
+        
+        function showBrowserSupport() {
+            const support = BrowserCacheService.getBrowserCacheSupport();
+            const instructions = BrowserCacheService.getBrowserInstructions();
+            
+            let supportHtml = `
+                <h6>Current Browser: ${instructions.browser}</h6>
+                <p><strong>Manual clearing shortcut:</strong> ${instructions.shortcut}</p>
+                <h6>Feature Support:</h6>
+                <ul class="list-unstyled">
+            `;
+            
+            Object.entries(support).forEach(([feature, supported]) => {
+                const icon = supported ? 'fas fa-check text-success' : 'fas fa-times text-danger';
+                const status = supported ? 'Supported' : 'Not Supported';
+                supportHtml += `<li><i class="${icon} me-2"></i>${feature}: ${status}</li>`;
+            });
+            
+            supportHtml += '</ul>';
+            document.getElementById('supportDetails').innerHTML = supportHtml;
+        }
+        
+        async function startCacheClearing() {
+            if (clearingInProgress) return;
+            
+            clearingInProgress = true;
+            document.getElementById('clearButton').disabled = true;
+            document.getElementById('clearButton').innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Clearing...';
+            document.getElementById('progressContainer').style.display = 'block';
+            document.getElementById('resultsContainer').style.display = 'none';
+            document.getElementById('errorContainer').style.display = 'none';
+            
+            try {
+                // Start progress animation
+                animateProgress();
+                
+                // Clear localStorage
+                await updateStatus('localStorage', 'clearing');
+                const localStorageResult = browserCacheService.clearLocalStorage();
+                await updateStatus('localStorage', localStorageResult ? 'success' : 'error');
+                await delay(500);
+                
+                // Clear sessionStorage
+                await updateStatus('sessionStorage', 'clearing');
+                const sessionStorageResult = browserCacheService.clearSessionStorage();
+                await updateStatus('sessionStorage', sessionStorageResult ? 'success' : 'error');
+                await delay(500);
+                
+                // Clear IndexedDB
+                await updateStatus('indexedDB', 'clearing');
+                const indexedDBResult = await browserCacheService.clearIndexedDB();
+                await updateStatus('indexedDB', indexedDBResult ? 'success' : 'error');
+                await delay(500);
+                
+                // Clear Service Worker
+                await updateStatus('serviceWorker', 'clearing');
+                const serviceWorkerResult = await browserCacheService.clearServiceWorkerCache();
+                await updateStatus('serviceWorker', serviceWorkerResult ? 'success' : 'error');
+                await delay(500);
+                
+                // Clear Cache API
+                await updateStatus('cacheAPI', 'clearing');
+                const cacheAPIResult = await browserCacheService.clearCacheAPI();
+                await updateStatus('cacheAPI', cacheAPIResult ? 'success' : 'error');
+                await delay(500);
+                
+                // Complete
+                document.getElementById('progressBar').style.width = '100%';
+                document.getElementById('progressText').textContent = 'Complete!';
+                
+                // Show results
+                setTimeout(() => {
+                    document.getElementById('resultDomain').textContent = window.location.hostname;
+                    document.getElementById('resultTimestamp').textContent = new Date().toLocaleString();
+                    document.getElementById('resultsContainer').style.display = 'block';
+                    document.getElementById('progressContainer').style.display = 'none';
+                }, 1000);
+                
+            } catch (error) {
+                console.error('Cache clearing error:', error);
+                document.getElementById('errorMessage').textContent = error.message;
+                document.getElementById('errorContainer').style.display = 'block';
+                document.getElementById('progressContainer').style.display = 'none';
+            } finally {
+                clearingInProgress = false;
+                document.getElementById('clearButton').disabled = false;
+                document.getElementById('clearButton').innerHTML = '<i class="fas fa-redo me-2"></i>Clear Again';
+            }
+        }
+        
+        async function updateStatus(type, status) {
+            const element = document.getElementById(`status-${type}`);
+            if (!element) return;
+            
+            element.className = 'status-item';
+            
+            switch (status) {
+                case 'clearing':
+                    element.className += ' status-pending';
+                    element.innerHTML = '<i class="fas fa-spinner fa-spin text-primary me-2"></i><span>' + 
+                        type.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()) + ' - Clearing...</span>';
+                    break;
+                case 'success':
+                    element.className += ' status-success';
+                    element.innerHTML = '<i class="fas fa-check text-success me-2"></i><span>' + 
+                        type.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()) + ' - Cleared ✅</span>';
+                    break;
+                case 'error':
+                    element.className += ' status-error';
+                    element.innerHTML = '<i class="fas fa-times text-danger me-2"></i><span>' + 
+                        type.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()) + ' - Failed ❌</span>';
+                    break;
+            }
+        }
+        
+        function animateProgress() {
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += Math.random() * 15;
+                if (progress > 90) progress = 90;
+                document.getElementById('progressBar').style.width = progress + '%';
+                document.getElementById('progressText').textContent = Math.round(progress) + '%';
+                
+                if (progress >= 90) {
+                    clearInterval(interval);
+                }
+            }, 300);
+        }
+        
+        function delay(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+        
+        // Add keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.shiftKey && e.key === 'Delete') {
+                e.preventDefault();
+                startCacheClearing();
+            }
+        });
+    </script>
+</body>
+</html>
