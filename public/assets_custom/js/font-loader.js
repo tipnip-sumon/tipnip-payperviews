@@ -5,10 +5,11 @@
 
 class FontLoader {
     constructor() {
-        this.fontTimeout = 3000; // 3 second timeout
+        this.fontTimeout = 2000; // Reduced to 2 seconds for faster fallback
         this.fontFamily = 'Inter';
         this.fallbackApplied = false;
         this.loadingStartTime = Date.now();
+        this.checkInterval = 100; // Check every 100ms instead of default
         
         this.init();
     }
@@ -16,6 +17,13 @@ class FontLoader {
     init() {
         // Apply loading state immediately
         document.documentElement.classList.add('font-loading');
+        
+        // Check if fonts are already available (cached)
+        if (this.areFontsAlreadyLoaded()) {
+            // console.log('Fonts already loaded from cache');
+            this.onFontLoadSuccess();
+            return;
+        }
         
         // Start font loading detection
         this.detectFontLoading();
@@ -25,6 +33,20 @@ class FontLoader {
         
         // Monitor for network errors
         this.monitorNetworkErrors();
+    }
+    
+    areFontsAlreadyLoaded() {
+        if (!document.fonts) return false;
+        
+        try {
+            // Check if our primary fonts are already loaded
+            const interLoaded = document.fonts.check('16px Inter');
+            const poppinsLoaded = document.fonts.check('16px Poppins');
+            
+            return interLoaded || poppinsLoaded;
+        } catch (error) {
+            return false;
+        }
     }
 
     detectFontLoading() {
@@ -38,30 +60,60 @@ class FontLoader {
     }
 
     useNativeFontAPI() {
+        // Use a more efficient approach with timeout race
         const fontPromises = [
             document.fonts.load('400 16px Inter'),
             document.fonts.load('500 16px Inter'),
-            document.fonts.load('600 16px Inter'),
-            document.fonts.load('700 16px Inter')
+            document.fonts.load('400 16px Poppins'),
+            document.fonts.load('500 16px Poppins')
         ];
 
-        Promise.all(fontPromises)
-            .then(() => {
-                this.onFontLoadSuccess();
-            })
-            .catch((error) => {
-                console.warn('Font loading failed:', error);
-                this.onFontLoadFailure();
-            });
-
-        // Also listen for font loading events
-        document.fonts.addEventListener('loadingdone', () => {
-            this.onFontLoadSuccess();
+        // Race between font loading and timeout
+        const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('Font loading timeout')), this.fontTimeout);
         });
 
-        document.fonts.addEventListener('loadingerror', () => {
+        Promise.race([
+            Promise.allSettled(fontPromises),
+            timeoutPromise
+        ])
+        .then((results) => {
+            // Check if we got results from allSettled (not timeout)
+            if (Array.isArray(results)) {
+                const successful = results.filter(result => result.status === 'fulfilled').length;
+                // console.log(`${successful}/${results.length} fonts loaded successfully`);
+                
+                if (successful > 0) {
+                    this.onFontLoadSuccess();
+                } else {
+                    console.warn('No fonts loaded successfully');
+                    this.onFontLoadFailure();
+                }
+            } else {
+                // Timeout occurred
+                this.onFontLoadFailure();
+            }
+        })
+        .catch((error) => {
+            console.warn('Font loading failed:', error.message);
             this.onFontLoadFailure();
         });
+
+        // Also listen for font loading events as backup
+        const fontLoadHandler = () => {
+            if (!this.fallbackApplied) {
+                // Double-check that fonts are actually loaded
+                const interLoaded = document.fonts.check('16px Inter');
+                const poppinsLoaded = document.fonts.check('16px Poppins');
+                
+                if (interLoaded || poppinsLoaded) {
+                    // console.log('Fonts detected via loadingdone event');
+                    this.onFontLoadSuccess();
+                }
+            }
+        };
+
+        document.fonts.addEventListener('loadingdone', fontLoadHandler, { once: true });
     }
 
     useManualDetection() {
@@ -107,7 +159,7 @@ class FontLoader {
     setupFontTimeout() {
         setTimeout(() => {
             if (!this.fallbackApplied) {
-                console.warn('Font loading timeout - applying fallback');
+                // console.log('Font loading timeout (2s) - applying system font fallback');
                 this.onFontLoadFailure();
             }
         }, this.fontTimeout);
@@ -124,13 +176,21 @@ class FontLoader {
             }
         }, true);
 
-        // Monitor fetch failures
+        // Monitor fetch failures with better error handling
         const originalFetch = window.fetch;
         window.fetch = (...args) => {
             return originalFetch(...args).catch(error => {
-                if (args[0] && args[0].includes('fonts.g')) {
+                // Only handle font-related fetch failures
+                if (args[0] && (
+                    args[0].includes('fonts.g') || 
+                    args[0].includes('gstatic.com') ||
+                    args[0].includes('googleapis.com')
+                )) {
                     console.warn('Font fetch failed:', error);
-                    this.onFontLoadFailure();
+                    // Don't trigger failure callback for CORS errors as they're handled by service worker
+                    if (!error.message.includes('CORS') && !error.message.includes('Failed to fetch')) {
+                        this.onFontLoadFailure();
+                    }
                 }
                 throw error;
             });
@@ -139,12 +199,13 @@ class FontLoader {
 
     onFontLoadSuccess() {
         if (this.fallbackApplied) return;
+        this.fallbackApplied = true;
         
         const loadTime = Date.now() - this.loadingStartTime;
-        console.log(`Fonts loaded successfully in ${loadTime}ms`);
+        // console.log(`✓ Custom fonts loaded successfully in ${loadTime}ms`);
         
         document.documentElement.classList.remove('font-loading');
-        document.documentElement.classList.add('font-loaded');
+        document.documentElement.classList.add('fonts-loaded');
         
         // Dispatch custom event
         this.dispatchFontEvent('fontloaded', { loadTime });
@@ -155,7 +216,7 @@ class FontLoader {
         this.fallbackApplied = true;
         
         const loadTime = Date.now() - this.loadingStartTime;
-        console.warn(`Font loading failed after ${loadTime}ms - using system fonts`);
+        // console.log(`Font loading completed with system fallback after ${loadTime}ms`);
         
         document.documentElement.classList.remove('font-loading');
         document.documentElement.classList.add('font-failed');
@@ -163,11 +224,11 @@ class FontLoader {
         // Apply system font stack
         this.applySystemFonts();
         
-        // Dispatch custom event
+        // Dispatch custom event (without automatic diagnostics)
         this.dispatchFontEvent('fontfailed', { loadTime });
         
-        // Show user notification if needed
-        this.showFallbackNotification();
+        // Don't show notification for timeout - it's normal behavior
+        // this.showFallbackNotification();
     }
 
     applySystemFonts() {

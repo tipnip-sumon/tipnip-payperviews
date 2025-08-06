@@ -1,5 +1,5 @@
 @extends('layouts.form_layout')
-@section('top_title','Register')
+@section('top_title','Register') 
 
 <!-- Font Fallback System -->
 <link rel="stylesheet" href="{{ asset('assets_custom/css/font-fallback.css') }}">
@@ -755,9 +755,9 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Debug information
-    console.log('Registration page loaded');
-    console.log('Initial CSRF token:', document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'));
-    console.log('SessionManager available:', typeof window.sessionManager !== 'undefined');
+    // console.log('Registration page loaded');
+    // console.log('Initial CSRF token:', document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'));
+    // console.log('SessionManager available:', typeof window.sessionManager !== 'undefined');
     
     // Enhanced initialization with retry mechanism
     let initRetryCount = 0;
@@ -770,7 +770,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!form || !submitBtn) {
             initRetryCount++;
             if (initRetryCount < maxInitRetries) {
-                console.log(`Form elements not found, retrying (${initRetryCount}/${maxInitRetries})...`);
+                // console.log(`Form elements not found, retrying (${initRetryCount}/${maxInitRetries})...`);
                 setTimeout(initializeForm, 100);
                 return;
             } else {
@@ -779,7 +779,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
-        console.log('Form elements found, initializing...');
+        // console.log('Form elements found, initializing...');
         setupFormHandlers();
     };
     
@@ -795,7 +795,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Network status monitoring
     window.addEventListener('online', function() {
-        console.log('Network connection restored');
+        // console.log('Network connection restored');
         if (window.sessionManager) {
             window.sessionManager.refreshCSRFToken().catch(error => {
                 console.error('Failed to refresh CSRF token after reconnection:', error);
@@ -804,7 +804,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     window.addEventListener('offline', function() {
-        console.log('Network connection lost');
+        // console.log('Network connection lost');
     });
     
     const setupFormHandlers = () => {
@@ -1999,7 +1999,7 @@ if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('/font-sw.js')
             .then((registration) => {
-                console.log('Font SW registered:', registration.scope);
+                // console.log('Font SW registered:', registration.scope);
                 
                 // Request background sync for font updates
                 if ('sync' in window.ServiceWorkerRegistration.prototype) {
@@ -2016,11 +2016,15 @@ if ('serviceWorker' in navigator) {
 
 // Font loading status monitoring
 document.addEventListener('fontloaded', () => {
-    console.log('✅ Fonts loaded successfully');
+    // console.log('✅ Fonts loaded successfully');
+});
+
+document.addEventListener('fontloaded', () => {
+    // console.log('✓ Custom fonts loaded successfully');
 });
 
 document.addEventListener('fontfailed', () => {
-    console.warn('⚠️ Font loading failed - using system fonts');
+    // console.log('ℹ️ Using system fonts (custom fonts not available)');
 });
 </script>
 

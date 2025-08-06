@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en"> 
 <head>
-    <meta charset="UTF-8">
+    <meta charset="UTF-8"> 
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>{{ $pageTitle }} - {{ siteName() }} | Watch Videos & Earn Money</title>
     <meta name="description" content="{{ \App\Models\GeneralSetting::getSetting('meta_description', siteName() . ' - Watch amazing videos and earn money! Join our platform to start earning money by watching videos and build your wealth today.') }}">
@@ -3052,7 +3052,7 @@
             window.addEventListener('load', function() {
                 navigator.serviceWorker.register('/sw.js')
                     .then(function(registration) {
-                        console.log('ServiceWorker registration successful');
+                        // console.log('ServiceWorker registration successful');
                     })
                     .catch(function(err) {
                         console.log('ServiceWorker registration failed: ', err);

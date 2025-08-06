@@ -34,6 +34,37 @@
     <link rel="icon" href="{{ asset('assets/images/logo/payperviews-icon.svg') }}" type="image/svg+xml">
     <link rel="shortcut icon" href="{{ asset('favicon.ico') }}" type="image/x-icon">
 
+    <!-- Font Preloading for Better Performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    
+    <!-- Preload critical font weights -->
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@400;500;600&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@400;500;600&display=swap"></noscript>
+    
+    <!-- Font Fallback CSS -->
+    <style>
+        /* Immediate font fallbacks to prevent layout shift */
+        :root {
+            --font-primary: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+            --font-secondary: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+        }
+        
+        body {
+            font-family: var(--font-primary);
+        }
+        
+        /* Reduce font loading flash */
+        .font-loading {
+            visibility: hidden;
+        }
+        
+        .font-loading.fonts-loaded,
+        .font-failed {
+            visibility: visible;
+        }
+    </style>
+
     <!-- Main Theme Js -->
     <script src="{{ asset('assets/js/authentication-main.js') }}"></script>
     

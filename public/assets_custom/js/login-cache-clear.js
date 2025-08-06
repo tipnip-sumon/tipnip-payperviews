@@ -29,11 +29,11 @@
 
     // Early exit if not in development
     if (!isDevelopment()) {
-        console.log('🏭 Production environment detected - login cache tools disabled');
+        // console.log('🏭 Production environment detected - login cache tools disabled');
         return;
     }
 
-    console.log('🔧 Development environment detected - login cache tools enabled');
+    // console.log('🔧 Development environment detected - login cache tools enabled');
 
     // Cache clearing functions
     const LoginCacheClear = {
@@ -64,10 +64,10 @@
                     sessionStorage.clear();
                 }
 
-                console.log('✅ Login cache cleared successfully');
+                // console.log('✅ Login cache cleared successfully');
                 return true;
             } catch (error) {
-                console.warn('⚠️ Cache clearing failed:', error);
+                // console.warn('⚠️ Cache clearing failed:', error);
                 return false;
             }
         },
@@ -91,7 +91,7 @@
 
                 return true;
             } catch (error) {
-                console.warn('⚠️ Form data clearing failed:', error);
+                // console.warn('⚠️ Form data clearing failed:', error);
                 return false;
             }
         },
@@ -109,7 +109,7 @@
             // Clear any error states
             this.clearErrorStates();
 
-            console.log('🎉 Login success cleanup completed');
+            // console.log('🎉 Login success cleanup completed');
         },
 
         // Clear error states
@@ -131,7 +131,7 @@
 
                 return true;
             } catch (error) {
-                console.warn('⚠️ Error state clearing failed:', error);
+                // console.warn('⚠️ Error state clearing failed:', error);
                 return false;
             }
         },
@@ -167,10 +167,10 @@
                     this.clearFormData();
                 });
 
-                console.log('🔧 Login cache manager initialized');
+                // console.log('🔧 Login cache manager initialized');
                 return true;
             } catch (error) {
-                console.error('❌ Login cache manager initialization failed:', error);
+                // console.error('❌ Login cache manager initialization failed:', error);
                 return false;
             }
         },
@@ -179,7 +179,7 @@
         clear: function() {
             const success = this.clearBrowserCache() && this.clearFormData() && this.clearErrorStates();
             if (success) {
-                console.log('✨ Manual cache clear completed');
+                // console.log('✨ Manual cache clear completed');
             }
             return success;
         }
@@ -223,10 +223,10 @@ if (typeof window !== 'undefined') {
                     }
                 }
                 videoKeys.forEach(key => localStorage.removeItem(key));
-                console.log('🎬 Video cache cleared');
+                // console.log('🎬 Video cache cleared');
                 return true;
             } catch (error) {
-                console.warn('⚠️ Video cache clearing failed:', error);
+                // console.warn('⚠️ Video cache clearing failed:', error);
                 return false;
             }
         },
@@ -247,10 +247,10 @@ if (typeof window !== 'undefined') {
                     }
                 }
                 sessionKeys.forEach(key => localStorage.removeItem(key));
-                console.log('👤 User session cache cleared');
+                // console.log('👤 User session cache cleared');
                 return true;
             } catch (error) {
-                console.warn('⚠️ User session clearing failed:', error);
+                // console.warn('⚠️ User session clearing failed:', error);
                 return false;
             }
         },
@@ -264,11 +264,11 @@ if (typeof window !== 'undefined') {
             );
             
             if (success) {
-                console.log('🚀 PayPerViews full cache clear completed');
+                // console.log('🚀 PayPerViews full cache clear completed');
             }
             return success;
         }
     };
 }
 
-console.log('📦 login-cache-clear.js loaded successfully');
+// console.log('📦 login-cache-clear.js loaded successfully');

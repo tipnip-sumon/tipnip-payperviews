@@ -2378,7 +2378,7 @@
         // No automatic URL cleaning to preserve from_logout and timestamp parameters
         
         // Just basic initialization, no session interference
-        console.log('Login page loaded - using standard Laravel authentication');
+        // console.log('Login page loaded - using standard Laravel authentication');
     });
     
     // Auto-hide alerts
@@ -2570,7 +2570,7 @@ document.addEventListener('DOMContentLoaded', function() {
         expires.content = '0';
         document.head.appendChild(expires);
         
-        console.log('Cache cleared after dashboard redirect');
+        // console.log('Cache cleared after dashboard redirect');
     }
     
     // Prevent browser back button cache issues

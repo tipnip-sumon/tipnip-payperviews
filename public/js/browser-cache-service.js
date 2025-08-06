@@ -14,7 +14,7 @@ class BrowserCacheService {
      */
     async clearDomainCache() {
         try {
-            console.log(`🧹 Starting cache clearing for domain: ${this.fullDomain}`);
+            // console.log(`🧹 Starting cache clearing for domain: ${this.fullDomain}`);
             
             // Clear localStorage
             this.clearLocalStorage();
@@ -34,7 +34,7 @@ class BrowserCacheService {
             // Clear WebSQL (deprecated but some browsers still support)
             this.clearWebSQL();
             
-            console.log(`✅ Cache clearing completed for domain: ${this.fullDomain}`);
+            // console.log(`✅ Cache clearing completed for domain: ${this.fullDomain}`);
             
             return {
                 success: true,
@@ -44,7 +44,7 @@ class BrowserCacheService {
             };
             
         } catch (error) {
-            console.error('❌ Cache clearing failed:', error);
+            // console.error('❌ Cache clearing failed:', error);
             return {
                 success: false,
                 error: error.message,
@@ -62,11 +62,11 @@ class BrowserCacheService {
             if (typeof(Storage) !== "undefined" && localStorage) {
                 const itemCount = localStorage.length;
                 localStorage.clear();
-                console.log(`✅ localStorage cleared (${itemCount} items removed)`);
+                // console.log(`✅ localStorage cleared (${itemCount} items removed)`);
                 return true;
             }
         } catch (error) {
-            console.warn('⚠️ localStorage clear failed:', error);
+            // console.warn('⚠️ localStorage clear failed:', error);
             return false;
         }
     }
@@ -79,11 +79,11 @@ class BrowserCacheService {
             if (typeof(Storage) !== "undefined" && sessionStorage) {
                 const itemCount = sessionStorage.length;
                 sessionStorage.clear();
-                console.log(`✅ sessionStorage cleared (${itemCount} items removed)`);
+                // console.log(`✅ sessionStorage cleared (${itemCount} items removed)`);
                 return true;
             }
         } catch (error) {
-            console.warn('⚠️ sessionStorage clear failed:', error);
+            // console.warn('⚠️ sessionStorage clear failed:', error);
             return false;
         }
     }
@@ -100,11 +100,11 @@ class BrowserCacheService {
                 });
                 
                 await Promise.all(deletePromises);
-                console.log(`✅ IndexedDB cleared (${databases.length} databases removed)`);
+                // console.log(`✅ IndexedDB cleared (${databases.length} databases removed)`);
                 return true;
             }
         } catch (error) {
-            console.warn('⚠️ IndexedDB clear failed:', error);
+            // console.warn('⚠️ IndexedDB clear failed:', error);
             return false;
         }
     }
@@ -121,11 +121,11 @@ class BrowserCacheService {
                 });
                 
                 await Promise.all(unregisterPromises);
-                console.log(`✅ Service Worker cache cleared (${registrations.length} registrations removed)`);
+                // console.log(`✅ Service Worker cache cleared (${registrations.length} registrations removed)`);
                 return true;
             }
         } catch (error) {
-            console.warn('⚠️ Service Worker cache clear failed:', error);
+            // console.warn('⚠️ Service Worker cache clear failed:', error);
             return false;
         }
     }
@@ -142,11 +142,11 @@ class BrowserCacheService {
                 });
                 
                 await Promise.all(deletePromises);
-                console.log(`✅ Cache API cleared (${cacheNames.length} caches removed)`);
+                // console.log(`✅ Cache API cleared (${cacheNames.length} caches removed)`);
                 return true;
             }
         } catch (error) {
-            console.warn('⚠️ Cache API clear failed:', error);
+            // console.warn('⚠️ Cache API clear failed:', error);
             return false;
         }
     }
@@ -158,12 +158,12 @@ class BrowserCacheService {
         try {
             if (window.openDatabase) {
                 // WebSQL is deprecated, but we can try to clear it
-                console.log('⚠️ WebSQL detected (deprecated), attempting clear...');
+                // console.log('⚠️ WebSQL detected (deprecated), attempting clear...');
                 // Note: WebSQL clearing is complex and deprecated
                 return true;
             }
         } catch (error) {
-            console.warn('⚠️ WebSQL clear failed:', error);
+            // console.warn('⚠️ WebSQL clear failed:', error);
             return false;
         }
     }
@@ -184,7 +184,7 @@ class BrowserCacheService {
             window.location.href = finalUrl;
             
         } catch (error) {
-            console.error('Navigation to cache clear URL failed:', error);
+            // console.error('Navigation to cache clear URL failed:', error);
             // Fallback: direct navigation
             window.location.href = finalUrl;
         }
@@ -283,4 +283,4 @@ window.addEventListener('beforeunload', function() {
     // window.browserCacheService.clearDomainCache();
 });
 
-console.log('🧹 Browser Cache Service loaded for domain:', window.location.hostname);
+// console.log('🧹 Browser Cache Service loaded for domain:', window.location.hostname);

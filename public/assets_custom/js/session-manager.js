@@ -14,7 +14,7 @@ class SessionManager {
     init() {
         if (this.initialized) return;
         
-        console.log('SessionManager: Initializing...');
+        // console.log('SessionManager: Initializing...');
         
         // Refresh CSRF token periodically (every 30 seconds)
         setInterval(() => {
@@ -32,7 +32,7 @@ class SessionManager {
         this.interceptForms();
         
         this.initialized = true;
-        console.log('SessionManager: Initialized successfully');
+        // console.log('SessionManager: Initialized successfully');
     }
 
     /**
@@ -49,7 +49,7 @@ class SessionManager {
     async refreshCSRFToken() {
         // If already refreshing, return the existing promise
         if (this.isRefreshing && this.refreshPromise) {
-            console.log('SessionManager: CSRF refresh already in progress, waiting...');
+            // console.log('SessionManager: CSRF refresh already in progress, waiting...');
             return this.refreshPromise;
         }
 
@@ -72,7 +72,7 @@ class SessionManager {
      */
     async _performCSRFRefresh() {
         try {
-            console.log('SessionManager: Refreshing CSRF token...');
+            // console.log('SessionManager: Refreshing CSRF token...');
             
             const response = await fetch('/csrf-refresh', {
                 method: 'POST',
@@ -102,17 +102,17 @@ class SessionManager {
                     input.value = data.csrf_token;
                 });
 
-                console.log('SessionManager: CSRF token refreshed successfully');
+                // console.log('SessionManager: CSRF token refreshed successfully');
                 return data.csrf_token;
             } else {
                 throw new Error('No CSRF token in response');
             }
         } catch (error) {
-            console.error('SessionManager: Failed to refresh CSRF token:', error);
+            // console.error('SessionManager: Failed to refresh CSRF token:', error);
             
             // If it's a session expired error, reload the page
             if (error.message.includes('419') || error.message.includes('expired')) {
-                console.log('SessionManager: Session expired, reloading page...');
+                // console.log('SessionManager: Session expired, reloading page...');
                 window.location.reload();
                 return null;
             }
@@ -149,7 +149,7 @@ class SessionManager {
 
             // Handle CSRF token mismatch
             if (response.status === 419) {
-                console.log('SessionManager: CSRF token mismatch, refreshing and retrying...');
+                // console.log('SessionManager: CSRF token mismatch, refreshing and retrying...');
                 await this.refreshCSRFToken();
                 
                 // Update headers with new token
@@ -165,7 +165,7 @@ class SessionManager {
 
             return response;
         } catch (error) {
-            console.error('SessionManager: Request failed:', error);
+            // console.error('SessionManager: Request failed:', error);
             throw error;
         }
     }
@@ -242,7 +242,7 @@ class SessionManager {
                     tokenInput.value = this.getCurrentToken();
                 }
             } catch (error) {
-                console.error('SessionManager: Failed to refresh CSRF token before form submission:', error);
+                // console.error('SessionManager: Failed to refresh CSRF token before form submission:', error);
                 // Let the form submit anyway, server will handle the error
             }
         });
@@ -277,7 +277,7 @@ class SessionManager {
 
             return await response.json();
         } catch (error) {
-            console.error('SessionManager: Username validation failed:', error);
+            // console.error('SessionManager: Username validation failed:', error);
             throw error;
         }
     }

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'payperviews-v1.0.0';
+const CACHE_NAME = 'payperviews-v1.0.1';
 const urlsToCache = [
   '/',
   '/videos',
@@ -6,26 +6,27 @@ const urlsToCache = [
   '/register',
   '/assets/css/app.css',
   '/assets/js/app.js',
+  '/assets_custom/images/default-favicon.ico',
   '/assets/images/logo/payperviews-icon.svg',
   '/assets/images/logo/payperviews-icon-192.png',
   '/assets/images/logo/payperviews-icon-512.png',
   'https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css',
-  'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css',
-  'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@300;400;500;600;700;800&display=swap'
+  'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css'
+  // Removed Google Fonts from cache to avoid CORS issues - handled by font-sw.js
 ];
 
 // Install Service Worker
 self.addEventListener('install', function(event) {
-  console.log('PayPerViews Service Worker: Installing...');
+  // console.log('PayPerViews Service Worker: Installing...');
   
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(function(cache) {
-        console.log('PayPerViews Service Worker: Caching app shell');
+        // console.log('PayPerViews Service Worker: Caching app shell');
         return cache.addAll(urlsToCache);
       })
       .catch(function(error) {
-        console.log('PayPerViews Service Worker: Cache failed', error);
+        // console.log('PayPerViews Service Worker: Cache failed', error);
       })
   );
 });
@@ -57,30 +58,42 @@ self.addEventListener('fetch', function(event) {
                 if (event.request.method === 'GET' && !event.request.url.includes('?')) {
                   cache.put(event.request, responseToCache);
                 }
+              })
+              .catch(function(cacheError) {
+                // console.error('Cache storage failed:', cacheError);
               });
 
             return fetchResponse;
           })
-          .catch(function() {
+          .catch(function(fetchError) {
             // Return offline page for navigation requests
             if (event.request.mode === 'navigate') {
               return caches.match('/offline.html');
             }
+            throw fetchError;
           });
+      })
+      .catch(function(error) {
+        // console.error('Fetch event failed:', error);
+        // Return a basic response to prevent uncaught promise rejection
+        return new Response('Service temporarily unavailable', {
+          status: 503,
+          statusText: 'Service Unavailable'
+        });
       })
   );
 });
 
 // Activate Service Worker
 self.addEventListener('activate', function(event) {
-  console.log('PayPerViews Service Worker: Activating...');
+  // console.log('PayPerViews Service Worker: Activating...');
   
   event.waitUntil(
     caches.keys().then(function(cacheNames) {
       return Promise.all(
         cacheNames.map(function(cacheName) {
           if (cacheName !== CACHE_NAME) {
-            console.log('PayPerViews Service Worker: Deleting old cache', cacheName);
+            // console.log('PayPerViews Service Worker: Deleting old cache', cacheName);
             return caches.delete(cacheName);
           }
         })
@@ -92,11 +105,15 @@ self.addEventListener('activate', function(event) {
 // Background sync for offline actions
 self.addEventListener('sync', function(event) {
   if (event.tag === 'newsletter-subscription') {
-    event.waitUntil(syncNewsletterSubscription());
+    event.waitUntil(syncNewsletterSubscription().catch(error => {
+      // console.error('Newsletter sync failed:', error);
+    }));
   }
   
   if (event.tag === 'video-view') {
-    event.waitUntil(syncVideoViews());
+    event.waitUntil(syncVideoViews().catch(error => {
+      // console.error('Video view sync failed:', error);
+    }));
   }
 });
 
@@ -126,7 +143,9 @@ self.addEventListener('push', function(event) {
   };
 
   event.waitUntil(
-    self.registration.showNotification('PayPerViews', options)
+    self.registration.showNotification('PayPerViews', options).catch(error => {
+      // console.error('Push notification failed:', error);
+    })
   );
 });
 
@@ -136,14 +155,18 @@ self.addEventListener('notificationclick', function(event) {
 
   if (event.action === 'explore') {
     event.waitUntil(
-      clients.openWindow('/videos')
+      clients.openWindow('/videos').catch(error => {
+        // console.error('Failed to open videos window:', error);
+      })
     );
   } else if (event.action === 'close') {
     // Just close the notification
   } else {
     // Default action - open the app
     event.waitUntil(
-      clients.openWindow('/')
+      clients.openWindow('/').catch(error => {
+        // console.error('Failed to open app window:', error);
+      })
     );
   }
 });
@@ -167,7 +190,7 @@ async function syncNewsletterSubscription() {
       }
     }
   } catch (error) {
-    console.log('Background sync failed for newsletter subscriptions:', error);
+    // console.log('Background sync failed for newsletter subscriptions:', error);
   }
 }
 
@@ -189,7 +212,7 @@ async function syncVideoViews() {
       }
     }
   } catch (error) {
-    console.log('Background sync failed for video views:', error);
+    // console.log('Background sync failed for video views:', error);
   }
 }
 
@@ -226,9 +249,23 @@ async function removeStoredVideoView(id) {
 self.addEventListener('message', function(event) {
   if (event.data && event.data.type === 'SHARE_TARGET') {
     event.waitUntil(
-      clients.openWindow('/videos?shared=true')
+      clients.openWindow('/videos?shared=true').catch(error => {
+        // console.error('Failed to handle share target:', error);
+      })
     );
+    // Don't return true here as it indicates async response
   }
+  // Handle other message types without returning true
 });
 
-console.log('PayPerViews Service Worker: Loaded successfully');
+// Global error handlers to prevent unhandled promise rejections
+self.addEventListener('error', function(event) {
+  // console.error('Service Worker error:', event.error);
+});
+
+self.addEventListener('unhandledrejection', function(event) {
+  // console.error('Service Worker unhandled promise rejection:', event.reason);
+  event.preventDefault(); // Prevent default browser error handling
+});
+
+// console.log('PayPerViews Service Worker: Loaded successfully');

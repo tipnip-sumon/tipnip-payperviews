@@ -405,7 +405,7 @@ class GeneralSetting extends Model
     public static function getFavicon()
     {
         $favicon = self::getSetting('favicon');
-        return $favicon ? asset('storage/images/favicons/' . $favicon) : asset('assets/images/default-favicon.ico');
+        return $favicon ? asset('storage/images/favicons/' . $favicon) : asset('assets_custom/images/default-favicon.ico');
     }
 
     /**

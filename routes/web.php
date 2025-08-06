@@ -29,6 +29,25 @@ use App\Http\Controllers\NewsletterController;
 use App\Http\Controllers\BrowserCacheController;
 
 // =============================================================================
+// STORAGE ROUTES (Fix for development server symbolic link issues)
+// =============================================================================
+
+// Serve storage files directly (workaround for php artisan serve symbolic link issues)
+Route::get('/storage/{path}', function ($path) {
+    $file = storage_path('app/public/' . $path);
+    
+    if (!file_exists($file)) {
+        abort(404);
+    }
+    
+    $mimeType = mime_content_type($file);
+    return response()->file($file, [
+        'Content-Type' => $mimeType,
+        'Cache-Control' => 'public, max-age=31536000',
+    ]);
+})->where('path', '.*');
+
+// =============================================================================
 // TEST ROUTES (Development only)
 // =============================================================================
 

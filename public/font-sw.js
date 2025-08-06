@@ -15,37 +15,37 @@ const FONT_URLS = [
     'https://fonts.gstatic.com/s/inter/v19/UcC73FwrK3iLTeHuS_fVMrMxCp50SjIa1ZL7W6T7GlUNOw.woff2'
 ];
 
+// Cache URLs for different font resources
+const CACHE_URLS = [
+    'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap',
+    'https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap'
+];
+
 // Install Service Worker
-self.addEventListener('install', (event) => {
-    console.log('Font Service Worker installing...');
+self.addEventListener('install', event => {
+    // console.log('Font Service Worker installing...');
     
     event.waitUntil(
-        caches.open(FONT_CACHE_NAME)
-            .then((cache) => {
-                console.log('Caching font resources...');
-                return cache.addAll(FONT_URLS.map(url => new Request(url, {
-                    cache: 'no-cache'
-                })));
-            })
-            .catch((error) => {
-                console.warn('Font caching failed:', error);
-            })
+        caches.open(FONT_CACHE_NAME).then(cache => {
+            // console.log('Caching font resources...');
+            return cache.addAll(CACHE_URLS);
+        })
     );
     
-    // Force activation
+    // Skip waiting to activate immediately
     self.skipWaiting();
 });
 
 // Activate Service Worker
 self.addEventListener('activate', (event) => {
-    console.log('Font Service Worker activating...');
+    // console.log('Font Service Worker activating...');
     
     event.waitUntil(
         caches.keys().then((cacheNames) => {
             return Promise.all(
                 cacheNames.map((cacheName) => {
                     if (cacheName !== FONT_CACHE_NAME && cacheName.startsWith('fonts-cache')) {
-                        console.log('Deleting old font cache:', cacheName);
+                        // console.log('Deleting old font cache:', cacheName);
                         return caches.delete(cacheName);
                     }
                 })
@@ -70,23 +70,62 @@ self.addEventListener('fetch', (event) => {
 
 async function handleFontRequest(request) {
     try {
-        // Try cache first
+        // Don't cache HEAD requests - they cause cache errors
+        if (request.method === 'HEAD') {
+            // console.log('HEAD request detected, not caching:', request.url);
+            try {
+                return await fetch(request, {
+                    mode: 'no-cors',
+                    credentials: 'omit'
+                });
+            } catch (error) {
+                // console.log('HEAD request failed, returning minimal response');
+                return new Response('', { 
+                    status: 200, 
+                    statusText: 'OK',
+                    headers: { 'Content-Type': 'text/plain' }
+                });
+            }
+        }
+        
+        // Try cache first for GET requests
         const cachedResponse = await caches.match(request);
         if (cachedResponse) {
-            console.log('Serving font from cache:', request.url);
+            // console.log('Serving font from cache:', request.url);
             return cachedResponse;
         }
         
-        // Try network
-        const networkResponse = await fetch(request, {
-            cache: 'default'
-        });
+        // Try network with CORS handling
+        let networkResponse;
+        try {
+            networkResponse = await fetch(request, {
+                cache: 'default',
+                mode: 'cors' // Explicitly set CORS mode
+            });
+        } catch (corsError) {
+            // console.log('CORS failed, trying no-cors mode:', request.url);
+            try {
+                networkResponse = await fetch(request, {
+                    cache: 'default',
+                    mode: 'no-cors' // Fallback to no-cors
+                });
+            } catch (noCorsError) {
+                throw new Error(`Both CORS and no-cors failed: ${corsError.message}`);
+            }
+        }
         
-        if (networkResponse.ok) {
-            // Cache successful response
-            const cache = await caches.open(FONT_CACHE_NAME);
-            cache.put(request, networkResponse.clone());
-            console.log('Font cached from network:', request.url);
+        if (networkResponse.ok || networkResponse.type === 'opaque') {
+            // Only cache GET requests to avoid cache errors
+            if (request.method === 'GET') {
+                try {
+                    const cache = await caches.open(FONT_CACHE_NAME);
+                    await cache.put(request, networkResponse.clone());
+                    // console.log('Font cached from network:', request.url);
+                } catch (cacheError) {
+                    console.warn('Failed to cache font response:', cacheError);
+                    // Continue without caching
+                }
+            }
             return networkResponse;
         }
         
@@ -175,7 +214,7 @@ async function updateFontCache() {
         });
         
         await Promise.all(updatePromises);
-        console.log('Font cache updated');
+        // console.log('Font cache updated');
         
     } catch (error) {
         console.error('Font cache update failed:', error);
@@ -187,6 +226,18 @@ self.addEventListener('error', (event) => {
     console.error('Font Service Worker error:', event.error);
 });
 
-self.addEventListener('unhandledrejection', (event) => {
-    console.error('Font Service Worker unhandled rejection:', event.reason);
+// Enhanced error handling for promises
+self.addEventListener('unhandledrejection', function(event) {
+    // console.log('Font Service Worker unhandled rejection:', event.reason);
+    
+    // Prevent default behavior that logs the error
+    event.preventDefault();
+    
+    // Only log non-CORS related errors to reduce console noise
+    if (event.reason && 
+        !event.reason.message?.includes('CORS') && 
+        !event.reason.message?.includes('Cache') &&
+        !event.reason.message?.includes('HEAD')) {
+        console.warn('SW Promise rejection (filtered):', event.reason);
+    }
 });
