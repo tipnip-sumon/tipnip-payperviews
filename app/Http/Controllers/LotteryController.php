@@ -186,25 +186,60 @@ class LotteryController extends Controller
 
             DB::beginTransaction();
 
-            $allPurchasedTickets = [];
-            $primaryTickets = [];
+            $allCreatedTickets = [];
+            $userTickets = []; // Only tickets belonging to the actual user
             
             // Create tickets with virtual multiplier
             for ($i = 0; $i < $ticketCount; $i++) {
                 $ticketsCreated = LotteryTicket::createTicketsWithMultiplier($user->id, 'deposit_wallet');
-                $allPurchasedTickets = array_merge($allPurchasedTickets, $ticketsCreated);
-                $primaryTickets[] = $ticketsCreated[0]; // First ticket is always the primary/real ticket
+                $allCreatedTickets = array_merge($allCreatedTickets, $ticketsCreated);
+                
+                // Filter only tickets that belong to the user (not virtual tickets assigned to virtual user)
+                $userOwnedTickets = array_filter($ticketsCreated, function($ticket) use ($user) {
+                    return $ticket->user_id == $user->id;
+                });
+                $userTickets = array_merge($userTickets, $userOwnedTickets);
             }
 
             DB::commit();
 
-            // Calculate total tickets created (including bonus)
-            $totalTicketsCreated = count($allPurchasedTickets);
-            $bonusTicketsCreated = $totalTicketsCreated - $ticketCount;
+            // Calculate actual user tickets vs purchased count for bonus calculation
+            $totalUserTickets = count($userTickets);
+            $bonusTicketsForUser = $totalUserTickets - $ticketCount;
+
+            // Send ticket purchase notification
+            try {
+                $currentDraw = LotteryDraw::getCurrentDraw();
+                $drawDate = $currentDraw ? $currentDraw->draw_date->format('M d, Y') : 'current draw';
+                
+                // Use the dedicated notification function with proper bonus ticket logic
+                // Only show bonus if there are actually bonus tickets for the user
+                $bonusToShow = ($bonusTicketsForUser > 0) ? $bonusTicketsForUser : 0;
+                
+                notifyLotteryTicketPurchase(
+                    $user->id, 
+                    $ticketCount, 
+                    $totalCost, 
+                    $bonusToShow, 
+                    $drawDate
+                );
+                
+                Log::info("Lottery ticket purchase notification sent", [
+                    'user_id' => $user->id,
+                    'tickets_purchased' => $ticketCount,
+                    'user_bonus_tickets' => $bonusTicketsForUser,
+                    'total_user_tickets' => $totalUserTickets,
+                    'total_cost' => $totalCost,
+                    'bonus_shown_in_notification' => $bonusToShow
+                ]);
+                
+            } catch (\Exception $e) {
+                Log::error("Failed to send lottery ticket purchase notification: " . $e->getMessage());
+            }
             
             $message = "Successfully purchased {$ticketCount} lottery ticket(s) for \$" . number_format($totalCost, 2) . ".";
-            if ($bonusTicketsCreated > 0) {
-                $message .= " Bonus: {$bonusTicketsCreated} additional ticket(s) created!";
+            if ($bonusTicketsForUser > 0) {
+                $message .= " Bonus: {$bonusTicketsForUser} additional ticket(s) created!";
             }
             
             // For AJAX requests, return JSON with updated data
@@ -213,14 +248,14 @@ class LotteryController extends Controller
                 $currentDraw = LotteryDraw::getCurrentDraw();
                 $userStats = $this->getUserStats($user->id);
                 
-                // Format new tickets for display (show all tickets including virtual)
+                // Format new tickets for display (show only user's tickets, not virtual tickets)
                 $newTicketsFormatted = array_map(function($ticket) {
                     return [
                         'ticket_number' => $ticket->ticket_number,
                         'created_at' => $ticket->created_at->format('M d, h:i A'),
-                        'is_virtual' => $ticket->is_virtual
+                        'is_virtual' => $ticket->is_virtual ?? false
                     ];
-                }, $allPurchasedTickets);
+                }, $userTickets);
                 
                 // Refresh the draw to get updated totals
                 $currentDraw->refresh();

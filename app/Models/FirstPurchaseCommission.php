@@ -121,6 +121,13 @@ class FirstPurchaseCommission extends Model
             'special_ticket_id' => $firstSpecialTokenId,
         ]);
 
+        // Send notification to sponsor about received tickets
+        if ($numberOfTickets > 0) {
+            notifySponsorTicketReceived($sponsorUserId, $numberOfTickets, $referralUserId, $purchaseAmount);
+            
+            \Illuminate\Support\Facades\Log::info("Sponsor ticket notification sent to user {$sponsorUserId} for {$numberOfTickets} tickets");
+        }
+
         return $commission;
     }
 

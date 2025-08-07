@@ -1034,6 +1034,37 @@
                 line-height: 1.1;
             }
         }
+
+        /* Real-time notification animations */
+        .pulse-animation {
+            animation: bellPulse 2s infinite;
+        }
+
+        @keyframes bellPulse {
+            0% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.1);
+                color: #007bff;
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        .header-icon-badge {
+            animation: badgeGlow 2s infinite alternate;
+        }
+
+        @keyframes badgeGlow {
+            0% {
+                box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+            }
+            100% {
+                box-shadow: 0 0 15px rgba(0, 123, 255, 0.8);
+            }
+        }
     </style>
 </head>
 
@@ -1124,7 +1155,9 @@
                             @auth
                                 @php
                                     try {
-                                        $unreadNotificationsCount = auth()->user()->unreadNotifications()->count();
+                                        $unreadNotificationsCount = \App\Models\UserNotification::where('user_id', auth()->id())
+                                                                        ->where('read', false)
+                                                                        ->count();
                                     } catch (Exception $e) {
                                         $unreadNotificationsCount = 0;
                                     }
@@ -2156,6 +2189,69 @@
             }
         }
     }
+
+    // Real-time notification badge update system
+    @auth
+    function updateNotificationBadge() {
+        fetch('{{ route("user.notifications.count") }}', {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            const badge = document.getElementById('notification-icon-badge');
+            const bellIcon = document.querySelector('.notifications-dropdown .header-link i');
+            
+            if (data.count > 0) {
+                if (badge) {
+                    badge.textContent = data.count;
+                    badge.style.display = 'flex';
+                } else {
+                    // Create badge if it doesn't exist
+                    const newBadge = document.createElement('span');
+                    newBadge.className = 'badge bg-primary rounded-pill header-icon-badge pulse pulse-primary';
+                    newBadge.id = 'notification-icon-badge';
+                    newBadge.textContent = data.count;
+                    document.querySelector('.notifications-dropdown .header-link').appendChild(newBadge);
+                }
+                
+                // Add pulse animation to bell icon
+                if (bellIcon) {
+                    bellIcon.classList.add('pulse-animation');
+                }
+            } else {
+                if (badge) {
+                    badge.style.display = 'none';
+                }
+                // Remove pulse animation from bell icon
+                if (bellIcon) {
+                    bellIcon.classList.remove('pulse-animation');
+                }
+            }
+        })
+        .catch(error => {
+            console.log('Notification update error:', error);
+        });
+    }
+
+    // Update notification badge every 30 seconds
+    setInterval(updateNotificationBadge, 30000);
+
+    // Also update when page becomes visible again (user returns to tab)
+    document.addEventListener('visibilitychange', function() {
+        if (!document.hidden) {
+            updateNotificationBadge();
+        }
+    });
+
+    // Initial update after page load
+    document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(updateNotificationBadge, 2000); // Wait 2 seconds after page load
+    });
+    @endauth
     </script>
 
 </body>

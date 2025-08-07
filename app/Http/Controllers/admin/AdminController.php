@@ -184,6 +184,19 @@ class AdminController extends Controller
     public function logout(Request $request)
     {
         try {
+            // Handle CSRF token expiration gracefully
+            if (!$request->hasValidSignature() && !$request->session()->token() === $request->input('_token')) {
+                Log::warning('CSRF token mismatch on admin logout', [
+                    'ip_address' => $request->ip(),
+                    'user_agent' => $request->userAgent(),
+                    'session_token' => $request->session()->token() ? 'present' : 'missing',
+                    'request_token' => $request->input('_token') ? 'present' : 'missing'
+                ]);
+                
+                // Regenerate token and force logout anyway for security
+                $request->session()->regenerateToken();
+            }
+
             if (Auth::guard('admin')->check()) {
                 $adminUser = Auth::guard('admin')->user();
                 $adminId = $adminUser->id;
@@ -217,52 +230,59 @@ class AdminController extends Controller
                 // Regenerate CSRF token for security
                 $request->session()->regenerateToken();
                 
-                // Add cache clearing headers for browser cache management
-                $response = redirect()->route('admin.index');
-                
-                // Set comprehensive cache control headers
-                $response->headers->set('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0, private');
-                $response->headers->set('Pragma', 'no-cache');
-                $response->headers->set('Expires', 'Thu, 01 Jan 1970 00:00:00 GMT');
-                $response->headers->set('Last-Modified', gmdate('D, d M Y H:i:s') . ' GMT');
-                
-                // Clear site data (modern browsers)
-                $response->headers->set('Clear-Site-Data', '"cache", "storage", "executionContexts"');
-                
-                // Add cache version headers for JavaScript detection
-                $cacheVersion = time(); // Generate new cache version
-                $response->headers->set('X-Cache-Version', $cacheVersion);
-                $response->headers->set('X-Admin-Logout', 'true');
-                $response->headers->set('X-Cache-Bust', uniqid('admin_logout_', true));
-                
-                // Handle AJAX requests
-                if ($request->ajax() || $request->wantsJson()) {
-                    return response()->json([
-                        'success' => true,
-                        'message' => 'Admin logout successful. Cache cleared.',
-                        'redirect' => route('admin.index'),
-                        'cache_cleared' => true,
-                        'cache_version' => $cacheVersion,
-                        'timestamp' => time()
-                    ])->withHeaders([
-                        'Cache-Control' => 'no-cache, no-store, must-revalidate',
-                        'Pragma' => 'no-cache',
-                        'Expires' => 'Thu, 01 Jan 1970 00:00:00 GMT',
-                        'Clear-Site-Data' => '"cache", "storage"',
-                        'X-Cache-Version' => $cacheVersion,
-                        'X-Admin-Logout' => 'true'
-                    ]);
-                }
-                
-                // Flash success message
-                $request->session()->flash('success', 'You have been successfully logged out. Browser cache has been cleared for security.');
-                
-                return $response;
-                
             } else {
-                // If not authenticated, redirect to login with message
-                return redirect()->route('admin.index')->with('error', 'You are not currently logged in.');
+                // Force clear session even if not authenticated
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+                
+                Log::info('Admin logout attempted without authentication', [
+                    'ip_address' => $request->ip(),
+                    'user_agent' => $request->userAgent()
+                ]);
             }
+            
+            // Add cache clearing headers for browser cache management
+            $response = redirect()->route('admin.index');
+            
+            // Set comprehensive cache control headers
+            $response->headers->set('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0, private');
+            $response->headers->set('Pragma', 'no-cache');
+            $response->headers->set('Expires', 'Thu, 01 Jan 1970 00:00:00 GMT');
+            $response->headers->set('Last-Modified', gmdate('D, d M Y H:i:s') . ' GMT');
+            
+            // Clear site data (modern browsers)
+            $response->headers->set('Clear-Site-Data', '"cache", "storage", "executionContexts"');
+            
+            // Add cache version headers for JavaScript detection
+            $cacheVersion = time(); // Generate new cache version
+            $response->headers->set('X-Cache-Version', $cacheVersion);
+            $response->headers->set('X-Admin-Logout', 'true');
+            $response->headers->set('X-Cache-Bust', uniqid('admin_logout_', true));
+            
+            // Handle AJAX requests
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Admin logout successful. Please login again.',
+                    'redirect' => route('admin.index'),
+                    'cache_cleared' => true,
+                    'cache_version' => $cacheVersion,
+                    'timestamp' => time(),
+                    'csrf_token' => csrf_token() // Provide new CSRF token
+                ])->withHeaders([
+                    'Cache-Control' => 'no-cache, no-store, must-revalidate',
+                    'Pragma' => 'no-cache',
+                    'Expires' => 'Thu, 01 Jan 1970 00:00:00 GMT',
+                    'Clear-Site-Data' => '"cache", "storage"',
+                    'X-Cache-Version' => $cacheVersion,
+                    'X-Admin-Logout' => 'true'
+                ]);
+            }
+            
+            // Flash success message
+            $request->session()->flash('success', 'You have been successfully logged out. Please login again.');
+            
+            return $response;
         } catch (\Exception $e) {
             // Log any errors that occur during logout
             Log::error('Admin logout error', [
@@ -279,6 +299,48 @@ class AdminController extends Controller
             
             return redirect()->route('admin.index')->with('warning', 'Logout completed, but an error occurred. Browser cache cleared for security.');
         }
+    }
+    
+    /**
+     * Extend admin session
+     */
+    public function extendSession(Request $request)
+    {
+        if (Auth::guard('admin')->check()) {
+            // Update session activity
+            $request->session()->put('last_activity', time());
+            
+            Log::info('Admin session extended', [
+                'admin_id' => Auth::guard('admin')->id(),
+                'ip_address' => $request->ip(),
+                'timestamp' => now()
+            ]);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Session extended successfully',
+                'timestamp' => time()
+            ]);
+        }
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Session expired'
+        ], 401);
+    }
+    
+    /**
+     * Get fresh CSRF token
+     */
+    public function getCsrfToken(Request $request)
+    {
+        // Regenerate CSRF token
+        $request->session()->regenerateToken();
+        
+        return response()->json([
+            'token' => csrf_token(),
+            'timestamp' => time()
+        ]);
     }
     
     /**

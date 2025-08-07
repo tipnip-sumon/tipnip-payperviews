@@ -724,6 +724,17 @@
             }
         }
     </script>
+    
+    <!-- Admin Session Manager -->
+    <script src="{{ asset('assets/js/admin-session-manager.js') }}"></script>
+    <script>
+        // Initialize session manager
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof AdminSessionManager !== 'undefined') {
+                console.log('Admin Session Manager loaded successfully');
+            }
+        });
+    </script>
 </body>
 
 </html>

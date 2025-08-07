@@ -147,6 +147,19 @@ class VideoViewController extends Controller
             $todaysViewingSummary = $videoViewService->getTodaysViewingSummary($user->id);
             $todayEarnings = $earningService->getTodaysTotalEarnings($user);
 
+            // Send video watching income notification
+            try {
+                notifyVideoWatchingIncome($user->id, $earningRate, $video->title, $request->watch_duration);
+                
+                // Check if daily quota is completed and send quota notification
+                $assignedVideos = count(json_decode($assignment->video_ids ?? '[]', true) ?: []);
+                if ($todaysViewingSummary['total_videos'] >= $assignedVideos) {
+                    notifyDailyVideoQuota($user->id, $todaysViewingSummary['total_videos'], $assignedVideos, $todayEarnings);
+                }
+            } catch (\Exception $e) {
+                Log::error("Failed to send video watching notification: " . $e->getMessage());
+            }
+
             return response()->json([
                 'success' => true,
                 'message' => 'Congratulations! You earned $' . number_format($earningRate, 4) . ' from today\'s video!',

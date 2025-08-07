@@ -249,6 +249,43 @@ class InvestController extends Controller
         // Pass original amount for sponsor calculations, but deduct discounted amount from wallet
         $hyip->investWithDiscount($originalAmount, $walletDeductionAmount, $wallet, $tokenDiscount, $tokenDetails, $ticketDiscount, $ticketDetails, $appliedTicketNumber);
         
+        // Send investment success notification
+        try {
+            $title = "🎉 Investment Successful!";
+            $message = "You have successfully invested \${$originalAmount} in {$plan->name}.";
+            
+            if ($walletDeductionAmount < $originalAmount) {
+                $totalDiscount = $originalAmount - $walletDeductionAmount;
+                $message .= " You saved \${$totalDiscount} with discounts! Actual paid: \${$walletDeductionAmount}.";
+            }
+            
+            $message .= " You can now start watching videos and earning daily income!";
+            
+            notifyUser($user->id, $title, $message, 'success', [
+                'priority' => 'high',
+                'action_url' => '/user/dashboard',
+                'action_text' => 'Go to Dashboard',
+                'metadata' => [
+                    'plan_name' => $plan->name,
+                    'investment_amount' => $originalAmount,
+                    'actual_paid' => $walletDeductionAmount,
+                    'token_discount' => $tokenDiscount,
+                    'ticket_discount' => $ticketDiscount,
+                    'wallet_type' => $wallet
+                ]
+            ]);
+            
+            Log::info("Investment success notification sent", [
+                'user_id' => $user->id,
+                'plan_id' => $plan->id,
+                'amount' => $originalAmount,
+                'actual_paid' => $walletDeductionAmount
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error("Failed to send investment success notification: " . $e->getMessage());
+        }
+        
         $message = 'Investment successful! You can now start watching ads and earning.';
         if ($tokenDiscount > 0) {
             $message .= " Special token discount of \${$tokenDiscount} applied!";

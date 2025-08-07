@@ -238,6 +238,13 @@ class LotteryDraw extends Model
                         
                         $winners[] = $winningTicket->id;
                         $winnerTickets[] = $winningTicket;
+                        
+                        // Send lottery win notification
+                        try {
+                            notifyLotteryWin($winningTicket->user_id, $prizeAmount, $position, $winningTicket->ticket_number);
+                        } catch (\Exception $e) {
+                            Log::error("Failed to send lottery win notification: " . $e->getMessage());
+                        }
                     }
                 }
             }
@@ -313,6 +320,15 @@ class LotteryDraw extends Model
             'payment_method' => $ticket->payment_method,
             'transaction_id' => $transaction->id
         ]);
+        
+        // Send refund notification for sponsor tickets
+        if ($ticket->payment_method === 'sponsor_reward') {
+            try {
+                notifySponsorTicketRefund($user->id, $refundAmount, $ticket->ticket_number);
+            } catch (\Exception $e) {
+                Log::error("Failed to send sponsor ticket refund notification: " . $e->getMessage());
+            }
+        }
     }
 
     /**

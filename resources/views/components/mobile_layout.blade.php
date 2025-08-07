@@ -225,7 +225,9 @@
                         @auth
                             @php
                                 try {
-                                    $unreadNotifications = auth()->user()->unreadNotifications()->count();
+                                    $unreadNotifications = \App\Models\UserNotification::where('user_id', auth()->id())
+                                                                ->where('read', false)
+                                                                ->count();
                                 } catch (Exception $e) {
                                     $unreadNotifications = 0;
                                 }
@@ -1572,6 +1574,24 @@
         }
     }
 
+    /* Real-time notification animations for mobile */
+    .pulse-animation {
+        animation: mobileBellPulse 2s infinite;
+    }
+
+    @keyframes mobileBellPulse {
+        0% {
+            transform: scale(1);
+        }
+        50% {
+            transform: scale(1.1);
+            color: #007bff;
+        }
+        100% {
+            transform: scale(1);
+        }
+    }
+
     /* Hover and Active States */
     .mobile-nav-link:hover,
     .mobile-nav-link:focus {
@@ -2793,6 +2813,66 @@
         if (yearMobile) {
             yearMobile.textContent = new Date().getFullYear();
         }
+
+        // Real-time notification badge update system for mobile
+        @auth
+        function updateMobileNotificationBadge() {
+            fetch('{{ route("user.notifications.count") }}', {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                const mobileBadge = document.querySelector('.notifications-link .notification-dot');
+                const bellIcon = document.querySelector('.notifications-link .bx-bell');
+                
+                if (data.count > 0) {
+                    if (mobileBadge) {
+                        mobileBadge.textContent = data.count;
+                        mobileBadge.style.display = 'flex';
+                    } else {
+                        // Create badge if it doesn't exist
+                        const newBadge = document.createElement('span');
+                        newBadge.className = 'notification-dot';
+                        newBadge.textContent = data.count;
+                        document.querySelector('.notifications-link .nav-icon-wrapper').appendChild(newBadge);
+                    }
+                    
+                    // Add pulse animation to bell icon
+                    if (bellIcon) {
+                        bellIcon.classList.add('pulse-animation');
+                    }
+                } else {
+                    if (mobileBadge) {
+                        mobileBadge.style.display = 'none';
+                    }
+                    // Remove pulse animation from bell icon
+                    if (bellIcon) {
+                        bellIcon.classList.remove('pulse-animation');
+                    }
+                }
+            })
+            .catch(error => {
+                console.log('Mobile notification update error:', error);
+            });
+        }
+
+        // Update mobile notification badge every 30 seconds
+        setInterval(updateMobileNotificationBadge, 30000);
+
+        // Also update when page becomes visible again (user returns to tab)
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden) {
+                updateMobileNotificationBadge();
+            }
+        });
+
+        // Initial update after page load
+        setTimeout(updateMobileNotificationBadge, 2000); // Wait 2 seconds after page load
+        @endauth
     });
     </script>
     <!-- Loader Element for custom.js compatibility -->

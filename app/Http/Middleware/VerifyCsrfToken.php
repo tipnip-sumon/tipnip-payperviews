@@ -16,5 +16,6 @@ class VerifyCsrfToken extends Middleware
         '/admin/logout',
         'logout',
         '/logout',
+        'api/*', // API routes typically don't need CSRF
     ];
 }

@@ -136,7 +136,7 @@ Route::get('get-countries', function () {
 
 Route::get('/admin', [AdminController::class, 'index'])->name('admin.index')->middleware('clear.login.cache');
 Route::post('admin/login', [AdminController::class, 'login'])->name('admin.login')->middleware('throttle:5,1');
-Route::get('/admin/video-leaderboard', [VideoLinkController::class, 'leaderboard'])->name('video.leaderboard');
+Route::get('/admin/video-leaderboard', [VideoLinkController::class, 'leaderboard'])->name('video.leaderboard')->middleware(['ok-user','prevent-back']);
 
 // Newsletter Routes
 Route::post('/newsletter/subscribe', [NewsletterController::class, 'subscribe'])->name('newsletter.subscribe');
@@ -314,6 +314,15 @@ Route::post('/email/resend-public', [App\Http\Controllers\Auth\VerificationContr
     ->name('verification.resend.public');
 
 // =============================================================================
+// PROTECTED MAIN ROUTES - Authentication Required
+// =============================================================================
+
+// Main invest route - requires authentication  
+Route::get('/invest', function () {
+    return redirect()->route('invest.index');
+})->middleware('auth')->name('main.invest');
+
+// =============================================================================
 // REFERRAL ROUTES
 // =============================================================================
 
@@ -341,6 +350,10 @@ Route::prefix('admin')->group(function () {
     Route::get('/transfer_stats', [AdminTransReceiveController::class, 'getTransferStats'])->name('admin.transfer_stats')->middleware(['ok-user','prevent-back']);
     Route::post('/logout', [AdminController::class, 'logout'])->name('admin.logout')->middleware(['ok-user','prevent-back']);
     Route::get('/logout', [AdminController::class, 'logout'])->name('admin.logout.get')->middleware(['ok-user','prevent-back']); // Allow GET for logout links
+    
+    // Session management routes
+    Route::post('/extend-session', [AdminController::class, 'extendSession'])->name('admin.extend-session')->middleware(['ok-user']);
+    Route::get('/csrf-token', [AdminController::class, 'getCsrfToken'])->name('admin.csrf-token');
     
     Route::get('/profile', [AdminController::class, 'profile'])->name('admin.profile');
     Route::post('/profile/update', [AdminController::class, 'updateProfile'])->name('admin.profile.update');
@@ -850,7 +863,7 @@ Route::prefix('admin')->middleware(['ok-user','prevent-back'])->group(function (
 // VIDEO ROUTES
 // =============================================================================
 
-Route::get('/videos', [VideoLinkController::class, 'publicGallery'])->name('videos.public');
+Route::get('/videos', [VideoLinkController::class, 'publicGallery'])->name('videos.public')->middleware('auth');
 
 // Redirect old service worker URLs to correct route
 Route::get('/videos/public', function () {
@@ -1123,4 +1136,18 @@ Route::middleware(['ok-user','prevent-back'])->prefix('admin/email-campaigns')->
     
     // Command Execution
     Route::post('/run-command', [App\Http\Controllers\admin\EmailCampaignController::class, 'runCommand'])->name('run-command');
+});
+
+// =============================================================================
+// FALLBACK ROUTE - Redirect unauthenticated users to login
+// =============================================================================
+
+// Catch all undefined routes and redirect unauthenticated users to login
+Route::fallback(function () {
+    if (!Auth::check()) {
+        return redirect()->route('login')->with('error', 'You must be logged in to access this page.');
+    }
+    
+    // If authenticated but page doesn't exist, show 404
+    abort(404);
 });

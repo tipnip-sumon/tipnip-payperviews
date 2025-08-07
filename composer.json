@@ -37,7 +37,8 @@
             "app/helpers/UserHelper.php",
             "app/helpers/LotteryHelper.php",
             "app/helpers/PermissionHelper.php",
-            "app/helpers/SessionNotificationHelper.php"
+            "app/helpers/SessionNotificationHelper.php",
+            "app/helpers/ActivityNotifications.php"
         ],
         "psr-4": {
             "App\\": "app/",
