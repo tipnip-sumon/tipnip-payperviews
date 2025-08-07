@@ -89,7 +89,7 @@
                             <span class="badge badge-success ms-auto">{{ $userTicketsCount }} tickets</span>
                         @endif
                     @endauth
-                    <i class="fe fe-chevron-right side-menu__angle oph-5"></i> 
+                    <i class="fe fe-chevron-right side-menu__angle oph-5"></i>
                 </a>
                 <ul class="slide-menu child2">
                     <li class="slide">

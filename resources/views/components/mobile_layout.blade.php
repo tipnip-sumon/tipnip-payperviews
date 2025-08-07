@@ -148,15 +148,6 @@
         <!-- Mobile Bottom Navigation -->
         <nav class="mobile-navbar" role="navigation" aria-label="Mobile Navigation">
             <div class="mobile-nav-items">
-                <!-- Home -->
-                <a href="javascript:void(0);" 
-                   class="mobile-nav-link home-link"
-                   onclick="openMobileModal('home');">
-                    <span class="nav-icon-wrapper">
-                        <i class="bx bx-home nav-icon"></i>
-                    </span>
-                    <span class="nav-text">Home</span>
-                </a>
 
                 <!-- Videos -->
                 <a href="javascript:void(0);" 
@@ -179,16 +170,6 @@
                     @auth
                         <span class="balance-indicator">${{number_format((auth()->user()->deposit_wallet + auth()->user()->interest_wallet) ?? 0, 2)}}</span>
                     @endauth
-                </a>
-
-                <!-- Profile -->
-                <a href="javascript:void(0);" 
-                   class="mobile-nav-link profile-link"
-                   onclick="openMobileModal('profile')">
-                    <span class="nav-icon-wrapper">
-                        <i class="bx bx-user nav-icon"></i>
-                    </span>
-                    <span class="nav-text">Profile</span>
                 </a>
 
                 <!-- Lottery -->
@@ -216,26 +197,29 @@
                     <span class="nav-text">Lottery</span>
                 </a>
 
-                <!-- Messages -->
+                <!-- Plan/Investment/VAPS -->
                 <a href="javascript:void(0);" 
-                   class="mobile-nav-link messages-link"
-                   onclick="openMobileModal('messages')">
+                   class="mobile-nav-link plan-link"
+                   onclick="openMobileModal('grid')">
                     <span class="nav-icon-wrapper">
-                        <i class="bx bx-envelope nav-icon"></i>
+                        <i class="bx bx-trending-up nav-icon"></i>
                         @auth
                             @php
                                 try {
-                                    $unreadMessagesCount = \App\Models\Message::where('to_user_id', auth()->id())->where('is_read', 0)->count();
+                                    // Check for active investment plans
+                                    $activePlans = \App\Models\Invest::where('user_id', auth()->id())
+                                                                      ->where('status', 'active')
+                                                                      ->count();
                                 } catch (Exception $e) {
-                                    $unreadMessagesCount = 0;
+                                    $activePlans = 0;
                                 }
                             @endphp
-                            @if($unreadMessagesCount > 0)
-                                <span class="notification-dot">{{$unreadMessagesCount}}</span>
+                            @if($activePlans > 0)
+                                <span class="notification-dot">{{$activePlans}}</span>
                             @endif
                         @endauth
                     </span>
-                    <span class="nav-text">Messages</span>
+                    <span class="nav-text">VAPS</span>
                 </a>
 
                 <!-- Notifications -->
@@ -434,7 +418,7 @@
                                     </div>
                                 </a>
                             </div>
-                            <div class="col-6">
+                            <div class="col-12">
                                 <a href="{{ route('user.video-views.gallery') }}" class="btn btn-outline-info w-100 p-3 mobile-feature-btn d-flex flex-column align-items-center">
                                     <i class="bx bx-collection mb-1"></i>
                                     <div class="mobile-btn-content text-center">
@@ -443,7 +427,7 @@
                                     </div>
                                 </a>
                             </div>
-                            <div class="col-6">
+                            <div class="col-12">
                                 <a href="{{ route('user.video-views.earnings') }}" class="btn btn-outline-success w-100 p-3 mobile-feature-btn d-flex flex-column align-items-center">
                                     <i class="bx bx-dollar mb-1"></i>
                                     <div class="mobile-btn-content text-center">
@@ -610,16 +594,16 @@
     <div class="modal fade" id="mobileProfileModal" tabindex="-1" aria-labelledby="mobileProfileModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-md modal-dialog-scrollable">
             <div class="modal-content mobile-modal-content">
-                <div class="modal-header bg-secondary text-white py-3 mobile-modal-header">
+                <div class="modal-header bg-primary text-white py-3 mobile-modal-header">
                     <h5 class="modal-title" id="mobileProfileModalLabel">
-                        <i class="bx bx-user me-2"></i>Profile & Settings
+                        <i class="bx bx-menu me-2"></i>Main Menu
                     </h5>
                     <button type="button" class="btn-close btn-close-white mobile-close-btn" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4 mobile-modal-body">
                     @auth
-                    <!-- Profile Header -->
-                    <div class="profile-header text-center mb-4 p-4 bg-secondary bg-opacity-10 rounded-3">
+                    <!-- User Info Quick Header -->
+                    <div class="user-quick-info text-center mb-4 p-3 bg-primary bg-opacity-10 rounded-3">
                         @php
                             $profileImage = auth()->user()->image 
                                 ? asset('assets/images/users/'.auth()->user()->image) 
@@ -627,18 +611,116 @@
                         @endphp
                         <img src="{{$profileImage}}" 
                              alt="{{auth()->user()->username ?? 'Profile'}}" 
-                             class="rounded-circle mb-3"
-                             style="width: 80px; height: 80px; object-fit: cover; border: 3px solid #6c757d;"
+                             class="rounded-circle mb-2"
+                             style="width: 50px; height: 50px; object-fit: cover; border: 2px solid #007bff;"
                              onerror="this.src='{{asset('assets/images/users/9.jpg')}}'">
-                        <h5 class="mb-1">{{auth()->user()->username ?? 'User'}}</h5>
-                        <p class="text-muted mb-2">{{auth()->user()->email ?? 'No Email'}}</p>
-                        <span class="badge bg-success">Active Member</span>
+                        <h6 class="mb-1">{{auth()->user()->username ?? 'User'}}</h6>
+                        <small class="text-muted">Welcome back!</small>
                     </div>
 
-                    <!-- Profile Management Section -->
+                    <!-- Main Navigation Menu -->
                     <div class="mb-4">
                         <h6 class="text-muted mb-3 small section-header">
-                            <i class="bx bx-edit me-2"></i>Profile Management
+                            <i class="bx bx-home me-2"></i>Dashboard & Home
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <a href="{{ route('user.dashboard') }}" class="btn btn-primary w-100 p-3 mobile-feature-btn">
+                                    <i class="bx bx-home mb-1"></i>
+                                    <div class="mobile-btn-content">
+                                        <strong class="small">Dashboard</strong>
+                                        <small class="d-block text-white-50">Main overview</small>
+                                    </div>
+                                </a>
+                            </div>
+                            <div class="col-6">
+                                <a href="{{ route('user.video-views.index') }}" class="btn btn-outline-primary w-100 p-3 mobile-feature-btn">
+                                    <i class="bx bx-video mb-1"></i>
+                                    <div class="mobile-btn-content">
+                                        <strong class="small">Videos</strong>
+                                        <small class="d-block">Watch & earn</small>
+                                    </div>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Financial Menu -->
+                    <div class="mb-4">
+                        <h6 class="text-muted mb-3 small section-header">
+                            <i class="bx bx-wallet me-2"></i>Wallet & Finance
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <a href="{{ route('user.dashboard') }}" class="btn btn-success w-100 p-3 mobile-feature-btn">
+                                    <i class="bx bx-wallet mb-1"></i>
+                                    <div class="mobile-btn-content">
+                                        <strong class="small">Wallet</strong>
+                                        <small class="d-block text-white-50">Balance & funds</small>
+                                    </div>
+                                </a>
+                            </div>
+                            <div class="col-6">
+                                <a href="{{ route('invest.index') }}" class="btn btn-outline-success w-100 p-3 mobile-feature-btn">
+                                    <i class="bx bx-transfer mb-1"></i>
+                                    <div class="mobile-btn-content">
+                                        <strong class="small">Video Access Security</strong>
+                                        <small class="d-block">Video Access Security Plan</small>
+                                    </div>
+                                </a>
+                            </div>
+                            <div class="col-6">
+                                <a href="{{ route('deposit.index') }}" class="btn btn-outline-info w-100 p-3 mobile-feature-btn">
+                                    <i class="bx bx-plus-circle mb-1"></i>
+                                    <div class="mobile-btn-content">
+                                        <strong class="small">Deposit</strong>
+                                        <small class="d-block">Add funds</small>
+                                    </div>
+                                </a>
+                            </div>
+                            <div class="col-6">
+                                <a href="{{ route('user.withdraw.wallet') }}" class="btn btn-outline-warning w-100 p-3 mobile-feature-btn">
+                                    <i class="bx bx-minus-circle mb-1"></i>
+                                    <div class="mobile-btn-content">
+                                        <strong class="small">Withdraw</strong>
+                                        <small class="d-block">Cash out</small>
+                                    </div>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Lottery & Games -->
+                    <div class="mb-4">
+                        <h6 class="text-muted mb-3 small section-header">
+                            <i class="bx bx-gift me-2"></i>Lottery & Games
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <a href="{{ route('lottery.index') }}" class="btn btn-warning w-100 p-3 mobile-feature-btn">
+                                    <i class="bx bx-gift mb-1"></i>
+                                    <div class="mobile-btn-content">
+                                        <strong class="small">Lottery</strong>
+                                        <small class="d-block text-dark">Active draws</small>
+                                    </div>
+                                </a>
+                            </div>
+                            <div class="col-6">
+                                <a href="{{ route('lottery.my.tickets') }}" class="btn btn-outline-warning w-100 p-3 mobile-feature-btn">
+                                    <i class="bx bx-ticket mb-1"></i>
+                                    <div class="mobile-btn-content">
+                                        <strong class="small">My Tickets</strong>
+                                        <small class="d-block">View tickets</small>
+                                    </div>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Profile & Account -->
+                    <div class="mb-4">
+                        <h6 class="text-muted mb-3 small section-header">
+                            <i class="bx bx-user me-2"></i>Profile & Account
                         </h6>
                         <div class="row g-3">
                             <div class="col-12">
@@ -646,45 +728,63 @@
                                     <i class="bx bx-edit mb-1"></i>
                                     <div class="mobile-btn-content">
                                         <strong class="small">Edit Profile</strong>
-                                        <small class="d-block text-white-50">Update personal information</small>
+                                        <small class="d-block text-white-50">Update info</small>
                                     </div>
                                 </a>
                             </div>
-                            <div class="col-6">
-                                <a href="{{ route('profile.password') }}" class="btn btn-outline-danger w-100 p-3 mobile-feature-btn">
-                                    <i class="bx bx-lock mb-1"></i>
+                            <div class="col-12">
+                                <a href="{{ route('user.notifications.index') }}" class="btn btn-outline-secondary w-100 p-3 mobile-feature-btn">
+                                    <i class="bx bx-bell mb-1"></i>
                                     <div class="mobile-btn-content">
-                                        <strong class="small">Password</strong>
-                                        <small class="d-block">Change password</small>
+                                        <strong class="small">Notifications</strong>
+                                        <small class="d-block">View alerts</small>
                                     </div>
                                 </a>
                             </div>
-                            <div class="col-6">
-                                <a href="{{ route('profile.security') }}" class="btn btn-outline-warning w-100 p-3 mobile-feature-btn">
+                            <div class="col-12">
+                                <a href="{{ route('profile.security') }}" class="btn btn-outline-danger w-100 p-3 mobile-feature-btn">
                                     <i class="bx bx-shield mb-1"></i>
                                     <div class="mobile-btn-content">
                                         <strong class="small">Security</strong>
-                                        <small class="d-block">2FA & security</small>
+                                        <small class="d-block">2FA & settings</small>
+                                    </div>
+                                </a>
+                            </div>
+                            <div class="col-12">
+                                <a href="{{ route('user.kyc.index') }}" class="btn btn-outline-info w-100 p-3 mobile-feature-btn">
+                                    <i class="bx bx-id-card mb-1"></i>
+                                    <div class="mobile-btn-content">
+                                        <strong class="small">KYC</strong>
+                                        <small class="d-block">Verification</small>
                                     </div>
                                 </a>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Verification Section -->
+                    <!-- Support & More -->
                     <div class="mb-3">
                         <h6 class="text-muted mb-3 small section-header">
-                            <i class="bx bx-id-card me-2"></i>Account Verification
+                            <i class="bx bx-help-circle me-2"></i>Support & More
                         </h6>
                         <div class="row g-3">
                             <div class="col-12">
-                                <a href="{{ route('user.kyc.index') }}" class="btn btn-outline-info w-100 p-3 mobile-feature-btn">
-                                    <i class="bx bx-id-card mb-1"></i>
+                                <a href="{{ route('user.messages') }}" class="btn btn-info w-100 p-3 mobile-feature-btn">
+                                    <i class="bx bx-envelope mb-1"></i>
                                     <div class="mobile-btn-content">
-                                        <strong class="small">KYC Verification</strong>
-                                        <small class="d-block">Identity verification & document upload</small>
+                                        <strong class="small">Messages</strong>
+                                        <small class="d-block text-white-50">Chat & support</small>
                                     </div>
                                 </a>
+                            </div>
+                            <div class="col-12">
+                                <button onclick="confirmLogout()" class="btn btn-danger w-100 p-3 mobile-feature-btn">
+                                    <i class="bx bx-log-out mb-1"></i>
+                                    <div class="mobile-btn-content">
+                                        <strong class="small">Logout</strong>
+                                        <small class="d-block text-white-50">Sign out</small>
+                                    </div>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -712,77 +812,230 @@
         </div>
     </div>
 
-    <!-- Messages & Communication Modal -->
-    <div class="modal fade" id="mobileMessagesModal" tabindex="-1" aria-labelledby="mobileMessagesModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
-            <div class="modal-content">
-                <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title" id="mobileMessagesModalLabel">
-                        <i class="bx bx-envelope me-2"></i>Messages & Communication
+    <!-- Plan/Investment/VAPS Modal - NEWLY CREATED -->
+    {{-- <div class="modal fade" id="mobilePlanModal" tabindex="-1" aria-labelledby="mobilePlanModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+            <div class="modal-content mobile-modal-content">
+                <div class="modal-header text-white py-3 mobile-modal-header" style="background: linear-gradient(135deg, #28a745 0%, #20c997 50%, #17a2b8 100%);">
+                    <h5 class="modal-title" id="mobilePlanModalLabel">
+                        <i class="bx bx-trending-up me-2"></i>Plan/Investment/VAPS
                     </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close btn-close-white mobile-close-btn" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body p-4">
+                <div class="modal-body p-4 mobile-modal-body">
                     @auth
-                    <!-- Message Stats -->
-                    <div class="row mb-4">
-                        @php
-                            $totalMessagesCount = \App\Models\Message::where('to_user_id', auth()->id())->count();
-                            $unreadMessagesCount = \App\Models\Message::where('to_user_id', auth()->id())->where('is_read', 0)->count();
-                        @endphp
-                        <div class="col-6">
-                            <div class="stat-card text-center p-3 bg-primary bg-opacity-10 rounded">
-                                <h4 class="text-primary mb-1">{{$totalMessagesCount}}</h4>
-                                <small class="text-muted">Total Messages</small>
+                    <!-- Investment Stats Display -->
+                    <div class="stats-section mb-4 p-3 bg-success bg-opacity-10 rounded-3">
+                        <div class="row text-center g-0">
+                            @php
+                                try {
+                                    $totalInvestment = \App\Models\Invest::where('user_id', auth()->id())->sum('amount') ?? 0;
+                                    $activeInvestments = \App\Models\Invest::where('user_id', auth()->id())->where('status', 'active')->count() ?? 0;
+                                    $totalReturns = \App\Models\Invest::where('user_id', auth()->id())->sum('total_return') ?? 0;
+                                } catch (Exception $e) {
+                                    $totalInvestment = 0;
+                                    $activeInvestments = 0;
+                                    $totalReturns = 0;
+                                }
+                            @endphp
+                            <div class="col-4">
+                                <h4 class="text-success mb-1">${{number_format($totalInvestment, 2)}}</h4>
+                                <small class="text-muted">Total Invested</small>
                             </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="stat-card text-center p-3 bg-danger bg-opacity-10 rounded">
-                                <h4 class="text-danger mb-1">{{$unreadMessagesCount}}</h4>
-                                <small class="text-muted">Unread</small>
+                            <div class="col-4">
+                                <h4 class="text-primary mb-1">{{$activeInvestments}}</h4>
+                                <small class="text-muted">Active Plans</small>
+                            </div>
+                            <div class="col-4">
+                                <h4 class="text-warning mb-1">${{number_format($totalReturns, 2)}}</h4>
+                                <small class="text-muted">Total Returns</small>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Message Actions -->
-                    <div class="row g-3">
-                        <div class="col-12">
-                            <a href="{{ route('user.messages') }}" class="btn btn-primary w-100 p-3">
-                                <i class="bx bx-message-dots me-2"></i>
-                                <div>
-                                    <strong>All Messages</strong>
-                                    <small class="d-block text-white-50">View all conversations</small>
-                                </div>
-                            </a>
-                        </div>
-                        <div class="col-6">
-                            <a href="{{ route('user.messages.inbox') }}" class="btn btn-outline-primary w-100 p-3">
-                                <i class="bx bx-inbox me-2"></i>
-                                <div>
-                                    <strong>Inbox</strong>
-                                    <small class="d-block">Received messages</small>
-                                </div>
-                            </a>
-                        </div>
-                        <div class="col-6">
-                            <a href="{{ route('user.messages.sent') }}" class="btn btn-outline-success w-100 p-3">
-                                <i class="bx bx-send me-2"></i>
-                                <div>
-                                    <strong>Sent</strong>
-                                    <small class="d-block">Sent messages</small>
-                                </div>
-                            </a>
-                        </div>
-                        <div class="col-12">
-                            <a href="{{ route('referral.index') }}" class="btn btn-outline-info w-100 p-3">
-                                <i class="bx bx-users me-2"></i>
-                                <div>
-                                    <strong>Referral Network</strong>
-                                    <small class="d-block">Manage referrals & team communication</small>
-                                </div>
-                            </a>
+                    <!-- VAPS (Video Access Protection System) Section -->
+                    <div class="mb-4">
+                        <h6 class="text-muted mb-3 small section-header">
+                            <i class="bx bx-shield me-2"></i>Video Access Protection System (VAPS)
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <a href="{{ route('invest.index') }}" class="btn w-100 p-3 text-white mobile-feature-btn d-flex flex-column align-items-center" style="background: linear-gradient(135deg, #28a745, #20c997);">
+                                    <i class="bx bx-shield-check mb-1"></i>
+                                    <div class="mobile-btn-content text-center">
+                                        <strong class="small text-white">VAPS Plans</strong>
+                                        <small class="d-block text-white-75">Video Access Security</small>
+                                    </div>
+                                </a>
+                            </div>
+                            <div class="col-6">
+                                <a href="{{ route('invest.history') }}" class="btn btn-outline-success w-100 p-3 mobile-feature-btn d-flex flex-column align-items-center">
+                                    <i class="bx bx-history mb-1"></i>
+                                    <div class="mobile-btn-content text-center">
+                                        <strong class="small">Investment History</strong>
+                                        <small class="d-block">Past investments</small>
+                                    </div>
+                                </a>
+                            </div>
+                            <div class="col-6">
+                                <a href="{{ route('invest.statistics') }}" class="btn btn-outline-warning w-100 p-3 mobile-feature-btn d-flex flex-column align-items-center">
+                                    <i class="bx bx-trending-up mb-1"></i>
+                                    <div class="mobile-btn-content text-center">
+                                        <strong class="small">Statistics</strong>
+                                        <small class="d-block">View analytics</small>
+                                    </div>
+                                </a>
+                            </div>
                         </div>
                     </div>
+
+                    <!-- Investment Plans Section -->
+                    <div class="mb-4">
+                        <h6 class="text-muted mb-3 small section-header">
+                            <i class="bx bx-package me-2"></i>Available Investment Plans
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <a href="{{ route('invest.index') }}" class="btn btn-outline-primary w-100 p-3 mobile-feature-btn d-flex flex-column align-items-center">
+                                    <i class="bx bx-star mb-1"></i>
+                                    <div class="mobile-btn-content text-center">
+                                        <strong class="small">Basic Plan</strong>
+                                        <small class="d-block">Start investing</small>
+                                    </div>
+                                </a>
+                            </div>
+                            <div class="col-6">
+                                <a href="{{ route('invest.index') }}" class="btn btn-outline-warning w-100 p-3 mobile-feature-btn d-flex flex-column align-items-center">
+                                    <i class="bx bx-crown mb-1"></i>
+                                    <div class="mobile-btn-content text-center">
+                                        <strong class="small">Premium Plan</strong>
+                                        <small class="d-block">High returns</small>
+                                    </div>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Portfolio Management Section -->
+                    <div class="mb-4">
+                        <h6 class="text-muted mb-3 small section-header">
+                            <i class="bx bx-briefcase me-2"></i>Portfolio Management
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <a href="{{ route('invest.log') }}" class="btn btn-outline-info w-100 p-3 mobile-feature-btn d-flex flex-column align-items-center">
+                                    <i class="bx bx-pie-chart mb-1"></i>
+                                    <div class="mobile-btn-content text-center">
+                                        <strong class="small">Portfolio</strong>
+                                        <small class="d-block">Investment logs</small>
+                                    </div>
+                                </a>
+                            </div>
+                            <div class="col-6">
+                                <a href="{{ route('invest.statistics') }}" class="btn btn-outline-secondary w-100 p-3 mobile-feature-btn d-flex flex-column align-items-center">
+                                    <i class="bx bx-calculator mb-1"></i>
+                                    <div class="mobile-btn-content text-center">
+                                        <strong class="small">Calculator</strong>
+                                        <small class="d-block">Plan returns</small>
+                                    </div>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions Section -->
+                    <div class="mb-3">
+                        <h6 class="text-muted mb-3 small section-header">
+                            <i class="bx bx-flash me-2"></i>Quick Actions
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <a href="{{ route('invest.index') }}" class="btn btn-success w-100 p-3 mobile-feature-btn d-flex flex-column align-items-center">
+                                    <i class="bx bx-refresh mb-1"></i>
+                                    <div class="mobile-btn-content text-center">
+                                        <strong class="small text-white">New Investment</strong>
+                                        <small class="d-block text-white-50">Start investing</small>
+                                    </div>
+                                </a>
+                            </div>
+                            <div class="col-6">
+                                <a href="{{ route('user.withdraw.wallet') }}" class="btn btn-warning w-100 p-3 mobile-feature-btn d-flex flex-column align-items-center">
+                                    <i class="bx bx-money mb-1"></i>
+                                    <div class="mobile-btn-content text-center">
+                                        <strong class="small">Withdraw</strong>
+                                        <small class="d-block text-dark">Cash out</small>
+                                    </div>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    @else
+                    <!-- Guest User Content -->
+                    <div class="text-center mb-4">
+                        <i class="bx bx-trending-up display-1 mb-3" style="color: #28a745;"></i>
+                        <h5>Start Your Investment Journey</h5>
+                        <p class="text-muted">Login to access VAPS and investment plans</p>
+                    </div>
+                    <div class="d-grid gap-2">
+                        <a href="{{ route('login') }}" class="btn btn-lg text-white" style="background: linear-gradient(135deg, #28a745, #20c997);">
+                            <i class="bx bx-log-in me-2"></i>Login to Invest
+                        </a>
+                        <a href="{{ route('register') }}" class="btn btn-outline-success">
+                            <i class="bx bx-user-plus me-2"></i>Create Account & Invest
+                        </a>
+                    </div>
+                    @endauth
+                </div>
+            </div>
+        </div>
+    </div> --}}
+
+    <!-- Custom Grid Modal - 1x1 GRID LAYOUT (Perfect like mobileWalletModal) -->
+    <div class="modal fade" id="mobileGridModal" tabindex="-1" aria-labelledby="mobileGridModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-md modal-dialog-scrollable">
+            <div class="modal-content mobile-modal-content">
+                <div class="modal-header bg-info text-white py-3 mobile-modal-header">
+                    <h5 class="modal-title" id="mobileGridModalLabel">
+                        <i class="bx bx-grid me-2"></i>Video Access Plan Security (VAPS)
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white mobile-close-btn" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4 mobile-modal-body">
+                    @auth
+
+                    <!-- Secondary Features Section -->
+                    <div class="mb-4">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <a href="{{ route('invest.index') }}" class="btn btn-outline-info w-100 p-3 mobile-feature-btn">
+                                    <i class="bx bx-trending-up mb-1"></i>
+                                    <div class="mobile-btn-content">
+                                        <strong class="small">Investment Plans</strong>
+                                        <small class="d-block">VAPS & more</small>
+                                    </div>
+                                </a>
+                            </div>
+                            <div class="col-12">
+                                <a href="{{ route('deposit.index') }}" class="btn btn-outline-success w-100 p-3 mobile-feature-btn">
+                                    <i class="bx bx-plus-circle mb-1"></i>
+                                    <div class="mobile-btn-content">
+                                        <strong class="small">Deposit</strong>
+                                        <small class="d-block">Add funds</small>
+                                    </div>
+                                </a>
+                            </div>
+                            <div class="col-12">
+                                <a href="{{ route('user.withdraw') }}" class="btn btn-outline-warning w-100 p-3 mobile-feature-btn">
+                                    <i class="bx bx-minus-circle mb-1"></i>
+                                    <div class="mobile-btn-content">
+                                        <strong class="small">Invest Withdraw</strong>
+                                        <small class="d-block">Cash out</small>
+                                    </div>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    @else
                     @endauth
                 </div>
             </div>
@@ -842,7 +1095,7 @@
                                     @endif
                                 </a>
                             </div>
-                            <div class="col-6">
+                            <div class="col-12">
                                 <a href="{{ route('user.session-notifications') }}" class="btn btn-outline-info w-100 p-3 mobile-feature-btn d-flex flex-column align-items-center">
                                     <i class="bx bx-time mb-1"></i>
                                     <div class="mobile-btn-content text-center">
@@ -851,7 +1104,7 @@
                                     </div>
                                 </a>
                             </div>
-                            <div class="col-6">
+                            <div class="col-12">
                                 <a href="{{ route('user.notifications.settings') }}" class="btn btn-outline-primary w-100 p-3 mobile-feature-btn d-flex flex-column align-items-center">
                                     <i class="bx bx-cog mb-1"></i>
                                     <div class="mobile-btn-content text-center">
@@ -921,7 +1174,7 @@
                             <i class="bx bx-category me-2"></i>Notification Types
                         </h6>
                         <div class="row g-3">
-                            <div class="col-6">
+                            <div class="col-12">
                                 <a href="{{ route('user.notifications.index', ['type' => 'system']) }}" class="btn btn-outline-secondary w-100 p-3 mobile-feature-btn d-flex flex-column align-items-center">
                                     <i class="bx bx-cog mb-1"></i>
                                     <div class="mobile-btn-content text-center">
@@ -930,7 +1183,7 @@
                                     </div>
                                 </a>
                             </div>
-                            <div class="col-6">
+                            <div class="col-12">
                                 <a href="{{ route('user.notifications.index', ['type' => 'security']) }}" class="btn btn-outline-danger w-100 p-3 mobile-feature-btn d-flex flex-column align-items-center">
                                     <i class="bx bx-shield mb-1"></i>
                                     <div class="mobile-btn-content text-center">
@@ -939,7 +1192,7 @@
                                     </div>
                                 </a>
                             </div>
-                            <div class="col-6">
+                            <div class="col-12">
                                 <a href="{{ route('user.notifications.index', ['type' => 'transaction']) }}" class="btn btn-outline-success w-100 p-3 mobile-feature-btn d-flex flex-column align-items-center">
                                     <i class="bx bx-dollar mb-1"></i>
                                     <div class="mobile-btn-content text-center">
@@ -948,7 +1201,7 @@
                                     </div>
                                 </a>
                             </div>
-                            <div class="col-6">
+                            <div class="col-12">
                                 <a href="{{ route('user.notifications.index', ['type' => 'general']) }}" class="btn btn-outline-info w-100 p-3 mobile-feature-btn d-flex flex-column align-items-center">
                                     <i class="bx bx-info-circle mb-1"></i>
                                     <div class="mobile-btn-content text-center">
@@ -966,7 +1219,7 @@
                             <i class="bx bx-check-double me-2"></i>Quick Actions
                         </h6>
                         <div class="row g-3">
-                            <div class="col-6">
+                            <div class="col-12">
                                 <button onclick="markAllNotificationsRead()" class="btn btn-outline-success w-100 p-3 mobile-feature-btn d-flex flex-column align-items-center">
                                     <i class="bx bx-check-double mb-1"></i>
                                     <div class="mobile-btn-content text-center">
@@ -975,7 +1228,7 @@
                                     </div>
                                 </button>
                             </div>
-                            <div class="col-6">
+                            <div class="col-12">
                                 <button onclick="clearAllNotifications()" class="btn btn-outline-danger w-100 p-3 mobile-feature-btn d-flex flex-column align-items-center">
                                     <i class="bx bx-trash mb-1"></i>
                                     <div class="mobile-btn-content text-center">
@@ -1201,7 +1454,7 @@
                                     </div>
                                 </a>
                             </div>
-                            <div class="col-6">
+                            <div class="col-12">
                                 <a href="{{ route('lottery.index') }}" class="btn btn-outline-primary w-100 p-3 mobile-feature-btn d-flex flex-column align-items-center" style="border-color: #6f42c1; color: #6f42c1;">
                                     <i class="bx bx-ticket mb-1"></i>
                                     <div class="mobile-btn-content text-center">
@@ -1210,7 +1463,7 @@
                                     </div>
                                 </a>
                             </div>
-                            <div class="col-6">
+                            <div class="col-12">
                                 <a href="{{ route('lottery.unified.activity.all') }}" class="btn btn-outline-success w-100 p-3 mobile-feature-btn d-flex flex-column align-items-center" style="border-color: #fd7e14; color: #fd7e14;">
                                     <i class="bx bx-receipt mb-1"></i>
                                     <div class="mobile-btn-content text-center">
@@ -1228,7 +1481,7 @@
                             <i class="bx bx-cog me-2"></i>Tools & Support
                         </h6>
                         <div class="row g-3">
-                            <div class="col-6">
+                            <div class="col-12">
                                 <a href="{{ route('lottery.share') }}" class="btn btn-outline-info w-100 p-3 mobile-feature-btn d-flex flex-column align-items-center">
                                     <i class="bx bx-share mb-1"></i>
                                     <div class="mobile-btn-content text-center">
@@ -1237,7 +1490,7 @@
                                     </div>
                                 </a>
                             </div>
-                            <div class="col-6">
+                            <div class="col-12">
                                 <a href="{{ route('lottery.unified.index') }}" class="btn btn-outline-warning w-100 p-3 mobile-feature-btn d-flex flex-column align-items-center">
                                     <i class="bx bx-info-circle mb-1"></i>
                                     <div class="mobile-btn-content text-center">
@@ -2848,7 +3101,7 @@
         }
         
         // Test if all modal elements exist
-        const modalTypes = ['home', 'videos', 'wallet', 'profile', 'messages', 'notifications', 'more', 'lottery'];
+        const modalTypes = ['videos', 'wallet', 'messages', 'notifications', 'more', 'lottery'];
         modalTypes.forEach(type => {
             const modalId = `mobile${type.charAt(0).toUpperCase() + type.slice(1)}Modal`;
             const modalElement = document.querySelector(`#${modalId}`);
