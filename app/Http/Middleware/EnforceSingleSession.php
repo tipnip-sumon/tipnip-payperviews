@@ -25,7 +25,10 @@ class EnforceSingleSession
             $sessionId = session('user_session_id');
 
             // Skip session check for logout requests to prevent issues
-            if ($request->routeIs('logout') || $request->routeIs('simple.logout') || $request->is('logout') || $request->is('simple-logout')) {
+            if ($request->routeIs('logout') || $request->routeIs('simple.logout') || 
+                $request->is('logout') || $request->is('simple-logout') ||
+                str_contains($request->getRequestUri(), 'logout') ||
+                $request->has('from_logout')) {
                 return $next($request);
             }
 

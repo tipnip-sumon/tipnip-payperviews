@@ -39,12 +39,26 @@ class LoginController extends Controller
      */
     protected function authenticated(\Illuminate\Http\Request $request, $user)
     {
-        // Add login success flag for cache clearing
-        return redirect()->intended($this->redirectPath())->with([
+        // Set fresh login flags without aggressive session clearing
+        session([
             'login_success' => true,
             'fresh_login' => true,
-            'user_id' => $user->id
+            'user_id' => $user->id,
+            'login_timestamp' => time()
         ]);
+        
+        // Create response with basic cache control
+        $response = redirect()->intended($this->redirectPath());
+        
+        // Add basic cache-clearing headers (less aggressive)
+        $response->headers->add([
+            'Cache-Control' => 'no-cache, no-store, must-revalidate',
+            'Pragma' => 'no-cache',
+            'Expires' => 'Thu, 01 Jan 1970 00:00:00 GMT',
+            'X-Fresh-Login' => 'true'
+        ]);
+        
+        return $response;
     }
 
     /**
@@ -659,29 +673,42 @@ class LoginController extends Controller
             'method' => $request->method()
         ]);
 
-        // Clear user session tracking in database
+        // Clear user session tracking in database (with better error handling)
         try {
             // Only clear sessions for THIS specific user to avoid affecting other users
             \Illuminate\Support\Facades\DB::table('sessions')
                 ->where('user_id', $userId)
                 ->delete();
+
+            // Also clear any cached session data
+            \Illuminate\Support\Facades\Cache::forget('user_' . $userId);
+            \Illuminate\Support\Facades\Cache::forget('user_session_' . $userId);
                 
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::warning('Session cleanup warning during logout: ' . $e->getMessage());
         }
 
-        // Perform the actual logout
-        $this->guard()->logout();
-
-        // Simple session invalidation without regeneration (prevents 419 errors)
-        $request->session()->invalidate();
-
-        // Log successful logout
-        \Illuminate\Support\Facades\Log::info('User logged out successfully', [
+        // Store user info before logout for logging
+        $userInfo = [
             'user_id' => $userId,
             'username' => $username,
             'ip' => $request->ip()
-        ]);
+        ];
+
+        // Perform the actual logout
+        $this->guard()->logout();
+
+        // Session cleanup - be more careful about this
+        try {
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::warning('Session invalidation warning during logout: ' . $e->getMessage());
+            // Continue with logout even if session cleanup fails
+        }
+
+        // Log successful logout
+        \Illuminate\Support\Facades\Log::info('User logged out successfully', $userInfo);
 
         // Check if this is an AJAX request for cache clearing
         if ($request->ajax() || $request->wantsJson()) {
@@ -706,10 +733,10 @@ class LoginController extends Controller
             'logout_completed' => true
         ]);
         
-        // Add basic cache control headers
+        // Add basic cache control headers (less aggressive to prevent white screen)
         $response->headers->set('Cache-Control', 'no-cache, no-store, must-revalidate');
         $response->headers->set('Pragma', 'no-cache');
-        $response->headers->set('Expires', '0');
+        $response->headers->set('Expires', 'Thu, 01 Jan 1970 00:00:00 GMT');
 
         return $response;
     }

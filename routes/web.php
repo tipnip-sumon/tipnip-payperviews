@@ -50,7 +50,6 @@ Route::get('/storage/{path}', function ($path) {
 // =============================================================================
 // TEST ROUTES (Development only)
 // =============================================================================
-
 // Test sponsor validation
 Route::get('/test/sponsor-validation', [App\Http\Controllers\TestController::class, 'testSponsorValidation'])
     ->name('test.sponsor.validation');
@@ -181,7 +180,7 @@ Route::get('/home', function () {
 
 // User Dashboard Route
 Route::get('/user/dashboard', [App\Http\Controllers\User\UserController::class, 'home'])
-    ->name('user.dashboard')->middleware(['auth', 'single-session', 'no-cache']);
+    ->name('user.dashboard')->middleware(['auth', 'fresh.login', 'single-session', 'no-cache']);
 
 // Dashboard Performance Metrics API
 Route::get('/user/dashboard/performance', [App\Http\Controllers\User\UserController::class, 'getPerformanceMetrics'])
@@ -227,10 +226,10 @@ Route::post('/resend-verification', [App\Http\Controllers\Auth\LoginController::
     ->name('resend.verification')
     ->middleware('throttle:3,1'); // Allow max 3 attempts per minute
 
-// Override default logout route to accept both GET and POST
+// Main logout route - properly configured with session handling
 Route::match(['GET', 'POST'], '/logout', [App\Http\Controllers\Auth\LoginController::class, 'logout'])
     ->name('logout')
-    ->withoutMiddleware(['web']);
+    ->middleware(['web']);
 
 // Alternative simple logout route (no middleware at all)
 Route::get('/simple-logout', function(\Illuminate\Http\Request $request) {
@@ -318,9 +317,9 @@ Route::post('/email/resend-public', [App\Http\Controllers\Auth\VerificationContr
 // =============================================================================
 
 // Main invest route - requires authentication  
-Route::get('/invest', function () {
-    return redirect()->route('invest.index');
-})->middleware('auth')->name('main.invest');
+// Route::get('/invest', function () {
+//     return redirect()->route('invest.index');
+// })->middleware('auth')->name('main.invest');
 
 // =============================================================================
 // REFERRAL ROUTES
@@ -766,7 +765,7 @@ Route::controller(\App\Http\Controllers\User\SponsorTicketController::class)->mi
 // INVESTMENT ROUTES
 // =============================================================================
 
-Route::controller(InvestController::class)->middleware('auth','prevent-back','single-session')->group(function () {
+Route::controller(InvestController::class)->middleware(['auth'])->group(function () {
     Route::get('/plans','plans')->name('plans');
     Route::get('/invest','index')->name('invest.index');
     Route::post('/get-plan-amount','getPlanAmount')->name('get-plan-amount');
@@ -791,9 +790,9 @@ Route::controller(App\Http\Controllers\User\WithdrawController::class)->middlewa
     Route::get('/user/withdraw','index')->name('user.withdraw');
     Route::post('/user/withdraw','withdraw')->name('user.withdraw.submit');
     Route::get('/user/withdraw/history','history')->name('user.withdraw.history');
-    Route::get('/user/withdraw/wallet','walletIndex')->name('user.withdraw.wallet')->middleware('auth');
-    Route::post('/user/withdraw/wallet','walletWithdraw')->name('user.withdraw.wallet.submit')->middleware('auth');
-    Route::get('/user/withdraw/wallet/history','walletHistory')->name('user.withdraw.wallet.history')->middleware('auth');
+    Route::get('/user/withdraw/wallet','walletIndex')->name('user.withdraw.wallet');
+    Route::post('/user/withdraw/wallet','walletWithdraw')->name('user.withdraw.wallet.submit');
+    Route::get('/user/withdraw/wallet/history','walletHistory')->name('user.withdraw.wallet.history');
 });
 
 // =============================================================================
@@ -810,10 +809,10 @@ Route::controller(DepositController::class)->middleware('auth','prevent-back','s
 
 // NOWPayments payment gateway routes
 Route::middleware(['auth','prevent-back','single-session'])->group(function () {
-    Route::post('/pay', [PaymentController::class, 'createCryptoPayment'])->name('pay')->middleware('auth');
-    Route::delete('/pay/delete/{user_id}', [PaymentController::class, 'cancelCryptoPayment'])->middleware('auth');
-    Route::post('/payment/ipn', [PaymentController::class, 'handleIPN'])->name('payments')->middleware('auth');
-    Route::get('/user/payment/history',[PaymentController::class, 'paymentHistory'])->name('user.payment_history')->middleware('auth');
+    Route::post('/pay', [PaymentController::class, 'createCryptoPayment'])->name('pay');
+    Route::delete('/pay/delete/{user_id}', [PaymentController::class, 'cancelCryptoPayment']);
+    Route::post('/payment/ipn', [PaymentController::class, 'handleIPN'])->name('payments');
+    Route::get('/user/payment/history',[PaymentController::class, 'paymentHistory'])->name('user.payment_history');
     Route::post('/user/payment/create', [PaymentController::class, 'createPayment'])->name('user.payment.create');
     Route::put('/user/payment/{id}', [PaymentController::class, 'updatePayment'])->name('user.payment.update');
     Route::delete('/user/payment/{id}', [PaymentController::class, 'deletePayment'])->name('user.payment.delete');

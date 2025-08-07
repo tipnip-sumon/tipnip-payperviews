@@ -1342,6 +1342,33 @@
                     toastElement.remove();
                 });
             }
+            
+            // Fresh Login Cache Clearing - Light version to prevent white screen
+            if (sessionStorage.getItem('fresh_login_cache_cleared') !== 'true') {
+                // This is the first access to dashboard after login
+                console.log('Performing light fresh login cache clearing...');
+                
+                try {
+                    // Only clear specific browser storage items (not all)
+                    if (typeof(Storage) !== 'undefined') {
+                        // Clear only dashboard-related items, not everything
+                        const itemsToClear = ['dashboard_cache', 'user_cache', 'temp_data', 'old_session'];
+                        itemsToClear.forEach(item => {
+                            localStorage.removeItem(item);
+                            sessionStorage.removeItem(item);
+                        });
+                        console.log('Specific storage items cleared');
+                    }
+                    
+                    // Set flag that cache has been cleared
+                    sessionStorage.setItem('fresh_login_cache_cleared', 'true');
+                    sessionStorage.setItem('cache_cleared_timestamp', Date.now().toString());
+                    
+                    console.log('Light fresh login cache clearing completed');
+                } catch (error) {
+                    console.error('Fresh login cache clearing error:', error);
+                }
+            }
         </script>
     @endpush
 </x-smart_layout>

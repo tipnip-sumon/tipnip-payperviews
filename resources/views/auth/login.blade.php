@@ -2532,7 +2532,7 @@
 <!-- Cache Clearing Script for Login Page -->
 <script src="{{ asset('assets_custom/js/login-cache-clear.js') }}"></script>
 
-<!-- Enhanced Cache Busting for Dashboard Redirects -->
+<!-- Enhanced Cache Busting for Fresh Login -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Check if user came from logout or dashboard redirect
@@ -2541,36 +2541,16 @@ document.addEventListener('DOMContentLoaded', function() {
     const redirectFrom = urlParams.get('redirect_from');
     
     if (fromLogout === '1' || redirectFrom === 'dashboard') {
-        // Clear any cached dashboard data
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.ready.then(function(registration) {
-                return registration.unregister();
+        // Light cache clearing - only clear specific items to avoid white screen
+        if (typeof(Storage) !== 'undefined') {
+            // Only clear dashboard-related data, not everything
+            ['dashboard_cache', 'user_data', 'dashboard_state', 'session_data'].forEach(key => {
+                localStorage.removeItem(key);
+                sessionStorage.removeItem(key);
             });
         }
         
-        // Clear local storage items related to dashboard
-        ['dashboard_cache', 'user_data', 'dashboard_state'].forEach(key => {
-            localStorage.removeItem(key);
-            sessionStorage.removeItem(key);
-        });
-        
-        // Add meta tags to prevent caching
-        const meta = document.createElement('meta');
-        meta.httpEquiv = 'Cache-Control';
-        meta.content = 'no-cache, no-store, must-revalidate';
-        document.head.appendChild(meta);
-        
-        const pragma = document.createElement('meta');
-        pragma.httpEquiv = 'Pragma';
-        pragma.content = 'no-cache';
-        document.head.appendChild(pragma);
-        
-        const expires = document.createElement('meta');
-        expires.httpEquiv = 'Expires';
-        expires.content = '0';
-        document.head.appendChild(expires);
-        
-        // console.log('Cache cleared after dashboard redirect');
+        console.log('Light cache clearing completed after logout');
     }
     
     // Prevent browser back button cache issues
@@ -2579,6 +2559,19 @@ document.addEventListener('DOMContentLoaded', function() {
             window.location.reload();
         }
     });
+    
+    // Add timestamp to form submission for fresh login
+    const loginForm = document.querySelector('#loginForm, form[method="POST"]');
+    if (loginForm) {
+        loginForm.addEventListener('submit', function(e) {
+            // Only add timestamp, no aggressive cache clearing
+            const timestampInput = document.createElement('input');
+            timestampInput.type = 'hidden';
+            timestampInput.name = 'login_timestamp';
+            timestampInput.value = Date.now();
+            this.appendChild(timestampInput);
+        });
+    }
 });
 </script>
 @endsection
