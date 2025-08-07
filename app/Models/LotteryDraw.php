@@ -175,6 +175,22 @@ class LotteryDraw extends Model
         $settings = LotterySetting::getSettings();
         $prizeStructure = $settings->prize_structure ?? $this->getDefaultPrizeStructure();
         
+        // Ensure prize structure is an array (handle JSON string case)
+        if (is_string($prizeStructure)) {
+            $prizeStructure = json_decode($prizeStructure, true) ?? $this->getDefaultPrizeStructure();
+        }
+        
+        if (!is_array($prizeStructure)) {
+            $prizeStructure = $this->getDefaultPrizeStructure();
+        }
+        
+        // Log prize structure for debugging
+        Log::info("LotteryDraw performDraw: Prize structure", [
+            'draw_id' => $this->id,
+            'prize_structure' => $prizeStructure,
+            'prize_structure_type' => gettype($prizeStructure)
+        ]);
+        
         $winners = [];
         $winnerTickets = [];
         
