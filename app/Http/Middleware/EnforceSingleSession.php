@@ -32,6 +32,27 @@ class EnforceSingleSession
                 return $next($request);
             }
 
+            // Skip aggressive session checking for AJAX notification requests to prevent page reload issues
+            if ($request->routeIs('user.notifications.count') || 
+                str_contains($request->getRequestUri(), '/notifications/count') ||
+                ($request->ajax() && str_contains($request->getRequestUri(), 'notifications'))) {
+                // Only update activity timestamp for AJAX requests, don't validate session
+                session(['last_activity' => time()]);
+                return $next($request);
+            }
+
+            // Less aggressive checking for invest routes that might be causing reload issues
+            if ($request->routeIs('invest.*') || str_contains($request->getRequestUri(), '/invest')) {
+                // For invest routes, only check session validity once per minute instead of every request
+                $lastInvestCheck = session('last_invest_session_check', 0);
+                if (time() - $lastInvestCheck < 60) {
+                    // Update activity and skip detailed validation
+                    session(['last_activity' => time()]);
+                    return $next($request);
+                }
+                session(['last_invest_session_check' => time()]);
+            }
+
             // Skip session check for fresh login redirects (give login process time to complete)
             if (session('fresh_login') || session('login_success')) {
                 // Clear the fresh login flags after first access

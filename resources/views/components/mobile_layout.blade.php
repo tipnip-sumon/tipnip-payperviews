@@ -1096,15 +1096,6 @@
                                 </a>
                             </div>
                             <div class="col-12">
-                                <a href="{{ route('user.session-notifications') }}" class="btn btn-outline-info w-100 p-3 mobile-feature-btn d-flex flex-column align-items-center">
-                                    <i class="bx bx-time mb-1"></i>
-                                    <div class="mobile-btn-content text-center">
-                                        <strong class="small">Session</strong>
-                                        <small class="d-block">Current alerts</small> 
-                                    </div>
-                                </a>
-                            </div>
-                            <div class="col-12">
                                 <a href="{{ route('user.notifications.settings') }}" class="btn btn-outline-primary w-100 p-3 mobile-feature-btn d-flex flex-column align-items-center">
                                     <i class="bx bx-cog mb-1"></i>
                                     <div class="mobile-btn-content text-center">
@@ -3065,21 +3056,43 @@
     // Debug mobile reload issues
     let reloadCounter = 0;
     let pageLoadTime = Date.now();
+    let navigationClicks = 0;
     
     // Detect page unload/reload
     window.addEventListener('beforeunload', function(e) {
         console.log('Mobile page unloading - reason: beforeunload event');
         console.log('Page was loaded for:', (Date.now() - pageLoadTime) / 1000, 'seconds');
+        console.log('Navigation clicks during session:', navigationClicks);
         localStorage.setItem('mobileReloadDebug', JSON.stringify({
             time: new Date().toISOString(),
             duration: (Date.now() - pageLoadTime) / 1000,
-            userAgent: navigator.userAgent
+            clicks: navigationClicks,
+            userAgent: navigator.userAgent,
+            currentUrl: window.location.href
         }));
+    });
+    
+    // Track navigation clicks to identify if they cause reloads
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.mobile-nav-link')) {
+            navigationClicks++;
+            console.log('Mobile navigation clicked:', e.target.closest('.mobile-nav-link').textContent.trim());
+        }
     });
     
     // Prevent pull-to-refresh on mobile
     document.body.style.overscrollBehavior = 'none';
     document.documentElement.style.overscrollBehavior = 'none';
+    
+    // Prevent double-tap zoom that might interfere
+    let lastTouchEnd = 0;
+    document.addEventListener('touchend', function (event) {
+        var now = (new Date()).getTime();
+        if (now - lastTouchEnd <= 300) {
+            event.preventDefault();
+        }
+        lastTouchEnd = now;
+    }, false);
     
     // Test mobile modal functionality on page load
     document.addEventListener('DOMContentLoaded', function() {
@@ -3092,20 +3105,42 @@
         }
         
         // Test if openMobileModal is available
-        console.log('openMobileModal function available:', typeof window.openMobileModal);
+        if (typeof window.openMobileModal === 'function') {
+            console.log('✅ openMobileModal function is available');
+        } else {
+            console.error('❌ openMobileModal function is NOT available - this will cause errors!');
+            // Try to load the function after a delay
+            setTimeout(() => {
+                if (typeof window.openMobileModal === 'function') {
+                    console.log('✅ openMobileModal loaded after delay');
+                } else {
+                    console.error('❌ openMobileModal still not available after delay');
+                }
+            }, 1000);
+        }
         
         // Test Bootstrap Modal availability
-        console.log('Bootstrap available:', typeof bootstrap !== 'undefined');
         if (typeof bootstrap !== 'undefined') {
-            console.log('Bootstrap Modal available:', typeof bootstrap.Modal !== 'undefined');
+            console.log('✅ Bootstrap available:', typeof bootstrap.Modal !== 'undefined' ? 'with Modal' : 'without Modal');
+        } else {
+            console.error('❌ Bootstrap is NOT available');
         }
         
         // Test if all modal elements exist
-        const modalTypes = ['videos', 'wallet', 'messages', 'notifications', 'more', 'lottery'];
+        const modalTypes = ['videos', 'wallet', 'grid', 'notifications', 'more', 'lottery', 'profile'];
         modalTypes.forEach(type => {
             const modalId = `mobile${type.charAt(0).toUpperCase() + type.slice(1)}Modal`;
             const modalElement = document.querySelector(`#${modalId}`);
-            console.log(`Modal ${modalId}:`, modalElement ? 'EXISTS' : 'MISSING');
+            console.log(`Modal ${modalId}:`, modalElement ? '✅ EXISTS' : '❌ MISSING');
+        });
+        
+        // Test navigation links
+        const navLinks = document.querySelectorAll('.mobile-nav-link');
+        console.log(`Navigation links found: ${navLinks.length}`);
+        navLinks.forEach((link, index) => {
+            const onclick = link.getAttribute('onclick');
+            const text = link.querySelector('.nav-text')?.textContent || 'unknown';
+            console.log(`Nav ${index + 1}: ${text} - onclick: ${onclick || 'none'}`);
         });
         
         // Set current year for footer
@@ -3117,47 +3152,67 @@
         // Real-time notification badge update system for mobile
         @auth
         function updateMobileNotificationBadge() {
-            fetch('{{ route("user.notifications.count") }}', {
-                method: 'GET',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            try {
+                // Check if CSRF token exists
+                const csrfTokenElement = document.querySelector('meta[name="csrf-token"]');
+                if (!csrfTokenElement) {
+                    console.log('CSRF token not found, skipping notification update');
+                    return;
                 }
-            })
-            .then(response => response.json())
-            .then(data => {
-                const mobileBadge = document.querySelector('.notifications-link .notification-dot');
-                const bellIcon = document.querySelector('.notifications-link .bx-bell');
-                
-                if (data.count > 0) {
-                    if (mobileBadge) {
-                        mobileBadge.textContent = data.count;
-                        mobileBadge.style.display = 'flex';
-                    } else {
-                        // Create badge if it doesn't exist
-                        const newBadge = document.createElement('span');
-                        newBadge.className = 'notification-dot';
-                        newBadge.textContent = data.count;
-                        document.querySelector('.notifications-link .nav-icon-wrapper').appendChild(newBadge);
+
+                fetch('{{ route("user.notifications.count") }}', {
+                    method: 'GET',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': csrfTokenElement.getAttribute('content')
                     }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    const mobileBadge = document.querySelector('.notifications-link .notification-dot');
+                    const bellIcon = document.querySelector('.notifications-link .bx-bell');
                     
-                    // Add pulse animation to bell icon
-                    if (bellIcon) {
-                        bellIcon.classList.add('pulse-animation');
+                    if (data.count > 0) {
+                        if (mobileBadge) {
+                            mobileBadge.textContent = data.count;
+                            mobileBadge.style.display = 'flex';
+                        } else {
+                            // Create badge if it doesn't exist
+                            const wrapper = document.querySelector('.notifications-link .nav-icon-wrapper');
+                            if (wrapper) {
+                                const newBadge = document.createElement('span');
+                                newBadge.className = 'notification-dot';
+                                newBadge.textContent = data.count;
+                                wrapper.appendChild(newBadge);
+                            }
+                        }
+                        
+                        // Add pulse animation to bell icon
+                        if (bellIcon) {
+                            bellIcon.classList.add('pulse-animation');
+                        }
+                    } else {
+                        if (mobileBadge) {
+                            mobileBadge.style.display = 'none';
+                        }
+                        // Remove pulse animation from bell icon
+                        if (bellIcon) {
+                            bellIcon.classList.remove('pulse-animation');
+                        }
                     }
-                } else {
-                    if (mobileBadge) {
-                        mobileBadge.style.display = 'none';
-                    }
-                    // Remove pulse animation from bell icon
-                    if (bellIcon) {
-                        bellIcon.classList.remove('pulse-animation');
-                    }
-                }
-            })
-            .catch(error => {
-                console.log('Mobile notification update error:', error);
-            });
+                })
+                .catch(error => {
+                    console.log('Mobile notification update error:', error);
+                    // Don't throw the error, just log it to prevent page issues
+                });
+            } catch (error) {
+                console.log('Mobile notification update initialization error:', error);
+            }
         }
 
         // Update mobile notification badge every 30 seconds
