@@ -162,9 +162,21 @@ class LotteryController extends Controller
             
             // Check user balance
             if ($user->deposit_wallet < $totalCost) {
-                $message = 'Insufficient balance. You need $' . number_format($totalCost, 2) . ' to purchase ' . $ticketCount . ' ticket(s).';
+                $currentBalance = number_format($user->deposit_wallet, 2);
+                $neededAmount = number_format($totalCost, 2);
+                $shortfallAmount = number_format($totalCost - $user->deposit_wallet, 2);
+                
+                $message = "Insufficient balance to purchase {$ticketCount} ticket(s). You need \${$neededAmount} but your current balance is \${$currentBalance}. Please deposit \${$shortfallAmount} more to complete this purchase.";
+                
                 if ($request->ajax()) {
-                    return response()->json(['success' => false, 'message' => $message], 400);
+                    return response()->json([
+                        'success' => false, 
+                        'message' => $message,
+                        'error_type' => 'insufficient_balance',
+                        'current_balance' => $user->deposit_wallet,
+                        'required_amount' => $totalCost,
+                        'shortfall_amount' => $totalCost - $user->deposit_wallet
+                    ], 400);
                 }
                 return back()->with('error', $message);
             }

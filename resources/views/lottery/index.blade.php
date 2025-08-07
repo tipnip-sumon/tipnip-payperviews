@@ -912,15 +912,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             })
             .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                return response.json();
+                // Always try to parse JSON, regardless of status code
+                return response.json().then(data => {
+                    return { data, status: response.status, ok: response.ok };
+                });
             })
-            .then(data => {
-                console.log('AJAX Response received:', data);
+            .then(({ data, status, ok }) => {
+                console.log('AJAX Response received:', data, 'Status:', status);
                 
-                if (data.success) {
+                if (ok && data.success) {
                     // Show success message
                     showAlert('success', data.message);
                     
@@ -936,8 +936,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                 } else {
                     console.log('Purchase failed:', data);
-                    // Show error message
-                    showAlert('error', data.message || 'An error occurred while purchasing tickets.');
+                    // Show error message with proper server response
+                    const errorMessage = data.message || 'An error occurred while purchasing tickets.';
+                    showAlert('error', errorMessage);
                     
                     // Reset button
                     btn.disabled = false;
@@ -945,8 +946,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
-                showAlert('error', 'Network error occurred. Please try again.'); 
+                console.error('Network Error:', error);
+                showAlert('error', 'Network connection error. Please check your internet connection and try again.'); 
                 
                 // Reset button
                 btn.disabled = false;
