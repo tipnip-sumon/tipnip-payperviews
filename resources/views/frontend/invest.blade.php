@@ -643,6 +643,7 @@
     @endpush
 
     @push('script')
+    <script src="{{ asset('assets/js/jquery-3.7.1.min.js') }}"></script>
     <script>
         $(document).ready(function() {
             // Plan card selection

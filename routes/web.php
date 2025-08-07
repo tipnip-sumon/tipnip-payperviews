@@ -972,7 +972,8 @@ Route::middleware('auth','prevent-back')->prefix('lottery')->name('lottery.')->g
     Route::get('/', [App\Http\Controllers\LotteryController::class, 'index'])->name('index');
     Route::get('/results', [App\Http\Controllers\LotteryController::class, 'results'])->name('results');
     Route::get('/statistics', [App\Http\Controllers\LotteryController::class, 'statistics'])->name('statistics');
-    Route::get('/draw/{id}', [App\Http\Controllers\LotteryController::class, 'drawDetails'])->name('draw.details');
+    Route::get('/draws', [App\Http\Controllers\LotteryController::class, 'activeDraws'])->name('draw.details');
+    Route::get('/draw/{id}', [App\Http\Controllers\LotteryController::class, 'drawDetails'])->name('draw.detail');
     Route::post('/status-check', [App\Http\Controllers\LotteryController::class, 'statusCheck'])->name('status.check');
     
     Route::middleware('auth')->group(function () {
@@ -1034,7 +1035,7 @@ Route::middleware(['ok-user','prevent-back'])->prefix('admin/lottery')->name('ad
     Route::post('/draws/{id}/save-manual-tickets', [App\Http\Controllers\admin\LotteryController::class, 'saveManualWinningTickets'])->name('draws.save-manual-tickets');
     Route::delete('/draws/{id}/clear-manual-winners', [App\Http\Controllers\admin\LotteryController::class, 'clearManualWinners'])->name('draws.clear-manual-winners');
     
-    // Ticket management routes
+    // Ticket management routes 
     Route::get('/draws/{id}/tickets', [App\Http\Controllers\admin\LotteryController::class, 'getDrawTickets'])->name('draws.tickets');
     
     // Ticket Management Routes

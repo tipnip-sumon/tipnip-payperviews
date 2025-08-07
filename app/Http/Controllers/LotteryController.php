@@ -721,4 +721,64 @@ class LotteryController extends Controller
             'kyc_verified' => Auth::user()->kv == 1
         ];
     }
+
+    /**
+     * Display active draws page (without requiring ID parameter)
+     */
+    public function activeDraws()
+    {
+        try {
+            $settings = LotterySetting::getSettings();
+            
+            if (!$settings->is_active) {
+                return view('lottery.active_draws')->with([
+                    'pageTitle' => 'Active Lottery Draws - Currently Inactive',
+                    'settings' => $settings,
+                    'activeDraws' => collect([]),
+                    'message' => 'Lottery system is currently inactive. Please check back later.',
+                    'lottery_inactive' => true
+                ]);
+            }
+
+            // Get all pending/active draws
+            $activeDraws = LotteryDraw::where('status', 'pending')
+                ->orderBy('draw_date', 'asc')
+                ->get()
+                ->map(function ($draw) {
+                    return [
+                        'id' => $draw->id,
+                        'draw_number' => $draw->draw_number,
+                        'prize_pool' => $draw->prize_pool,
+                        'ticket_price' => $draw->ticket_price,
+                        'max_tickets' => $draw->max_tickets,
+                        'tickets_sold' => $draw->tickets_sold,
+                        'draw_date' => $draw->draw_date,
+                        'status' => $draw->status,
+                        'time_remaining' => $draw->draw_date->diffForHumans(),
+                        'tickets_remaining' => $draw->max_tickets - $draw->tickets_sold,
+                        'progress_percentage' => ($draw->tickets_sold / $draw->max_tickets) * 100
+                    ];
+                });
+
+            return view('lottery.active_draws')->with([
+                'pageTitle' => 'Active Lottery Draws',
+                'settings' => $settings,
+                'activeDraws' => $activeDraws,
+                'userBalance' => Auth::check() ? Auth::user()->balance : 0,
+                'userTickets' => Auth::check() ? LotteryTicket::where('user_id', Auth::id())->count() : 0,
+                'lottery_inactive' => false
+            ]);
+
+        } catch (Exception $e) {
+            Log::error('Lottery activeDraws error: ' . $e->getMessage());
+            
+            return view('lottery.active_draws')->with([
+                'pageTitle' => 'Active Lottery Draws - Error',
+                'settings' => (object)['is_active' => false],
+                'activeDraws' => collect([]),
+                'message' => 'Unable to load active draws. Please try again later.',
+                'lottery_inactive' => true
+            ]);
+        }
+    }
 }

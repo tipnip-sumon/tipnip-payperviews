@@ -1171,7 +1171,7 @@
                         </h6>
                         <div class="row g-3">
                             <div class="col-12">
-                                <a href="{{ route('lottery.unified.index') }}" class="btn w-100 p-3 text-white mobile-feature-btn d-flex flex-column align-items-center" style="background: linear-gradient(135deg, #6f42c1, #e83e8c);">
+                                <a href="{{ route('lottery.draw.details') }}" class="btn w-100 p-3 text-white mobile-feature-btn d-flex flex-column align-items-center" style="background: linear-gradient(135deg, #6f42c1, #e83e8c);">
                                     <i class="bx bx-trophy mb-1"></i>
                                     <div class="mobile-btn-content text-center">
                                         <strong class="small text-white">Active Draws</strong>
@@ -1180,10 +1180,10 @@
                                 </a>
                             </div>
                             <div class="col-6">
-                                <a href="{{ route('lottery.unified.available.plans') }}" class="btn btn-outline-primary w-100 p-3 mobile-feature-btn d-flex flex-column align-items-center" style="border-color: #6f42c1; color: #6f42c1;">
+                                <a href="{{ route('lottery.index') }}" class="btn btn-outline-primary w-100 p-3 mobile-feature-btn d-flex flex-column align-items-center" style="border-color: #6f42c1; color: #6f42c1;">
                                     <i class="bx bx-ticket mb-1"></i>
                                     <div class="mobile-btn-content text-center">
-                                        <strong class="small">Buy Tickets</strong>
+                                        <strong class="small">Buy Tickets</strong> 
                                         <small class="d-block">Purchase</small>
                                     </div>
                                 </a>
