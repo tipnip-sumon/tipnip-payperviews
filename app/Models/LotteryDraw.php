@@ -266,6 +266,11 @@ class LotteryDraw extends Model
             $this->distributePrizes();
         }
 
+        // Auto-create next draw if this is an auto draw and auto_generate_draws is enabled
+        if ($this->auto_draw && $settings->auto_generate_draws) {
+            $this->createNextAutoDraw($settings);
+        }
+
         return $winnerTickets;
     }
 
@@ -530,5 +535,124 @@ class LotteryDraw extends Model
             $adminCommission = $totalRevenue * (($settings->admin_commission_percentage ?? 10) / 100);
             return max($totalRevenue - $adminCommission, 0);
         }
+    }
+
+    /**
+     * Create next automatic draw after current draw completion
+     */
+    private function createNextAutoDraw($settings)
+    {
+        try {
+            // Calculate next draw time based on draw frequency
+            $nextDrawTime = $this->calculateNextDrawTime($settings);
+            $drawNumber = 'AUTO_' . $nextDrawTime->format('Y_m_d_H_i');
+            
+            // Check if a draw already exists for this time
+            $existingDraw = LotteryDraw::where('draw_number', $drawNumber)
+                                     ->orWhere('draw_time', $nextDrawTime)
+                                     ->first();
+            
+            if (!$existingDraw) {
+                $newDraw = self::create([
+                    'draw_number' => $drawNumber,
+                    'draw_date' => $nextDrawTime->toDateString(),
+                    'draw_time' => $nextDrawTime,
+                    'status' => 'pending',
+                    'auto_draw' => true,
+                    'auto_prize_distribution' => true,
+                    'manual_winner_selection_enabled' => false,
+                    'ticket_price' => $settings->ticket_price ?? 2.00,
+                    'admin_commission_percentage' => $settings->admin_commission_percentage ?? 10,
+                ]);
+                
+                Log::info("Next automatic draw created: {$drawNumber} for {$nextDrawTime->format('Y-m-d H:i:s')}", [
+                    'new_draw_id' => $newDraw->id,
+                    'triggered_by_draw' => $this->id
+                ]);
+                
+                return $newDraw;
+            } else {
+                Log::info("Next draw already exists: {$existingDraw->draw_number}");
+                return $existingDraw;
+            }
+        } catch (\Exception $e) {
+            Log::error("Failed to create next auto draw: " . $e->getMessage(), [
+                'current_draw_id' => $this->id,
+                'error' => $e->getTraceAsString()
+            ]);
+        }
+        
+        return null;
+    }
+
+    /**
+     * Calculate next draw time based on settings
+     */
+    private function calculateNextDrawTime($settings)
+    {
+        $frequency = $settings->auto_generation_frequency ?? 'weekly';
+        $drawTime = $settings->draw_time ?? '20:00';
+        $drawDay = $settings->draw_day ?? 'sunday';
+        
+        // Parse the draw time
+        $timeParts = explode(':', $drawTime);
+        $hour = (int) ($timeParts[0] ?? 20);
+        $minute = (int) ($timeParts[1] ?? 0);
+        
+        $nextDrawTime = Carbon::now();
+        
+        switch ($frequency) {
+            case 'daily':
+                $nextDrawTime = $nextDrawTime->addDay()->setTime($hour, $minute, 0);
+                break;
+                
+            case 'weekly':
+                // Default to next week same day/time
+                $nextDrawTime = $nextDrawTime->addWeek()->setTime($hour, $minute, 0);
+                
+                // If specific day is set, adjust to that day
+                if ($drawDay && $drawDay !== 'current') {
+                    $dayMap = [
+                        'monday' => Carbon::MONDAY,
+                        'tuesday' => Carbon::TUESDAY, 
+                        'wednesday' => Carbon::WEDNESDAY,
+                        'thursday' => Carbon::THURSDAY,
+                        'friday' => Carbon::FRIDAY,
+                        'saturday' => Carbon::SATURDAY,
+                        'sunday' => Carbon::SUNDAY,
+                    ];
+                    
+                    if (isset($dayMap[strtolower($drawDay)])) {
+                        $nextDrawTime = $nextDrawTime->next($dayMap[strtolower($drawDay)])->setTime($hour, $minute, 0);
+                    }
+                }
+                break;
+                
+            case 'monthly':
+                $nextDrawTime = $nextDrawTime->addMonth()->setTime($hour, $minute, 0);
+                break;
+                
+            case 'hourly':
+                $nextDrawTime = $nextDrawTime->addHour();
+                break;
+                
+            case 'every_3_hours':
+                $nextDrawTime = $nextDrawTime->addHours(3);
+                break;
+                
+            case 'every_6_hours':
+                $nextDrawTime = $nextDrawTime->addHours(6);
+                break;
+                
+            case 'every_12_hours':
+                $nextDrawTime = $nextDrawTime->addHours(12);
+                break;
+                
+            default:
+                // Default to weekly on the same day at the specified time
+                $nextDrawTime = $nextDrawTime->addWeek()->setTime($hour, $minute, 0);
+        }
+        
+        return $nextDrawTime;
     }
 }
