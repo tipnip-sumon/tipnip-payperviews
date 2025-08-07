@@ -13,7 +13,7 @@
                             <li class="breadcrumb-item active" aria-current="page">Inbox</li>
                         </ol>
                     </nav>
-                </div>
+                </div> 
             </div>
             
             <!-- Quick Actions -->
@@ -139,20 +139,25 @@
 
     @push('script')
         <!-- DataTables CSS -->
-        <link rel="stylesheet" href="{{ asset('assets/css/dataTables.bootstrap4.min.css') }}">
+        <link rel="stylesheet" href="{{ asset('assets/libs/datatables.net-bs5/css/dataTables.bootstrap5.min.css') }}">
         
         <!-- DataTables JS -->
-        <script src="{{ asset('assets/js/jquery-3.7.1.min.js') }}"></script>
+        <script src="{{ asset('assets_custom/js/jquery-3.7.1.min.js') }}"></script>
         <script src="{{ asset('assets/js/jquery.dataTables.min.js') }}"></script>
         <script src="{{ asset('assets/js/dataTables.bootstrap4.min.js') }}"></script>
         
         <!-- Sweet Alert -->
-        <script src="{{ asset('assets/js/sweetalert2.min.js') }}"></script>
+        <script src="{{ asset('assets/libs/sweetalert2/sweetalert2.min.js') }}"></script>
         
         <script type="text/javascript">
             var table;
             
             $(document).ready(function() {
+                // Check if DataTable already exists and destroy it
+                if ($.fn.DataTable.isDataTable('#inbox_table')) {
+                    $('#inbox_table').DataTable().destroy();
+                }
+                
                 // Initialize DataTable
                 table = $('#inbox_table').DataTable({
                     processing: true,
@@ -177,7 +182,9 @@
 
                 // Refresh inbox
                 $('#refresh_inbox').click(function() {
-                    table.ajax.reload();
+                    if (table) {
+                        table.ajax.reload(null, false);
+                    }
                     Swal.fire({
                         title: 'Refreshed!',
                         text: 'Inbox has been refreshed.',
@@ -242,7 +249,9 @@
                                 }
                                 
                                 // Refresh table to update read status
-                                table.ajax.reload(null, false);
+                                if (table) {
+                                    table.ajax.reload(null, false);
+                                }
                             } else {
                                 $('#message_content').html('<div class="alert alert-danger">' + response.message + '</div>');
                             }
@@ -307,7 +316,9 @@
                                     text: response.message,
                                     icon: 'success'
                                 });
-                                table.ajax.reload();
+                                if (table) {
+                                    table.ajax.reload();
+                                }
                             } else {
                                 Swal.fire({
                                     title: 'Error!',
@@ -352,7 +363,9 @@
                                 success: function(response) {
                                     if (response.success) {
                                         Swal.fire('Deleted!', response.message, 'success');
-                                        table.ajax.reload();
+                                        if (table) {
+                                            table.ajax.reload();
+                                        }
                                     } else {
                                         Swal.fire('Error!', response.message, 'error');
                                     }
@@ -363,6 +376,13 @@
                             });
                         }
                     });
+                });
+                
+                // Cleanup DataTable on page unload
+                $(window).on('beforeunload', function() {
+                    if (table && $.fn.DataTable.isDataTable('#inbox_table')) {
+                        table.destroy();
+                    }
                 });
             });
         </script>

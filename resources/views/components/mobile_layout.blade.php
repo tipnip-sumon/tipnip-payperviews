@@ -426,7 +426,7 @@
 
                     <!-- Watch Videos Section -->
                     <div class="mb-4">
-                        <h6 class="text-muted mb-3 small section-header">
+                        <h6 class="text-muted mb-3 small">
                             <i class="bx bx-play-circle me-2"></i>Watch & Earn
                         </h6>
                         <div class="row g-3">
@@ -439,7 +439,8 @@
                                     </div>
                                 </a>
                             </div>
-                            <div class="col-12">
+                            
+                            <div class="col-5">
                                 <a href="{{ route('user.video-views.gallery') }}" class="btn btn-outline-info w-100 p-3 mobile-feature-btn d-flex flex-column align-items-center">
                                     <i class="bx bx-collection mb-1"></i>
                                     <div class="mobile-btn-content text-center">
@@ -448,7 +449,7 @@
                                     </div>
                                 </a>
                             </div>
-                            <div class="col-12">
+                            <div class="col-5">
                                 <a href="{{ route('user.video-views.earnings') }}" class="btn btn-outline-success w-100 p-3 mobile-feature-btn d-flex flex-column align-items-center">
                                     <i class="bx bx-dollar mb-1"></i>
                                     <div class="mobile-btn-content text-center">
@@ -1312,7 +1313,7 @@
     <div class="modal fade" id="mobileMoreModal" tabindex="-1" aria-labelledby="mobileMoreModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-md modal-dialog-scrollable">
             <div class="modal-content mobile-modal-content">
-                <div class="modal-header bg-dark text-white py-3 mobile-modal-header">
+                <div class="modal-header text-white py-3 mobile-modal-header">
                     <h5 class="modal-title" id="mobileMoreModalLabel">
                         <i class="bx bx-grid-alt me-2"></i>More Features
                     </h5>
@@ -1321,7 +1322,7 @@
                 <div class="modal-body p-4 mobile-modal-body">
                     <!-- Messages & Communication Section -->
                     <div class="mb-4">
-                        <h6 class="text-muted mb-3 small section-header">
+                        <h6 class="text-muted mb-3 small ">
                             <i class="bx bx-envelope me-2"></i>Messages & Communication
                         </h6>
                         <div class="row g-3">
@@ -1365,7 +1366,7 @@
 
                     <!-- Support & Help Section -->
                     <div class="mb-4">
-                        <h6 class="text-muted mb-3 small section-header">
+                        <h6 class="text-muted mb-3 small ">
                             <i class="bx bx-support me-2"></i>Support & Help
                         </h6>
                         <div class="row g-3">
@@ -1392,7 +1393,7 @@
 
                     <!-- System & Tools Section -->
                     <div class="mb-4">
-                        <h6 class="text-muted mb-3 small section-header">
+                        <h6 class="text-muted mb-3 small ">
                             <i class="bx bx-cog me-2"></i>System & Tools
                         </h6>
                         <div class="row g-3">
@@ -1419,7 +1420,7 @@
 
                     <!-- Account Actions Section -->
                     <div class="mb-3">
-                        <h6 class="text-muted mb-3 small section-header">
+                        <h6 class="text-muted mb-3 small ">
                             <i class="bx bx-user-circle me-2"></i>Account Actions
                         </h6>
                         <div class="row g-3">
@@ -1489,7 +1490,7 @@
 
                     <!-- Active Lotteries Section -->
                     <div class="mb-4">
-                        <h6 class="text-muted mb-3 small section-header">
+                        <h6 class="text-muted mb-3 small ">
                             <i class="bx bx-trophy me-2"></i>Active Lotteries
                         </h6>
                         <div class="row g-3">
@@ -1525,7 +1526,7 @@
 
                     <!-- Tools & Support Section -->
                     <div class="mb-3">
-                        <h6 class="text-muted mb-3 small section-header">
+                        <h6 class="text-muted mb-3 small ">
                             <i class="bx bx-cog me-2"></i>Tools & Support
                         </h6>
                         <div class="row g-3">
@@ -3153,52 +3154,52 @@
     
     // Test mobile modal functionality on page load
     document.addEventListener('DOMContentLoaded', function() {
-        console.log('Mobile layout loaded');
-        
-        // Check if this is a reload
-        const debugInfo = localStorage.getItem('mobileReloadDebug');
-        if (debugInfo) {
-            console.log('Previous reload info:', JSON.parse(debugInfo));
+        // Only show debug info in development
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            console.log('Mobile layout loaded');
+            
+            // Check if this is a reload
+            const debugInfo = localStorage.getItem('mobileReloadDebug');
+            if (debugInfo) {
+                console.log('Previous reload info:', JSON.parse(debugInfo));
+            }
+            
+            // Test if openMobileModal is available
+            if (typeof window.openMobileModal === 'function') {
+                console.log('✅ openMobileModal function is available');
+            } else {
+                console.error('❌ openMobileModal function is NOT available - this will cause errors!');
+            }
         }
-        
-        // Test if openMobileModal is available
-        if (typeof window.openMobileModal === 'function') {
-            console.log('✅ openMobileModal function is available');
-        } else {
-            console.error('❌ openMobileModal function is NOT available - this will cause errors!');
-            // Try to load the function after a delay
-            setTimeout(() => {
-                if (typeof window.openMobileModal === 'function') {
-                    console.log('✅ openMobileModal loaded after delay');
-                } else {
-                    console.error('❌ openMobileModal still not available after delay');
                 }
             }, 1000);
         }
         
-        // Test Bootstrap Modal availability
-        if (typeof bootstrap !== 'undefined') {
-            console.log('✅ Bootstrap available:', typeof bootstrap.Modal !== 'undefined' ? 'with Modal' : 'without Modal');
-        } else {
-            console.error('❌ Bootstrap is NOT available');
+        // Test Bootstrap Modal availability (dev only)
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            if (typeof bootstrap !== 'undefined') {
+                console.log('✅ Bootstrap available:', typeof bootstrap.Modal !== 'undefined' ? 'with Modal' : 'without Modal');
+            } else {
+                console.error('❌ Bootstrap is NOT available');
+            }
+            
+            // Test if all modal elements exist
+            const modalTypes = ['videos', 'wallet', 'grid', 'notifications', 'more', 'lottery', 'profile'];
+            modalTypes.forEach(type => {
+                const modalId = `mobile${type.charAt(0).toUpperCase() + type.slice(1)}Modal`;
+                const modalElement = document.querySelector(`#${modalId}`);
+                console.log(`Modal ${modalId}:`, modalElement ? '✅ EXISTS' : '❌ MISSING');
+            });
+            
+            // Test navigation links
+            const navLinks = document.querySelectorAll('.mobile-nav-link');
+            console.log(`Navigation links found: ${navLinks.length}`);
+            navLinks.forEach((link, index) => {
+                const onclick = link.getAttribute('onclick');
+                const text = link.querySelector('.nav-text')?.textContent || 'unknown';
+                console.log(`Nav ${index + 1}: ${text} - onclick: ${onclick || 'none'}`);
+            });
         }
-        
-        // Test if all modal elements exist
-        const modalTypes = ['videos', 'wallet', 'grid', 'notifications', 'more', 'lottery', 'profile'];
-        modalTypes.forEach(type => {
-            const modalId = `mobile${type.charAt(0).toUpperCase() + type.slice(1)}Modal`;
-            const modalElement = document.querySelector(`#${modalId}`);
-            console.log(`Modal ${modalId}:`, modalElement ? '✅ EXISTS' : '❌ MISSING');
-        });
-        
-        // Test navigation links
-        const navLinks = document.querySelectorAll('.mobile-nav-link');
-        console.log(`Navigation links found: ${navLinks.length}`);
-        navLinks.forEach((link, index) => {
-            const onclick = link.getAttribute('onclick');
-            const text = link.querySelector('.nav-text')?.textContent || 'unknown';
-            console.log(`Nav ${index + 1}: ${text} - onclick: ${onclick || 'none'}`);
-        });
         
         // Set current year for footer
         const yearMobile = document.getElementById('year-mobile');
@@ -3213,62 +3214,78 @@
                 // Check if CSRF token exists
                 const csrfTokenElement = document.querySelector('meta[name="csrf-token"]');
                 if (!csrfTokenElement) {
-                    console.log('CSRF token not found, skipping notification update');
-                    return;
+                    return; // Silently fail if no CSRF token
                 }
 
                 fetch('{{ route("user.notifications.count") }}', {
                     method: 'GET',
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRF-TOKEN': csrfTokenElement.getAttribute('content')
+                        'X-CSRF-TOKEN': csrfTokenElement.getAttribute('content'),
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
                     }
                 })
                 .then(response => {
                     if (!response.ok) {
                         throw new Error(`HTTP error! status: ${response.status}`);
                     }
+                    
+                    // Check if response is actually JSON
+                    const contentType = response.headers.get('content-type');
+                    if (!contentType || !contentType.includes('application/json')) {
+                        throw new Error('Response is not JSON');
+                    }
+                    
                     return response.json();
                 })
                 .then(data => {
-                    const mobileBadge = document.querySelector('.notifications-link .notification-dot');
-                    const bellIcon = document.querySelector('.notifications-link .bx-bell');
-                    
-                    if (data.count > 0) {
-                        if (mobileBadge) {
-                            mobileBadge.textContent = data.count;
-                            mobileBadge.style.display = 'flex';
-                        } else {
-                            // Create badge if it doesn't exist
-                            const wrapper = document.querySelector('.notifications-link .nav-icon-wrapper');
-                            if (wrapper) {
-                                const newBadge = document.createElement('span');
-                                newBadge.className = 'notification-dot';
-                                newBadge.textContent = data.count;
-                                wrapper.appendChild(newBadge);
-                            }
-                        }
+                    if (data && typeof data.count !== 'undefined') {
+                        const mobileBadge = document.querySelector('.notifications-link .notification-dot');
+                        const bellIcon = document.querySelector('.notifications-link .bx-bell');
                         
-                        // Add pulse animation to bell icon
-                        if (bellIcon) {
-                            bellIcon.classList.add('pulse-animation');
-                        }
-                    } else {
-                        if (mobileBadge) {
-                            mobileBadge.style.display = 'none';
-                        }
-                        // Remove pulse animation from bell icon
-                        if (bellIcon) {
-                            bellIcon.classList.remove('pulse-animation');
+                        if (data.count > 0) {
+                            if (mobileBadge) {
+                                mobileBadge.textContent = data.count;
+                                mobileBadge.style.display = 'flex';
+                            } else {
+                                // Create badge if it doesn't exist
+                                const wrapper = document.querySelector('.notifications-link .nav-icon-wrapper');
+                                if (wrapper) {
+                                    const newBadge = document.createElement('span');
+                                    newBadge.className = 'notification-dot';
+                                    newBadge.textContent = data.count;
+                                    wrapper.appendChild(newBadge);
+                                }
+                            }
+                            
+                            // Add pulse animation to bell icon
+                            if (bellIcon) {
+                                bellIcon.classList.add('pulse-animation');
+                            }
+                        } else {
+                            if (mobileBadge) {
+                                mobileBadge.style.display = 'none';
+                            }
+                            // Remove pulse animation from bell icon
+                            if (bellIcon) {
+                                bellIcon.classList.remove('pulse-animation');
+                            }
                         }
                     }
                 })
                 .catch(error => {
-                    console.log('Mobile notification update error:', error);
-                    // Don't throw the error, just log it to prevent page issues
+                    // Only log errors in development
+                    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                        console.log('Mobile notification update error:', error);
+                    }
+                    // Silently fail in production to prevent console spam
                 });
             } catch (error) {
-                console.log('Mobile notification update initialization error:', error);
+                // Only log errors in development
+                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                    console.log('Mobile notification update initialization error:', error);
+                }
             }
         }
 

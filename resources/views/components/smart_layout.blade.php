@@ -493,7 +493,10 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Global video watching functionality
     window.playVideo = function(videoId, videoTitle, videoUrl, earningAmount, minimumTime = 20) {
-        console.log('🎬 Playing video:', { videoId, videoTitle, videoUrl, earningAmount, minimumTime });
+        // Only log in development
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            console.log('🎬 Playing video:', { videoId, videoTitle, videoUrl, earningAmount, minimumTime });
+        }
         
         // Check if Bootstrap is available
         if (typeof window.bootstrap === 'undefined') {
@@ -531,7 +534,10 @@ document.addEventListener('DOMContentLoaded', function() {
         // Start progress tracking
         startWatchProgress(videoId, earningAmount, minimumTime);
         
-        console.log('✅ Video modal opened successfully');
+        // Only log in development
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            console.log('✅ Video modal opened successfully');
+        }
     };
     
     // Reset video progress
@@ -547,7 +553,10 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Start watch progress tracking
     function startWatchProgress(videoId, earningAmount, minimumTime) {
-        console.log('⏱️ Starting watch progress for video:', videoId);
+        // Only log in development
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            console.log('⏱️ Starting watch progress for video:', videoId);
+        }
         
         let watchTime = 0;
         const progressBar = document.getElementById('global-progress-bar');
@@ -566,7 +575,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 completeBtn.classList.remove('d-none');
                 completeBtn.onclick = () => completeVideoWatching(videoId, earningAmount);
                 clearInterval(interval);
-                console.log('✅ Minimum watch time reached');
+                
+                // Only log in development
+                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                    console.log('✅ Minimum watch time reached');
+                }
             }
         }, 1000);
         
@@ -576,7 +589,10 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Complete video watching and earn money
     window.completeVideoWatching = function(videoId, earningAmount) {
-        console.log('💰 Completing video watch for video:', videoId);
+        // Only log in development
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            console.log('💰 Completing video watch for video:', videoId);
+        }
         
         const completeBtn = document.getElementById('global-complete-btn');
         if (completeBtn) {
@@ -599,11 +615,17 @@ document.addEventListener('DOMContentLoaded', function() {
             })
         })
         .then(response => {
-            console.log('📡 API Response status:', response.status);
+            // Only log in development
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                console.log('📡 API Response status:', response.status);
+            }
             return response.json();
         })
         .then(data => {
-            console.log('📡 API Response data:', data);
+            // Only log in development
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                console.log('📡 API Response data:', data);
+            }
             
             if (data.success) {
                 // Close video modal
@@ -618,7 +640,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     clearInterval(window.currentVideoInterval);
                 }
                 
-                console.log('✅ Video watching completed successfully');
+                // Only log in development
+                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                    console.log('✅ Video watching completed successfully');
+                }
                 
                 // Optionally reload page after 3 seconds like gallery does
                 setTimeout(() => {
@@ -643,7 +668,10 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Show earnings modal
     function showEarningsModal(amount, message, newBalance) {
-        console.log('🏆 Showing earnings modal:', { amount, message, newBalance });
+        // Only log in development
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            console.log('🏆 Showing earnings modal:', { amount, message, newBalance });
+        }
         
         const earningsModal = document.getElementById('globalEarningsModal');
         if (!earningsModal) {
@@ -667,7 +695,10 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Setup event handlers for video buttons
     function setupVideoEventHandlers() {
-        console.log('🔧 Setting up video event handlers...');
+        // Only log in development
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            console.log('🔧 Setting up video event handlers...');
+        }
         
         // Handle all watch-btn clicks (for gallery.blade.php compatibility)
         document.addEventListener('click', function(e) {
@@ -675,18 +706,27 @@ document.addEventListener('DOMContentLoaded', function() {
                 const button = e.target.closest('.watch-btn');
                 if (!button) return;
                 
-                console.log('🎯 Watch button clicked:', button);
+                // Only log in development
+                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                    console.log('🎯 Watch button clicked:', button);
+                }
                 
                 // Check if this is already being handled by the original gallery system
                 if (button.disabled || button.innerHTML.includes('Processing') || button.innerHTML.includes('spinner')) {
-                    console.log('⏸️ Button already being processed, skipping global handler');
+                    // Only log in development
+                    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                        console.log('⏸️ Button already being processed, skipping global handler');
+                    }
                     return;
                 }
                 
                 // Only prevent default if we're going to handle it
                 const videoId = button.getAttribute('data-video-id') || button.dataset.videoId;
                 if (!videoId) {
-                    console.log('⚠️ No video ID found, letting original handler take over');
+                    // Only log in development
+                    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                        console.log('⚠️ No video ID found, letting original handler take over');
+                    }
                     return; // Let original handler deal with it
                 }
                 
@@ -696,7 +736,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 const hasVideoUrl = iframe && iframe.src && iframe.src !== '';
                 
                 if (!hasVideoUrl) {
-                    console.log('⚠️ No video URL found quickly, letting original gallery handler take over');
+                    // Only log in development
+                    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                        console.log('⚠️ No video URL found quickly, letting original gallery handler take over');
+                    }
                     return; // Let original handler deal with it
                 }
                 
@@ -730,10 +773,13 @@ document.addEventListener('DOMContentLoaded', function() {
                             }
                         }
                         
-                        console.log('🔍 Iframe details:', {
-                            originalSrc: iframe.src,
-                            cleanedUrl: videoUrl
-                        });
+                        // Only log in development
+                        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                            console.log('🔍 Iframe details:', {
+                                originalSrc: iframe.src,
+                                cleanedUrl: videoUrl
+                            });
+                        }
                     }
                     
                     // Find earning amount by searching for badges with dollar signs
@@ -759,7 +805,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 }
                 
-                console.log('🎬 Extracted video data:', { videoId, videoTitle, videoUrl, earningAmount });
+                // Only log in development
+                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                    console.log('🎬 Extracted video data:', { videoId, videoTitle, videoUrl, earningAmount });
+                }
                 
                 // Reset button
                 button.disabled = false;
@@ -770,7 +819,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Play video using global system
                     window.playVideo(videoId, videoTitle, videoUrl, earningAmount);
                 } else {
-                    console.log('⚠️ No video URL found after extraction, this should not happen');
+                    // Only log in development
+                    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                        console.log('⚠️ No video URL found after extraction, this should not happen');
+                    }
                     // This should not happen since we checked earlier, but just in case
                     alert('Error: Video URL not found. Please refresh the page and try again.');
                 }
@@ -956,13 +1008,20 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initialize when DOM is ready
     function initializeVideoSystem() {
-        console.log('🚀 Initializing global video system...');
+        // Only log in development
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            console.log('🚀 Initializing global video system...');
+        }
         
         // Wait for Bootstrap to be available
         if (typeof window.bootstrap !== 'undefined') {
             setupGlobalVideoModals();
             setupVideoEventHandlers();
-            console.log('✅ Global video system initialized successfully');
+            
+            // Only log in development
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                console.log('✅ Global video system initialized successfully');
+            }
         } else {
             // Bootstrap not ready, try again in 100ms
             setTimeout(initializeVideoSystem, 100);
@@ -1000,9 +1059,12 @@ document.addEventListener('DOMContentLoaded', function() {
         const currentLayout = document.querySelector('.mobile-optimized') ? 'mobile' : 'desktop';
         const expectedLayout = isMobileDevice ? 'mobile' : 'desktop';
         
-        console.log('Device Type:', isMobileDevice ? 'Mobile' : 'Desktop');
-        console.log('Current Layout:', currentLayout);
-        console.log('Expected Layout:', expectedLayout);
+        // Only log in development
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            console.log('Device Type:', isMobileDevice ? 'Mobile' : 'Desktop');
+            console.log('Current Layout:', currentLayout);
+            console.log('Expected Layout:', expectedLayout);
+        }
         
         // If layout doesn't match, send screen width and reload
         if (currentLayout !== expectedLayout) {

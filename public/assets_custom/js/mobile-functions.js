@@ -474,79 +474,79 @@ window.clearAllNotifications = function() {
 /**
  * Confirm logout with user
  */
-// window.confirmLogout = function() {
-//     try {
-//         // Check if SweetAlert is available
-//         if (typeof Swal !== 'undefined') {
-//             Swal.fire({
-//                 title: 'Confirm Logout',
-//                 text: 'Are you sure you want to logout?',
-//                 icon: 'question',
-//                 showCancelButton: true,
-//                 confirmButtonColor: '#dc3545',
-//                 cancelButtonColor: '#6c757d',
-//                 confirmButtonText: 'Yes, Logout',
-//                 cancelButtonText: 'Cancel',
-//                 backdrop: true,
-//                 allowOutsideClick: false
-//             }).then((result) => {
-//                 if (result.isConfirmed) {
-//                     performLogout();
-//                 }
-//             });
-//         } else {
-//             // Fallback to native confirm
-//             if (confirm('Are you sure you want to logout?')) {
-//                 performLogout();
-//             }
-//         }
-//     } catch (error) {
-//         console.error('Error in confirmLogout:', error);
-//         // Final fallback
-//         if (confirm('Are you sure you want to logout?')) {
-//             performLogout();
-//         }
-//     }
-// };
+window.confirmLogout = function() {
+    try {
+        // Check if SweetAlert is available
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: 'Confirm Logout',
+                text: 'Are you sure you want to logout?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, Logout',
+                cancelButtonText: 'Cancel',
+                backdrop: true,
+                allowOutsideClick: false
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    performLogout();
+                }
+            });
+        } else {
+            // Fallback to native confirm
+            if (confirm('Are you sure you want to logout?')) {
+                performLogout();
+            }
+        }
+    } catch (error) {
+        console.error('Error in confirmLogout:', error);
+        // Final fallback
+        if (confirm('Are you sure you want to logout?')) {
+            performLogout();
+        }
+    }
+};
 
 /**
  * Perform logout action
  */
-// function performLogout() {
-//     try {
-//         // Show loading if SweetAlert is available
-//         if (typeof Swal !== 'undefined') {
-//             Swal.fire({
-//                 title: 'Logging out...',
-//                 text: 'Please wait',
-//                 icon: 'info',
-//                 allowOutsideClick: false,
-//                 showConfirmButton: false,
-//                 didOpen: () => {
-//                     Swal.showLoading();
-//                 }
-//             });
-//         }
+function performLogout() {
+    try {
+        // Show loading if SweetAlert is available
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: 'Logging out...',
+                text: 'Please wait',
+                icon: 'info',
+                allowOutsideClick: false,
+                showConfirmButton: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+        }
         
-//         // Add small delay for better UX
-//         setTimeout(() => {
-//             // Try different logout methods
-//             if (window.logoutForm) {
-//                 window.logoutForm.submit();
-//             } else if (document.getElementById('logout-form')) {
-//                 document.getElementById('logout-form').submit();
-//             } else {
-//                 // Fallback: redirect to logout URL
-//                 window.location.href = '/logout';
-//             }
-//         }, 500);
+        // Add small delay for better UX
+        setTimeout(() => {
+            // Try different logout methods
+            if (window.logoutForm) {
+                window.logoutForm.submit();
+            } else if (document.getElementById('logout-form')) {
+                document.getElementById('logout-form').submit();
+            } else {
+                // Fallback: redirect to logout URL
+                window.location.href = '/logout';
+            }
+        }, 500);
         
-//     } catch (error) {
-//         console.error('Error in performLogout:', error);
-//         // Ultimate fallback
-//         window.location.href = '/logout';
-//     }
-// }
+    } catch (error) {
+        console.error('Error in performLogout:', error);
+        // Ultimate fallback
+        window.location.href = '/logout';
+    }
+}
 
 // =================================================================
 // WALLET FUNCTIONS
@@ -589,7 +589,10 @@ window.updateWalletBalance = function() {
  */
 function initializeMobileFunctions() {
     try {
-        console.log('Initializing mobile functions...');
+        // Only log in development
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            console.log('Initializing mobile functions...');
+        }
         
         // Initialize theme
         initializeTheme();
@@ -607,15 +610,17 @@ function initializeMobileFunctions() {
             }
         });
         
-        // Log successful initialization
-        console.log('Mobile functions initialized successfully:', {
-            openMobileModal: typeof window.openMobileModal,
-            toggleMobileTheme: typeof window.toggleMobileTheme,
-            confirmLogout: typeof window.confirmLogout,
-            markAllNotificationsRead: typeof window.markAllNotificationsRead,
-            clearAllNotifications: typeof window.clearAllNotifications,
-            updateWalletBalance: typeof window.updateWalletBalance
-        });
+        // Log successful initialization (dev only)
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            console.log('Mobile functions initialized successfully:', {
+                openMobileModal: typeof window.openMobileModal,
+                toggleMobileTheme: typeof window.toggleMobileTheme,
+                confirmLogout: typeof window.confirmLogout,
+                markAllNotificationsRead: typeof window.markAllNotificationsRead,
+                clearAllNotifications: typeof window.clearAllNotifications,
+                updateWalletBalance: typeof window.updateWalletBalance
+            });
+        }
         
     } catch (error) {
         console.error('Error initializing mobile functions:', error);

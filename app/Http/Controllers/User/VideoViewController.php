@@ -149,7 +149,7 @@ class VideoViewController extends Controller
 
             // Send video watching income notification
             try {
-                notifyVideoWatchingIncome($user->id, $earningRate, $video->title, $request->watch_duration);
+                //notifyVideoWatchingIncome($user->id, $earningRate, $video->title, $request->watch_duration);
                 
                 // Check if daily quota is completed and send quota notification
                 $assignedVideos = count(json_decode($assignment->video_ids ?? '[]', true) ?: []);

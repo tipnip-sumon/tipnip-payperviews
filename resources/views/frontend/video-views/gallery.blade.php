@@ -678,9 +678,12 @@
     
     <!-- Wait for jQuery to load -->
     <script>
+        // Development mode check
+        const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        
         // Ensure jQuery is loaded before proceeding
         if (typeof $ === 'undefined') {
-            console.error('jQuery not loaded properly');
+            if (isDevelopment) console.error('jQuery not loaded properly');
             document.write('<script src="https://code.jquery.com/jquery-3.7.1.min.js"><\/script>');
         }
         
@@ -689,12 +692,12 @@
             // Ensure CSRF meta tag exists
             if (!$('meta[name="csrf-token"]').length) {
                 $('head').append('<meta name="csrf-token" content="{{ csrf_token() }}">');
-                console.log('CSRF meta tag added to head');
+                if (isDevelopment) console.log('CSRF meta tag added to head');
             }
             
             // Get fresh CSRF token for this session
             const csrfToken = $('meta[name="csrf-token"]').attr('content');
-            console.log('CSRF token loaded:', csrfToken ? 'Found' : 'Missing');
+            if (isDevelopment) console.log('CSRF token loaded:', csrfToken ? 'Found' : 'Missing');
             
             // Set up global CSRF token for AJAX requests with error handling
             if (csrfToken) {
@@ -704,9 +707,9 @@
                         'X-Requested-With': 'XMLHttpRequest'
                     }
                 });
-                console.log('Global AJAX CSRF token configured');
+                if (isDevelopment) console.log('Global AJAX CSRF token configured');
             } else {
-                console.error('CSRF token not available for AJAX setup');
+                if (isDevelopment) console.error('CSRF token not available for AJAX setup');
             }
         });
     </script>
@@ -716,7 +719,7 @@
         $(document).ready(function() {
             // Ensure jQuery is available
             if (typeof $ === 'undefined') {
-                console.error('jQuery not available for tab detection');
+                if (isDevelopment) console.error('jQuery not available for tab detection');
                 return;
             }
             
@@ -758,9 +761,9 @@
         // Track when tab becomes visible/hidden
         document.addEventListener('visibilitychange', function() {
             if (document.hidden) {
-                console.log('Tab hidden - pausing activity');
+                if (isDevelopment) console.log('Tab hidden - pausing activity');
             } else {
-                console.log('Tab visible - resuming activity');
+                if (isDevelopment) console.log('Tab visible - resuming activity');
                 // Check if we're still the active tab
                 checkTabStatus();
             }
@@ -825,7 +828,7 @@
     <script>
         // Check if server-time.js loaded correctly
         if (typeof window.getServerTime !== 'function') {
-            console.error('server-time.js not loaded properly, adding fallback implementation');
+            if (isDevelopment) console.error('server-time.js not loaded properly, adding fallback implementation');
             // Fallback implementation
             window.getServerTime = async function() {
                 try {
@@ -834,7 +837,7 @@
                     const data = await response.json();
                     return data.server_time;
                 } catch (e) {
-                    console.error('Error in fallback getServerTime:', e);
+                    if (isDevelopment) console.error('Error in fallback getServerTime:', e);
                     return null;
                 }
             };
@@ -842,11 +845,11 @@
         
         // Force show timer immediately when page loads
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('DOM loaded - forcing timer visibility');
+            if (isDevelopment) console.log('DOM loaded - forcing timer visibility');
             var timerElement = document.getElementById('countdown-timer');
             if (timerElement) {
                 timerElement.style.display = 'block';
-                console.log('Timer element found and display set to block');
+                if (isDevelopment) console.log('Timer element found and display set to block');
                 
                 // Start a temporary local timer immediately while waiting for server time
                 function tempUpdateTimer() {
@@ -875,16 +878,16 @@
                 // Replace with server time after a short delay
                 setTimeout(function() {
                     clearInterval(tempTimerInterval);
-                    console.log('Temporary timer stopped, initializing server time countdown');
+                    if (isDevelopment) console.log('Temporary timer stopped, initializing server time countdown');
                 }, 3000);
             } else {
-                console.error('Timer element not found!');
+                if (isDevelopment) console.error('Timer element not found!');
             }
         });
         
         // Server-time based countdown timer with improved UI
         $(document).ready(function() {
-            console.log('Gallery page loaded, initializing countdown timer...');
+            if (isDevelopment) console.log('Gallery page loaded, initializing countdown timer...');
             
             // Initialize global variables for video watching
             window.currentVideoId = null;
@@ -935,7 +938,7 @@
                     
                     isTimerInitialized = true;
                 } catch (error) {
-                    console.error('Error initializing server time:', error);
+                    if (isDevelopment) console.error('Error initializing server time:', error);
                     fallbackToLocalTimer();
                 }
             }

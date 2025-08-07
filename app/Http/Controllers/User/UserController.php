@@ -2343,7 +2343,7 @@ class UserController extends Controller
                 ->make(true);
         }
         
-        return view('frontend.messages-inbox', compact('pageTitle'));
+        return view('frontend.messages-inbox', compact('pageTitle')); 
     }
     
     /**

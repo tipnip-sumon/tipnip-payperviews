@@ -118,9 +118,16 @@
       });
     });
 
-    themeContainerPrimary.appendChild(button);
+    // Check if themeContainerPrimary exists before appendChild
+    if (themeContainerPrimary) {
+      themeContainerPrimary.appendChild(button);
+    }
   }
-  nanoButtons[0].click();
+  
+  // Check if nanoButtons exists and has elements before clicking
+  if (nanoButtons && nanoButtons.length > 0) {
+    nanoButtons[0].click();
+  }
   /* for theme primary */
 
   /* for theme background */
