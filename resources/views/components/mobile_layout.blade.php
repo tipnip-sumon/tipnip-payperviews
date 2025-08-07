@@ -42,6 +42,28 @@
     <!-- Choices Css -->
     <link rel="stylesheet" href="{{asset('assets/libs/choices.js/public/assets/styles/choices.min.css')}}">
 
+    <!-- Mobile Reload Prevention -->
+    <style>
+        /* Prevent pull-to-refresh on mobile devices */
+        body, html {
+            overscroll-behavior-y: none;
+            touch-action: pan-x pan-y;
+        }
+        
+        /* Prevent accidental refresh gestures */
+        .page {
+            overscroll-behavior: none;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        /* Disable pull-to-refresh specifically */
+        @media (max-width: 768px) {
+            body {
+                overscroll-behavior-y: contain;
+            }
+        }
+    </style>
+
     @stack('styles')
 </head>
 
@@ -2787,9 +2809,34 @@
         window.location.href = "{{ route('simple.logout') }}";
     }
 
+    // Debug mobile reload issues
+    let reloadCounter = 0;
+    let pageLoadTime = Date.now();
+    
+    // Detect page unload/reload
+    window.addEventListener('beforeunload', function(e) {
+        console.log('Mobile page unloading - reason: beforeunload event');
+        console.log('Page was loaded for:', (Date.now() - pageLoadTime) / 1000, 'seconds');
+        localStorage.setItem('mobileReloadDebug', JSON.stringify({
+            time: new Date().toISOString(),
+            duration: (Date.now() - pageLoadTime) / 1000,
+            userAgent: navigator.userAgent
+        }));
+    });
+    
+    // Prevent pull-to-refresh on mobile
+    document.body.style.overscrollBehavior = 'none';
+    document.documentElement.style.overscrollBehavior = 'none';
+    
     // Test mobile modal functionality on page load
     document.addEventListener('DOMContentLoaded', function() {
         console.log('Mobile layout loaded');
+        
+        // Check if this is a reload
+        const debugInfo = localStorage.getItem('mobileReloadDebug');
+        if (debugInfo) {
+            console.log('Previous reload info:', JSON.parse(debugInfo));
+        }
         
         // Test if openMobileModal is available
         console.log('openMobileModal function available:', typeof window.openMobileModal);
