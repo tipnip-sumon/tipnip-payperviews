@@ -107,6 +107,13 @@
                         <span class="brand-text">PayPerViews</span>
                     </a>
                 </div>
+                <!-- Theme Toggle Button -->
+                {{-- <a href="javascript:void(0);" 
+                    class="mobile-action-btn theme-toggle" 
+                    onclick="toggleMobileTheme()"
+                    title="Toggle Theme">
+                    <i class="bx bx-moon theme-icon"></i>
+                </a> --}}
 
                 <!-- Action Icons (Right) -->
                 <div class="mobile-actions">
@@ -120,14 +127,28 @@
                                 <span class="notification-badge">{{$totalMessagesCount}}</span>
                             </a>
                         @endif
-
-                        <!-- Theme Toggle Button -->
-                        <a href="javascript:void(0);" 
-                           class="mobile-action-btn theme-toggle" 
-                           onclick="toggleMobileTheme()"
-                           title="Toggle Theme">
-                            <i class="bx bx-moon theme-icon"></i>
-                        </a>
+                            <a href="javascript:void(0);" 
+                   class="mobile-nav-link notifications-link"
+                   onclick="openMobileModal('notifications')">
+                    <span class="nav-icon-wrapper">
+                        <i class="bx bx-bell nav-icon"></i>
+                        @auth
+                            @php
+                                try {
+                                    $unreadNotifications = \App\Models\UserNotification::where('user_id', auth()->id())
+                                                                ->where('read', false)
+                                                                ->count();
+                                } catch (Exception $e) {
+                                    $unreadNotifications = 0;
+                                }
+                            @endphp
+                            @if($unreadNotifications > 0)
+                                <span class="notification-dot">{{$unreadNotifications}}</span>
+                            @endif
+                        @endauth
+                    </span>
+                </a>
+                        
                     @else
                         <!-- Login Button for Guest Users -->
                         <a href="{{ route('login') }}" class="mobile-action-btn" title="Login">
@@ -202,7 +223,7 @@
                    class="mobile-nav-link plan-link"
                    onclick="openMobileModal('grid')">
                     <span class="nav-icon-wrapper">
-                        <i class="bx bx-trending-up nav-icon"></i>
+                        <i class="bx bx-package nav-icon"></i>
                         @auth
                             @php
                                 try {
@@ -219,11 +240,11 @@
                             @endif
                         @endauth
                     </span>
-                    <span class="nav-text">VAPS</span>
+                    <span class="nav-text">Packages</span>
                 </a>
 
                 <!-- Notifications -->
-                <a href="javascript:void(0);" 
+                {{-- <a href="javascript:void(0);" 
                    class="mobile-nav-link notifications-link"
                    onclick="openMobileModal('notifications')">
                     <span class="nav-icon-wrapper">
@@ -244,7 +265,7 @@
                         @endauth
                     </span>
                     <span class="nav-text">Alerts</span>
-                </a>
+                </a> --}}
 
                 <!-- More/Menu -->
                 <a href="javascript:void(0);" 
@@ -620,7 +641,7 @@
 
                     <!-- Main Navigation Menu -->
                     <div class="mb-4">
-                        <h6 class="text-muted mb-3 small section-header">
+                        <h6 class="text-muted mb-3 small">
                             <i class="bx bx-home me-2"></i>Dashboard & Home
                         </h6>
                         <div class="row g-3">
@@ -647,28 +668,10 @@
 
                     <!-- Financial Menu -->
                     <div class="mb-4">
-                        <h6 class="text-muted mb-3 small section-header">
+                        <h6 class="text-muted mb-3 small">
                             <i class="bx bx-wallet me-2"></i>Wallet & Finance
                         </h6>
                         <div class="row g-3">
-                            <div class="col-6">
-                                <a href="{{ route('user.dashboard') }}" class="btn btn-success w-100 p-3 mobile-feature-btn">
-                                    <i class="bx bx-wallet mb-1"></i>
-                                    <div class="mobile-btn-content">
-                                        <strong class="small">Wallet</strong>
-                                        <small class="d-block text-white-50">Balance & funds</small>
-                                    </div>
-                                </a>
-                            </div>
-                            <div class="col-6">
-                                <a href="{{ route('invest.index') }}" class="btn btn-outline-success w-100 p-3 mobile-feature-btn">
-                                    <i class="bx bx-transfer mb-1"></i>
-                                    <div class="mobile-btn-content">
-                                        <strong class="small">Video Access Security</strong>
-                                        <small class="d-block">Video Access Security Plan</small>
-                                    </div>
-                                </a>
-                            </div>
                             <div class="col-6">
                                 <a href="{{ route('deposit.index') }}" class="btn btn-outline-info w-100 p-3 mobile-feature-btn">
                                     <i class="bx bx-plus-circle mb-1"></i>
@@ -679,11 +682,29 @@
                                 </a>
                             </div>
                             <div class="col-6">
+                                <a href="{{ route('user.transfer_funds') }}" class="btn btn-outline-secondary w-100 p-3 mobile-feature-btn">
+                                    <i class="bx bx-transfer mb-1"></i>
+                                    <div class="mobile-btn-content">
+                                        <strong class="small">Fund Transfer</strong>
+                                        <small class="d-block">Transfer funds</small>
+                                    </div>
+                                </a>
+                            </div>
+                            <div class="col-6">
                                 <a href="{{ route('user.withdraw.wallet') }}" class="btn btn-outline-warning w-100 p-3 mobile-feature-btn">
                                     <i class="bx bx-minus-circle mb-1"></i>
                                     <div class="mobile-btn-content">
-                                        <strong class="small">Withdraw</strong>
+                                        <strong class="small">Withdrawal</strong>
                                         <small class="d-block">Cash out</small>
+                                    </div>
+                                </a>
+                            </div>
+                            <div class="col-6">
+                                <a href="{{ route('user.withdraw') }}" class="btn btn-outline-success w-100 p-3 mobile-feature-btn">
+                                    <i class="bx bx-minus-circle mb-1"></i>
+                                    <div class="mobile-btn-content">
+                                        <strong class="small">Withdrawal</strong>
+                                        <small class="d-block">Package Funds Withdrawal</small>
                                     </div>
                                 </a>
                             </div>
@@ -692,25 +713,43 @@
 
                     <!-- Lottery & Games -->
                     <div class="mb-4">
-                        <h6 class="text-muted mb-3 small section-header">
-                            <i class="bx bx-gift me-2"></i>Lottery & Games
+                        <h6 class="text-muted mb-3 small">
+                            <i class="bx bx-gift me-2"></i>Lottery & Video Packages
                         </h6>
                         <div class="row g-3">
                             <div class="col-6">
-                                <a href="{{ route('lottery.index') }}" class="btn btn-warning w-100 p-3 mobile-feature-btn">
+                                <a href="{{ route('lottery.index') }}" class="btn btn-outline-success w-100 p-3 mobile-feature-btn">
                                     <i class="bx bx-gift mb-1"></i>
                                     <div class="mobile-btn-content">
-                                        <strong class="small">Lottery</strong>
-                                        <small class="d-block text-dark">Active draws</small>
+                                        <strong class="small">Buy Tickets</strong>
+                                        <small class="d-block">Buy Lottery Tickets</small>
+                                    </div>
+                                </a>
+                            </div>
+                            <div class="col-6">
+                                <a href="{{ route('lottery.results') }}" class="btn btn-outline-warning w-100 p-3 mobile-feature-btn">
+                                    <i class="bx bx-gift mb-1"></i>
+                                    <div class="mobile-btn-content">
+                                        <strong class="small">Lottery Results</strong>
+                                        <small class="d-block text-dark">Lottery Results</small>
                                     </div>
                                 </a>
                             </div>
                             <div class="col-6">
                                 <a href="{{ route('lottery.my.tickets') }}" class="btn btn-outline-warning w-100 p-3 mobile-feature-btn">
-                                    <i class="bx bx-ticket mb-1"></i>
+                                    <i class="bx bx-gift mb-1"></i>
                                     <div class="mobile-btn-content">
                                         <strong class="small">My Tickets</strong>
-                                        <small class="d-block">View tickets</small>
+                                        <small class="d-block text-dark">View tickets</small>
+                                    </div>
+                                </a>
+                            </div>
+                            <div class="col-6">
+                                <a href="{{ route('invest.index') }}" class="btn btn-outline-success w-100 p-3 mobile-feature-btn">
+                                    <i class="bx bx-gift mb-1"></i>
+                                    <div class="mobile-btn-content">
+                                        <strong class="small">Package Plans</strong>
+                                        <small class="d-block">Packages & More</small>
                                     </div>
                                 </a>
                             </div>
@@ -719,12 +758,12 @@
 
                     <!-- Profile & Account -->
                     <div class="mb-4">
-                        <h6 class="text-muted mb-3 small section-header">
+                        <h6 class="text-muted mb-3 small">
                             <i class="bx bx-user me-2"></i>Profile & Account
                         </h6>
                         <div class="row g-3">
-                            <div class="col-12">
-                                <a href="{{ route('profile.edit') }}" class="btn btn-secondary w-100 p-3 mobile-feature-btn">
+                            <div class="col-6">
+                                <a href="{{ route('profile.edit') }}" class="btn btn-outline-secondary w-100 p-3 mobile-feature-btn">
                                     <i class="bx bx-edit mb-1"></i>
                                     <div class="mobile-btn-content">
                                         <strong class="small">Edit Profile</strong>
@@ -732,7 +771,7 @@
                                     </div>
                                 </a>
                             </div>
-                            <div class="col-12">
+                            <div class="col-6">
                                 <a href="{{ route('user.notifications.index') }}" class="btn btn-outline-secondary w-100 p-3 mobile-feature-btn">
                                     <i class="bx bx-bell mb-1"></i>
                                     <div class="mobile-btn-content">
@@ -741,7 +780,7 @@
                                     </div>
                                 </a>
                             </div>
-                            <div class="col-12">
+                            <div class="col-6">
                                 <a href="{{ route('profile.security') }}" class="btn btn-outline-danger w-100 p-3 mobile-feature-btn">
                                     <i class="bx bx-shield mb-1"></i>
                                     <div class="mobile-btn-content">
@@ -750,7 +789,7 @@
                                     </div>
                                 </a>
                             </div>
-                            <div class="col-12">
+                            <div class="col-6">
                                 <a href="{{ route('user.kyc.index') }}" class="btn btn-outline-info w-100 p-3 mobile-feature-btn">
                                     <i class="bx bx-id-card mb-1"></i>
                                     <div class="mobile-btn-content">
@@ -764,16 +803,34 @@
 
                     <!-- Support & More -->
                     <div class="mb-3">
-                        <h6 class="text-muted mb-3 small section-header">
+                        <h6 class="text-muted mb-3 small">
                             <i class="bx bx-help-circle me-2"></i>Support & More
                         </h6>
                         <div class="row g-3">
-                            <div class="col-12">
-                                <a href="{{ route('user.messages') }}" class="btn btn-info w-100 p-3 mobile-feature-btn">
+                            <div class="col-6">
+                                <a href="{{ route('user.messages.inbox') }}" class="btn btn-outline-info w-100 p-3 mobile-feature-btn">
                                     <i class="bx bx-envelope mb-1"></i>
                                     <div class="mobile-btn-content">
                                         <strong class="small">Messages</strong>
                                         <small class="d-block text-white-50">Chat & support</small>
+                                    </div>
+                                </a>
+                            </div>
+                            <div class="col-6">
+                                <a href="{{ route('user.messages.sent') }}" class="btn btn-outline-info w-100 p-3 mobile-feature-btn">
+                                    <i class="bx bx-envelope mb-1"></i>
+                                    <div class="mobile-btn-content">
+                                        <strong class="small">Sent Messages</strong>
+                                        <small class="d-block text-white-50">View sent messages</small>
+                                    </div>
+                                </a>
+                            </div>
+                            <div class="col-12">
+                                <a href="{{ route('user.sponsor-list') }}" class="btn btn-outline-info w-100 p-3 mobile-feature-btn">
+                                    <i class="bx bx-envelope mb-1"></i>
+                                    <div class="mobile-btn-content">
+                                        <strong class="small">Compose Message</strong>
+                                        <small class="d-block text-white-50">Send a new message</small>
                                     </div>
                                 </a>
                             </div>
@@ -996,7 +1053,7 @@
             <div class="modal-content mobile-modal-content">
                 <div class="modal-header bg-info text-white py-3 mobile-modal-header">
                     <h5 class="modal-title" id="mobileGridModalLabel">
-                        <i class="bx bx-grid me-2"></i>Video Access Plan Security (VAPS)
+                        <i class="bx bx-grid me-2"></i>Video Access Plan Packages
                     </h5>
                     <button type="button" class="btn-close btn-close-white mobile-close-btn" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
@@ -1010,8 +1067,8 @@
                                 <a href="{{ route('invest.index') }}" class="btn btn-outline-info w-100 p-3 mobile-feature-btn">
                                     <i class="bx bx-trending-up mb-1"></i>
                                     <div class="mobile-btn-content">
-                                        <strong class="small">Investment Plans</strong>
-                                        <small class="d-block">VAPS & more</small>
+                                        <strong class="small">Package Plans</strong>
+                                        <small class="d-block">Packages & more</small>
                                     </div>
                                 </a>
                             </div>
@@ -1028,7 +1085,7 @@
                                 <a href="{{ route('user.withdraw') }}" class="btn btn-outline-warning w-100 p-3 mobile-feature-btn">
                                     <i class="bx bx-minus-circle mb-1"></i>
                                     <div class="mobile-btn-content">
-                                        <strong class="small">Invest Withdraw</strong>
+                                        <strong class="small">Package Funds Withdraw</strong>
                                         <small class="d-block">Cash out</small>
                                     </div>
                                 </a>
