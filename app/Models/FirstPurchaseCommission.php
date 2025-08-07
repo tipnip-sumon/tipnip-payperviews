@@ -90,30 +90,20 @@ class FirstPurchaseCommission extends Model
             'transaction_reference' => $trx,
         ]);
 
-        // Instead of paying cash commission, create Commission Lottery Tickets
-        // 1 ticket per $25 deposited, each ticket worth $2
-        $commissionResult = self::createCommissionTickets($sponsorUserId, $referralUserId, $purchaseAmount, $trx);
+        // Instead of creating separate commission tickets, create only special lottery tickets
+        // Special tickets serve as both commission reward and lottery participation
+        // 1 special ticket per $25 deposited, each ticket worth $2 and serves as commission
+        $numberOfTickets = floor($purchaseAmount / 25);
+        \Illuminate\Support\Facades\Log::info("Creating {$numberOfTickets} special tickets for sponsor {$sponsorUserId} from first purchase by user {$referralUserId} (amount: \${$purchaseAmount})");
+        
+        $specialTokens = SpecialLotteryTicket::createForSponsorWithBaseNumber($sponsorUserId, $referralUserId, $purchaseAmount, null);
 
-        // Extract commission tickets and base number from result
-        $commissionTickets = null;
+        // Extract base number for record keeping
         $baseTicketNumber = null;
-        
-        if ($commissionResult && is_array($commissionResult)) {
-            $commissionTickets = $commissionResult['commission_tickets'] ?? [];
-            $baseTicketNumber = $commissionResult['base_ticket_number'] ?? null;
-        }
-
-        // If no base number from commission tickets, create special lottery token separately
-        if (!$baseTicketNumber && !empty($commissionTickets)) {
-            $baseTicketNumber = preg_replace('/_LT\d+$/', '', $commissionTickets[0]->ticket_number);
-        }
-        
-        // Create special lottery token if we don't have one already from commission creation
-        $specialTokens = null;
-        if ($commissionResult && isset($commissionResult['special_tickets'])) {
-            $specialTokens = $commissionResult['special_tickets'];
-        } else if ($baseTicketNumber) {
-            $specialTokens = SpecialLotteryTicket::createForSponsorWithBaseNumber($sponsorUserId, $referralUserId, $purchaseAmount, $baseTicketNumber);
+        if (is_array($specialTokens) && !empty($specialTokens)) {
+            $baseTicketNumber = $specialTokens[0]->ticket_number;
+        } else if ($specialTokens) {
+            $baseTicketNumber = $specialTokens->ticket_number;
         }
         
         // Handle both array and single ticket return types
@@ -182,18 +172,12 @@ class FirstPurchaseCommission extends Model
             $createdTickets[] = $ticket;
         }
         
-        // Create special lottery tickets for sponsor with the same base number
-        $specialTickets = \App\Models\SpecialLotteryTicket::createForSponsorWithBaseNumber(
-            $sponsorUserId, 
-            $referralUserId, 
-            $purchaseAmount, 
-            $baseTicketNumber
-        );
-
-        // Return both types of tickets for reference
+        // Don't create special tickets here - they should be created separately
+        // This prevents double creation of special tickets
+        
+        // Return only commission tickets for reference
         return [
             'commission_tickets' => $createdTickets,
-            'special_tickets' => is_array($specialTickets) ? $specialTickets : [$specialTickets],
             'base_ticket_number' => $baseTicketNumber
         ];
     }

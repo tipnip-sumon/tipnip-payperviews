@@ -6,6 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     
+    <!-- CSRF Token -->
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    
     <!-- Cache Control Meta Tags -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0">
     <meta http-equiv="Pragma" content="no-cache">
@@ -366,26 +369,54 @@
                 }, 300);
             });
         }, 5000);
-        
-        // Form validation
-        document.querySelector('form').addEventListener('submit', function(e) {
-            const username = document.getElementById('username').value.trim();
-            const password = document.getElementById('password').value.trim();
-            
-            if (!username || !password) {
-                e.preventDefault();
-                alert('Please fill in all required fields.');
-                return false;
-            }
-            
-            // Add loading state
-            const submitBtn = document.querySelector('.btn-login');
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Logging in...';
-            submitBtn.disabled = true;
-        });
     </script>
     
     <!-- Cache Clearing Script for Login Page -->
     <script src="{{ asset('assets_custom/js/login-cache-clear.js') }}"></script>
+    
+    <!-- Session Manager for CSRF Token Handling -->
+    <script src="{{ asset('assets_custom/js/session-manager.js') }}"></script>
+    <script>
+        // Debug CSRF token
+        console.log('CSRF Token:', document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'));
+        console.log('Form CSRF Token:', document.querySelector('input[name="_token"]')?.value);
+        
+        // Simple admin login without session manager interference
+        document.addEventListener('DOMContentLoaded', function() {
+            const adminForm = document.querySelector('form[action*="admin/login"]');
+            if (adminForm) {
+                // Remove the default form submission handler that prevents submission
+                const forms = document.querySelectorAll('form');
+                forms.forEach(form => {
+                    // Remove existing event listeners by cloning the element
+                    const newForm = form.cloneNode(true);
+                    form.parentNode.replaceChild(newForm, form);
+                });
+                
+                // Add a simple validation handler that doesn't prevent submission
+                const newForm = document.querySelector('form[action*="admin/login"]');
+                newForm.addEventListener('submit', function(e) {
+                    const username = document.getElementById('username').value.trim();
+                    const password = document.getElementById('password').value.trim();
+                    
+                    if (!username || !password) {
+                        e.preventDefault();
+                        alert('Please fill in all required fields.');
+                        return false;
+                    }
+                    
+                    // Add loading state but don't prevent submission
+                    const submitBtn = document.querySelector('.btn-login');
+                    if (submitBtn) {
+                        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Logging in...';
+                        submitBtn.disabled = true;
+                    }
+                    
+                    // Let the form submit normally
+                    return true;
+                });
+            }
+        });
+    </script>
 </body>
 </html>

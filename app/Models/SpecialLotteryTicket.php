@@ -156,6 +156,9 @@ class SpecialLotteryTicket extends Model
         // Calculate number of special tickets (1 per $25, same as commission tickets)
         $numberOfTickets = floor($purchaseAmount / 25);
         
+        \Illuminate\Support\Facades\Log::info("SpecialLotteryTicket: Creating {$numberOfTickets} special tickets for sponsor {$sponsorUserId} from user {$referralUserId} investment of \${$purchaseAmount}");
+        \Illuminate\Support\Facades\Log::info("SpecialLotteryTicket: Each special ticket will automatically receive \$1 refund if not winning, handled by lottery draw process");
+        
         if ($numberOfTickets <= 0) {
             return null; // No tickets if purchase amount is less than $25
         }

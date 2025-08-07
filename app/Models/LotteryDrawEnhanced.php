@@ -140,8 +140,8 @@ class LotteryDrawEnhanced extends LotteryDraw
         foreach ($losingTickets as $ticket) {
             $ticket->update(['status' => 'lost']);
             
-            // Handle commission ticket refunds if applicable
-            if ($ticket->payment_method === 'commission_reward') {
+            // Handle commission and sponsor ticket refunds if applicable
+            if ($ticket->payment_method === 'commission_reward' || $ticket->payment_method === 'sponsor_reward') {
                 $this->processCommissionTicketRefund($ticket);
             }
         }

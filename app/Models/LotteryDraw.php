@@ -239,8 +239,8 @@ class LotteryDraw extends Model
         foreach ($losingTickets as $ticket) {
             $ticket->update(['status' => 'expired']);
             
-            // If this is a commission ticket, refund $1 to user's main wallet
-            if ($ticket->payment_method === 'commission_reward') {
+            // If this is a commission ticket or special sponsor ticket, refund $1 to user's main wallet
+            if ($ticket->payment_method === 'commission_reward' || $ticket->payment_method === 'sponsor_reward') {
                 $this->processCommissionTicketRefund($ticket);
             }
         }
@@ -254,36 +254,42 @@ class LotteryDraw extends Model
     }
 
     /**
-     * Process $1 refund for losing commission tickets
+     * Process $1 refund for losing commission and sponsor tickets
      */
     private function processCommissionTicketRefund($ticket)
     {
         $user = $ticket->user;
-        $refundAmount = 1.00; // Fixed $1 refund for commission tickets
+        $refundAmount = 1.00; // Fixed $1 refund for commission and sponsor tickets
         
         // Add $1 to user's main wallet (deposit_wallet)
         $user->deposit_wallet += $refundAmount;
         $user->save();
         
+        // Determine ticket type for logging
+        $ticketType = $ticket->payment_method === 'sponsor_reward' ? 'sponsor' : 'commission';
+        $remarkType = $ticket->payment_method === 'sponsor_reward' ? 'sponsor_ticket_refund' : 'commission_ticket_refund';
+        
         // Create transaction record for refund
-        $transaction = new Transaction();
+        $transaction = new \App\Models\Transaction();
         $transaction->user_id = $user->id;
         $transaction->amount = $refundAmount;
         $transaction->post_balance = $user->deposit_wallet;
         $transaction->charge = 0;
         $transaction->trx_type = '+';
-        $transaction->trx = 'COMM_REFUND_' . time() . '_' . $ticket->id;
+        $transaction->trx = strtoupper($ticketType) . '_REFUND_' . time() . '_' . $ticket->id;
         $transaction->wallet_type = 'deposit_wallet';
-        $transaction->remark = 'commission_ticket_refund';
-        $transaction->details = "Commission ticket refund for ticket: {$ticket->ticket_number}";
+        $transaction->remark = $remarkType;
+        $transaction->details = ucfirst($ticketType) . " ticket refund for non-winning ticket: {$ticket->ticket_number}";
         $transaction->save();
         
         // Log the refund
-        Log::info("Commission ticket refund processed", [
+        Log::info(ucfirst($ticketType) . " ticket refund processed", [
             'ticket_id' => $ticket->id,
             'ticket_number' => $ticket->ticket_number,
             'user_id' => $user->id,
             'refund_amount' => $refundAmount,
+            'ticket_type' => $ticketType,
+            'payment_method' => $ticket->payment_method,
             'transaction_id' => $transaction->id
         ]);
     }
