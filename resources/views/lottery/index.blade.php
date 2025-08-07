@@ -826,7 +826,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
-        // Real-time status checking (check server status every 30 seconds)
+        // Real-time status checking (check server status every 5 minutes to avoid frequent reloads)
         function checkDrawStatus() {
             if (!hasManualWinners && drawStatus === 'pending') {
                 fetch('{{ route("lottery.status.check") }}', {
@@ -839,10 +839,36 @@ document.addEventListener('DOMContentLoaded', function() {
                 })
                 .then(response => response.json())
                 .then(data => {
-                    if (data.has_manual_winners !== hasManualWinners || data.status !== drawStatus) {
-                        // Status changed, reload page for updated content
-                        window.location.reload();
+                    // Only reload if there are significant status changes (winners selected or draw completed)
+                    if (data.has_manual_winners && !hasManualWinners) {
+                        console.log('Winners have been selected, updating page...');
+                        // Update status in place instead of full reload
+                        updateDrawStatusDisplay('warning', 'fas fa-trophy', 'Draw Status', 
+                            'Winners Selected - Draw Pending', 'text-warning');
+                        
+                        // Disable buy button
+                        const buyBtn = document.getElementById('buyTicketBtn');
+                        if (buyBtn) {
+                            buyBtn.disabled = true;
+                            buyBtn.innerHTML = '<i class="fas fa-trophy me-2"></i>Winners Selected';
+                            buyBtn.className = 'btn btn-warning btn-lg w-100';
+                        }
+                        
+                        // Show notification
+                        showAlert('info', 'Winners have been selected for this draw!');
+                        
+                        // Update local variables
+                        hasManualWinners = true;
+                    } else if (data.status === 'completed' && drawStatus === 'pending') {
+                        console.log('Draw completed, updating page...');
+                        // Only reload for completed draws to show final results
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 2000); // Small delay to let user see any current actions
                     }
+                    
+                    // Update local status
+                    drawStatus = data.status;
                 })
                 .catch(error => {
                     console.log('Status check failed:', error);
@@ -850,12 +876,39 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
+        // Helper function to update draw status display
+        function updateDrawStatusDisplay(alertType, iconClass, label, message, textClass) {
+            const countdownElement = document.getElementById('countdown');
+            const labelElement = document.getElementById('countdownLabel');
+            const statusContainer = countdownElement?.closest('.alert');
+            const iconElement = statusContainer?.querySelector('i');
+            
+            if (labelElement) labelElement.textContent = label;
+            if (countdownElement) {
+                countdownElement.innerHTML = message;
+                countdownElement.className = `fw-bold ${textClass} fs-5`;
+            }
+            if (statusContainer) {
+                statusContainer.className = `alert alert-${alertType} border-${alertType}`;
+            }
+            if (iconElement) {
+                iconElement.className = `${iconClass} me-2 fs-5`;
+            }
+        }
+        
         // Initialize countdown
         updateCountdown();
         setInterval(updateCountdown, 1000);
         
-        // Check status every 30 seconds for real-time updates
-        setInterval(checkDrawStatus, 30000);
+        // Check status every 5 minutes instead of 30 seconds to prevent frequent reloads
+        // Only enable if user hasn't disabled auto-checking
+        const autoCheckEnabled = localStorage.getItem('lottery_auto_check') !== 'disabled';
+        if (autoCheckEnabled) {
+            console.log('Auto status checking enabled - checking every 5 minutes');
+            setInterval(checkDrawStatus, 300000); // 5 minutes = 300000ms
+        } else {
+            console.log('Auto status checking disabled by user preference');
+        }
     @endif
     
     // Update total cost when quantity changes
@@ -1248,6 +1301,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Log successful initialization
     console.log('Lottery page JavaScript initialized successfully');
+    console.log('Auto-reload status checking:', localStorage.getItem('lottery_auto_check') !== 'disabled' ? 'ENABLED (every 5 minutes)' : 'DISABLED');
+    console.log('To disable auto-checking and prevent reloads, run: localStorage.setItem("lottery_auto_check", "disabled")');
+    console.log('To re-enable auto-checking, run: localStorage.removeItem("lottery_auto_check")');
 });
 
 // Ticket sharing functions
