@@ -544,7 +544,13 @@
                         <p class="text-muted">All notifications have been cleared.</p>
                     </div>
                 `;
-                updateNotificationStats();
+                
+                // Update all stats to 0
+                document.querySelector('.text-dark.mb-0').textContent = '0'; // Total notifications
+                document.getElementById('unread-count').textContent = '0'; // Unread count  
+                document.querySelector('.text-success.mb-0').textContent = '0'; // Read count
+                document.querySelector('.text-info.mb-0').textContent = '0'; // This week count
+                
                 console.log('Notifications cleared successfully');
                 
                 Swal.fire({
@@ -560,10 +566,8 @@
                     timerProgressBar: true
                 });
                 
-                // Refresh the page after a short delay to update pagination
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1500);
+                // Update the page content without reloading
+                // The notifications container has already been updated above
             } else {
                 console.error('Failed to clear notifications:', data.message);
                 Swal.fire({
