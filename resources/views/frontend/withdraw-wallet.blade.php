@@ -3,8 +3,6 @@
 @section('title', $pageTitle)
 
 @section('content')
-<!-- Ensure SweetAlert2 is loaded -->
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <style>
 .spin {
     animation: spin 1s linear infinite;
@@ -60,6 +58,8 @@
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     @endif
+
+
 
     <div class="row">
         <!-- Wallet Balance Overview -->
@@ -359,12 +359,13 @@
         </div>
     </div>
 </div>
+@endsection
 
+@push('script')
 <script>
-// Wait for DOM and SweetAlert to be loaded
+// Wait for DOM to be loaded
 document.addEventListener('DOMContentLoaded', function() {
-    // Check if this is a fresh page load or a redirect after form submission
-    const urlParams = new URLSearchParams(window.location.search);
+    // Check if this is a redirect after form submission
     const isRedirectAfterSubmission = sessionStorage.getItem('withdrawalSubmitted') === 'true';
     
     // Clear submission flags on fresh load
@@ -372,22 +373,27 @@ document.addEventListener('DOMContentLoaded', function() {
         sessionStorage.removeItem('withdrawalSubmitting');
         sessionStorage.removeItem('withdrawalSubmitted');
     } else {
-        // Mark that we've handled the redirect
         sessionStorage.removeItem('withdrawalSubmitted');
     }
     
-    // Wait a bit more for SweetAlert to load from CDN
-    setTimeout(function() {
-        // Initialize all functionality after SweetAlert is confirmed to be loaded
-        initializeWithdrawalPage();
-    }, 100);
+    // Wait for SweetAlert to be fully loaded
+    function waitForSweetAlert() {
+        if (typeof Swal !== 'undefined') {
+            initializeWithdrawalPage();
+        } else {
+            setTimeout(waitForSweetAlert, 100);
+        }
+    }
+    
+    waitForSweetAlert();
 });
 
 // KYC Alert Function
 function showKycAlert() {
     if (typeof Swal === 'undefined') {
-        alert('KYC Verification Required - Please complete KYC verification to withdraw funds.');
-        window.location.href = '{{ route('user.kyc.index') }}';
+        if (confirm('KYC Verification Required - Please complete KYC verification to withdraw funds. Click OK to proceed to KYC verification.')) {
+            window.location.href = '{{ route('user.kyc.index') }}';
+        }
         return;
     }
     
@@ -411,9 +417,14 @@ function showKycAlert() {
         cancelButtonText: 'Later',
         confirmButtonColor: '#ffc107',
         cancelButtonColor: '#6c757d',
-        reverseButtons: true
+        reverseButtons: true,
+        allowOutsideClick: false
     }).then((result) => {
         if (result.isConfirmed) {
+            window.location.href = '{{ route('user.kyc.index') }}';
+        }
+    }).catch((error) => {
+        if (confirm('KYC Verification Required - Please complete KYC verification to withdraw funds. Click OK to proceed.')) {
             window.location.href = '{{ route('user.kyc.index') }}';
         }
     });
@@ -421,6 +432,7 @@ function showKycAlert() {
 
 // Function to show SweetAlert messages
 function showSweetAlertMessage(type, title, message) {
+    // Check if SweetAlert is available
     if (typeof Swal === 'undefined') {
         return false; // SweetAlert not available, keep HTML alert
     }
@@ -429,7 +441,9 @@ function showSweetAlertMessage(type, title, message) {
         title: title,
         text: message,
         confirmButtonText: 'OK',
-        showCloseButton: true
+        showCloseButton: true,
+        allowOutsideClick: true,
+        allowEscapeKey: true
     };
     
     switch(type) {
@@ -451,6 +465,9 @@ function showSweetAlertMessage(type, title, message) {
             config.icon = 'info';
             config.confirmButtonColor = '#17a2b8';
             break;
+        default:
+            config.icon = 'info';
+            config.confirmButtonColor = '#6c757d';
     }
     
     try {
@@ -794,7 +811,14 @@ function initializeWithdrawalPage() {
                                 submitButton.innerHTML = '<i class="fe fe-loader me-2 spin"></i>Processing...';
                             }
                             
-                            // Submit the original form directly instead of cloning
+                            // Refresh CSRF token from meta tag
+                            const csrfToken = withdrawForm.querySelector('input[name="_token"]');
+                            const metaCsrf = document.querySelector('meta[name="csrf-token"]');
+                            if (metaCsrf && csrfToken) {
+                                csrfToken.value = metaCsrf.getAttribute('content');
+                            }
+                            
+                            // Submit the form
                             withdrawForm.submit();
                         }
                     });
@@ -813,6 +837,13 @@ function initializeWithdrawalPage() {
                             submitButton.innerHTML = '<i class="fe fe-loader me-2 spin"></i>Processing...';
                         }
                         
+                        // Refresh CSRF token from meta tag
+                        const csrfToken = withdrawForm.querySelector('input[name="_token"]');
+                        const metaCsrf = document.querySelector('meta[name="csrf-token"]');
+                        if (metaCsrf && csrfToken) {
+                            csrfToken.value = metaCsrf.getAttribute('content');
+                        }
+                        
                         withdrawForm.submit();
                     }
                 }
@@ -821,5 +852,5 @@ function initializeWithdrawalPage() {
     }
 }
 </script>
-@endsection
+@endpush
 </x-smart_layout>

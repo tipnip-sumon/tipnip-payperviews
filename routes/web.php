@@ -48,17 +48,6 @@ Route::get('/storage/{path}', function ($path) {
 })->where('path', '.*');
 
 // =============================================================================
-// TEST ROUTES (Development only)
-// =============================================================================
-// Test sponsor validation
-Route::get('/test/sponsor-validation', [App\Http\Controllers\TestController::class, 'testSponsorValidation'])
-    ->name('test.sponsor.validation');
-
-// Test database connection
-Route::get('/test/database', [App\Http\Controllers\TestController::class, 'testDatabase'])
-    ->name('test.database');
-
-// =============================================================================
 // PUBLIC ROUTES
 // =============================================================================
 
@@ -185,11 +174,6 @@ Route::get('/user/dashboard', [App\Http\Controllers\User\UserController::class, 
 // Dashboard Performance Metrics API
 Route::get('/user/dashboard/performance', [App\Http\Controllers\User\UserController::class, 'getPerformanceMetrics'])
     ->name('dashboard.performance')->middleware(['auth']);
-
-// Layout Test Route
-Route::get('/test/layout', function () {
-    return view('test.layout-demo', ['pageTitle' => 'Smart Layout Test']);
-})->name('test.layout')->middleware(['auth']);
 
 // =============================================================================
 // AUTHENTICATION ROUTES
@@ -786,7 +770,7 @@ Route::controller(App\Http\Controllers\Api\TicketValidationController::class)->m
 // WITHDRAWAL ROUTES
 // =============================================================================
 
-Route::controller(App\Http\Controllers\User\WithdrawController::class)->middleware('auth','prevent-back','single-session')->group(function () {
+Route::controller(App\Http\Controllers\User\WithdrawController::class)->middleware('auth','prevent-back')->group(function () {
     Route::get('/user/withdraw','index')->name('user.withdraw');
     Route::post('/user/withdraw','withdraw')->name('user.withdraw.submit');
     Route::get('/user/withdraw/history','history')->name('user.withdraw.history');
@@ -862,7 +846,7 @@ Route::prefix('admin')->middleware(['ok-user','prevent-back'])->group(function (
 // VIDEO ROUTES
 // =============================================================================
 
-Route::get('/videos', [VideoLinkController::class, 'publicGallery'])->name('videos.public')->middleware('auth');
+Route::get('/videos', [VideoLinkController::class, 'publicGallery'])->name('videos.public');
 
 // Redirect old service worker URLs to correct route
 Route::get('/videos/public', function () {

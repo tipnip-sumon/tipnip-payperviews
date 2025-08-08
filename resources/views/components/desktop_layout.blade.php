@@ -1628,14 +1628,15 @@
     <script src="{{asset('assets/js/simplebar.js')}}"></script>
 
     <!-- Color Picker JS -->
-    <script src="{{asset('assets/libs/@simonwep/pickr/pickr.es5.min.js')}}"></script>
+    <script src="{{asset('assets/libs/@simonwep/pickr/pickr.es5.min.js')}}"></script> 
 
     <!-- Custom-Switcher JS -->
     <script src="{{asset('assets/js/custom-switcher.min.js')}}"></script>
 
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
+    
+    <!-- SweetAlert2 Test Script (Debug Mode Only) -->
     <!-- Custom JS -->
     <script src="{{asset('assets/js/custom.js')}}"></script>
 
@@ -1644,24 +1645,18 @@
     <script>
     // Enhanced logout function with fallback mechanisms (from user_layout)
     function performLogout() {
-        console.log('performLogout called - attempting simple logout first');
-        
         // Primary: Try simple logout (no CSRF, no middleware)
         window.location.href = "{{ route('simple.logout') }}";
     }
     
     // Fallback logout function
     function performLogoutFallback() {
-        console.log('performLogoutFallback called - using standard logout');
-        
         // Fallback: Try standard logout
         window.location.href = "{{ route('logout') }}";
     }
     
     // Emergency logout function
     function performEmergencyLogout() {
-        console.log('performEmergencyLogout called - direct redirect');
-        
         // Emergency: Direct redirect to login
         window.location.href = "{{ route('login') }}?emergency_logout=1&t=" + Math.floor(Date.now() / 1000);
     }
@@ -1669,7 +1664,6 @@
     // Global error handler for logout failures
     window.addEventListener('error', function(e) {
         if (e.message && e.message.includes('419')) {
-            console.log('419 error detected, attempting emergency logout');
             performEmergencyLogout();
         }
     });
@@ -1717,8 +1711,6 @@
         
         // Initialize theme toggle
         initThemeToggle();
-        
-        console.log('Desktop layout loaded successfully');
     });
     
     function initThemeToggle() {
@@ -1742,8 +1734,6 @@
         
         localStorage.setItem('theme', newTheme);
         applyDesktopTheme(newTheme);
-        
-        console.log('Desktop theme switched to:', newTheme);
     }
     
     function applyDesktopTheme(theme) {
@@ -1885,11 +1875,8 @@
         const currentPasswordInput = document.getElementById('current_password');
         
         if (!form || !newPasswordInput || !confirmPasswordInput || !currentPasswordInput) {
-            console.error('Password change form elements not found');
             return;
         }
-        
-        console.log('Password change modal initialized');
         
         // Password strength checker
         newPasswordInput.addEventListener('input', function() {
@@ -1905,14 +1892,11 @@
         // Form submission
         form.addEventListener('submit', function(e) {
             e.preventDefault();
-            console.log('Form submitted, validating...');
             
             if (!validatePasswordForm()) {
-                console.log('Validation failed');
                 return;
             }
             
-            console.log('Validation passed, submitting...');
             submitPasswordChange();
         });
         
@@ -2029,7 +2013,6 @@
                 isValid = false;
             }
             
-            console.log('Validation result:', isValid);
             return isValid;
         }
         
@@ -2046,11 +2029,6 @@
             formData.append('current_password', currentPasswordInput.value);
             formData.append('password', newPasswordInput.value);
             formData.append('password_confirmation', confirmPasswordInput.value);
-            
-            // Debug log
-            console.log('Submitting password change...');
-            console.log('Form action:', form.action);
-            console.log('Form data keys:', Array.from(formData.keys()));
             
             fetch(form.action, {
                 method: 'POST', // Laravel expects POST with _method field for PUT
@@ -2099,7 +2077,6 @@
                     }
                 } else {
                     if (data.errors) {
-                        console.log('Validation errors:', data.errors);
                         Object.keys(data.errors).forEach(key => {
                             const errorMessage = Array.isArray(data.errors[key]) ? data.errors[key][0] : data.errors[key];
                             showPasswordError(key + '_error', errorMessage);
