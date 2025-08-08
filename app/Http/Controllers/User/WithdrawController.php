@@ -256,6 +256,11 @@ class WithdrawController extends Controller
         // Get available withdrawal methods
         $withdrawMethods = WithdrawMethod::where('status', 1)->get();
         
+        // Check if this is a test request
+        if (request()->get('test') === 'simple') {
+            return view('test-withdrawal', compact('withdrawMethods'));
+        }
+        
         // Get wallet withdrawal statistics
         $withdrawalStats = [
             'total_wallet_withdrawals' => Withdrawal::where('user_id', $user->id)->where('withdraw_type', 'wallet')->count(),
@@ -325,10 +330,14 @@ class WithdrawController extends Controller
             // Check if profile completion is the specific issue
             $failures = $conditionCheck['failures'];
             if (count($failures) === 1 && strpos($failures[0], 'Profile completion') !== false) {
-                return back()->with('error', 'Please complete your profile information before making withdrawals. Update your profile with all required details including name, mobile, country, and address.');
+                $message = 'Please complete your profile information before making withdrawals. Update your profile with all required details including name, mobile, country, and address.';
+                Log::info('Returning profile completion error', ['message' => $message]);
+                return redirect()->back()->with('error', $message)->withInput();
             }
             
-            return back()->with('error', 'Withdrawal requirements not met: ' . implode(', ', $conditionCheck['failures']));
+            $message = 'Withdrawal requirements not met: ' . implode(', ', $conditionCheck['failures']);
+            Log::info('Returning general condition error', ['message' => $message]);
+            return redirect()->back()->with('error', $message)->withInput();
         }
         
         // Get the selected withdrawal method for validation

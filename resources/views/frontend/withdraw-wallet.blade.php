@@ -799,11 +799,9 @@ function initializeWithdrawalPage() {
                                 submitButton.innerHTML = '<i class="fe fe-loader me-2 spin"></i>Processing...';
                             }
                             
-                            // Submit the form directly
+                            // Submit the original form directly instead of cloning
                             console.log('Submitting form...');
-                            const newForm = withdrawForm.cloneNode(true);
-                            withdrawForm.parentNode.replaceChild(newForm, withdrawForm);
-                            newForm.submit();
+                            withdrawForm.submit();
                         }
                     });
                 } else {
@@ -822,9 +820,7 @@ function initializeWithdrawalPage() {
                         }
                         
                         console.log('Submitting form via fallback...');
-                        const newForm = withdrawForm.cloneNode(true);
-                        withdrawForm.parentNode.replaceChild(newForm, withdrawForm);
-                        newForm.submit();
+                        withdrawForm.submit();
                     }
                 }
             }
