@@ -318,12 +318,20 @@ class LotteryController extends Controller
         try {
             $user = Auth::user();
             
-            // Build base query
+            // Build base query - exclude expired tickets by default unless specifically requested
             $query = LotteryTicket::where('user_id', $user->id)
                                  ->with(['lotteryDraw', 'winner', 'lotteryDraw.winners']);
 
+            // By default, exclude expired and used tickets unless specifically filtering for them
+            if (!$request->filled('status') || !in_array($request->status, ['expired', 'used_as_token'])) {
+                $query->where(function($q) {
+                    $q->where('status', '!=', 'expired')
+                      ->whereNull('used_as_token_at');
+                });
+            }
+
             // Apply filters with validation
-            if ($request->filled('status') && in_array($request->status, ['active', 'claimed', 'winner', 'refunded', 'expired'])) {
+            if ($request->filled('status') && in_array($request->status, ['active', 'claimed', 'winner', 'refunded', 'expired', 'used_as_token'])) {
                 switch ($request->status) {
                     case 'active':
                         $query->whereHas('lotteryDraw', function($q) {
@@ -342,9 +350,17 @@ class LotteryController extends Controller
                         $query->where('status', 'refunded');
                         break;
                     case 'expired':
-                        $query->whereHas('lotteryDraw', function($q) {
-                            $q->where('status', 'completed');
-                        })->whereDoesntHave('winner');
+                        $query->where(function($q) {
+                            $q->where('status', 'expired')
+                              ->orWhere(function($subq) {
+                                  $subq->whereHas('lotteryDraw', function($drawQuery) {
+                                      $drawQuery->where('status', 'completed');
+                                  })->whereDoesntHave('winner');
+                              });
+                        });
+                        break;
+                    case 'used_as_token':
+                        $query->whereNotNull('used_as_token_at');
                         break;
                 }
             }
@@ -373,7 +389,10 @@ class LotteryController extends Controller
                 'active_tickets' => LotteryTicket::where('user_id', $user->id)
                                                 ->whereHas('lotteryDraw', function($q) {
                                                     $q->where('status', 'pending');
-                                                })->count(),
+                                                })
+                                                ->where('status', '!=', 'expired')
+                                                ->whereNull('used_as_token_at')
+                                                ->count(),
                 'winning_tickets' => LotteryTicket::where('user_id', $user->id)
                                                  ->whereHas('winner')
                                                  ->whereHas('lotteryDraw', function($q) {
