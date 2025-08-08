@@ -3,6 +3,9 @@
 @section('title', $pageTitle)
 
 @section('content')
+<!-- Ensure SweetAlert2 is loaded -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 <div class="container-fluid">
     <!-- Page Header -->
     <div class="d-flex align-items-center justify-content-between page-header-breadcrumb flex-wrap gap-2">
@@ -344,8 +347,16 @@
 </div>
 
 <script>
-// Debug: Check if SweetAlert is loaded
-console.log('SweetAlert2 loaded:', typeof Swal !== 'undefined');
+// Wait for DOM and SweetAlert to be loaded
+document.addEventListener('DOMContentLoaded', function() {
+    // Wait a bit more for SweetAlert to load from CDN
+    setTimeout(function() {
+        console.log('SweetAlert2 loaded:', typeof Swal !== 'undefined');
+        
+        // Initialize all functionality after SweetAlert is confirmed to be loaded
+        initializeWithdrawalPage();
+    }, 100);
+});
 
 // KYC Alert Function
 function showKycAlert() {
@@ -421,8 +432,9 @@ function showSweetAlertMessage(type, title, message) {
     Swal.fire(config);
 }
 
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM loaded, checking for session messages...');
+// Main initialization function
+function initializeWithdrawalPage() {
+    console.log('Initializing withdrawal page...');
     
     // Check for session messages and show SweetAlert
     @if(session('success'))
@@ -445,9 +457,7 @@ document.addEventListener('DOMContentLoaded', function() {
         showSweetAlertMessage('info', 'Information', '{{ addslashes(session('info')) }}');
     @endif
     
-    // Test SweetAlert functionality
-    console.log('Testing SweetAlert...');
-    
+    // Get DOM elements
     const amountInput = document.getElementById('amount');
     const methodSelect = document.getElementById('withdraw_method');
     const methodInfo = document.getElementById('method-info');
@@ -498,8 +508,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 const dailyLimit = parseFloat(selectedOption.dataset.dailyLimit || 0);
                 
                 // Update amount input constraints
-                amountInput.min = minAmount;
-                amountInput.max = Math.min(maxAmount, {{ $totalWalletBalance }});
+                if (amountInput) {
+                    amountInput.min = minAmount;
+                    amountInput.max = Math.min(maxAmount, {{ $totalWalletBalance }});
+                }
                 
                 // Show method information
                 let chargeInfo = '';
@@ -551,8 +563,10 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    
+    // Charge calculation function
     function updateChargeCalculation() {
-        if (!methodSelect || !chargeCalculation) return;
+        if (!methodSelect || !chargeCalculation || !amountInput) return;
         
         const selectedOption = methodSelect.options[methodSelect.selectedIndex];
         const amount = parseFloat(amountInput.value);
@@ -588,6 +602,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    
     // Validate amount against method limits on form submission
     const withdrawForm = document.querySelector('form');
     if (withdrawForm) {
@@ -731,31 +746,39 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Test button for SweetAlert (remove in production)
-    console.log('Adding test button for SweetAlert');
-    const testButton = document.createElement('button');
-    testButton.innerHTML = 'Test SweetAlert';
-    testButton.type = 'button';
-    testButton.className = 'btn btn-secondary btn-sm';
-    testButton.style.position = 'fixed';
-    testButton.style.top = '10px';
-    testButton.style.right = '10px';
-    testButton.style.zIndex = '9999';
-    testButton.onclick = function() {
-        console.log('Test button clicked');
-        if (typeof Swal !== 'undefined') {
+    // Test button for SweetAlert
+    if (typeof Swal !== 'undefined') {
+        console.log('Adding SweetAlert test button');
+        const testButton = document.createElement('button');
+        testButton.innerHTML = 'Test SweetAlert';
+        testButton.type = 'button';
+        testButton.className = 'btn btn-secondary btn-sm';
+        testButton.style.position = 'fixed';
+        testButton.style.top = '10px';
+        testButton.style.right = '10px';
+        testButton.style.zIndex = '9999';
+        testButton.onclick = function() {
+            console.log('Test button clicked');
             Swal.fire({
                 title: 'SweetAlert Test',
                 text: 'SweetAlert is working properly!',
                 icon: 'success',
                 confirmButtonText: 'Great!'
             });
+        };
+        
+        // Check if document.body exists before appending
+        if (document.body) {
+            document.body.appendChild(testButton);
         } else {
-            alert('SweetAlert is not loaded!');
+            console.error('document.body not found');
         }
-    };
-    document.body.appendChild(testButton);
-});
+    } else {
+        console.log('SweetAlert not available, test button not added');
+    }
+    
+    console.log('✅ Withdrawal page initialization complete');
+}
 </script>
 @endsection
 </x-smart_layout>
