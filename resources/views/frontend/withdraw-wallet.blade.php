@@ -18,35 +18,35 @@
     </div>
 
     @if(session('success'))
-        <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                Swal.fire({
-                    title: 'Success!',
-                    text: '{{ session('success') }}',
-                    icon: 'success',
-                    confirmButtonText: 'OK',
-                    confirmButtonColor: '#28a745',
-                    timer: 5000,
-                    timerProgressBar: true,
-                    showCloseButton: true
-                });
-            });
-        </script>
+        <div class="alert alert-success alert-dismissible fade show" role="alert" style="display: none;">
+            <i class="fe fe-check-circle me-2"></i>
+            {{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
     @endif
 
     @if(session('error'))
-        <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                Swal.fire({
-                    title: 'Error!',
-                    text: '{{ session('error') }}',
-                    icon: 'error',
-                    confirmButtonText: 'OK',
-                    confirmButtonColor: '#dc3545',
-                    showCloseButton: true
-                });
-            });
-        </script>
+        <div class="alert alert-danger alert-dismissible fade show" role="alert" style="display: none;">
+            <i class="fe fe-alert-triangle me-2"></i>
+            {{ session('error') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    @endif
+
+    @if(session('warning'))
+        <div class="alert alert-warning alert-dismissible fade show" role="alert" style="display: none;">
+            <i class="fe fe-alert-triangle me-2"></i>
+            {{ session('warning') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    @endif
+
+    @if(session('info'))
+        <div class="alert alert-info alert-dismissible fade show" role="alert" style="display: none;">
+            <i class="fe fe-info-circle me-2"></i>
+            {{ session('info') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
     @endif
 
     <div class="row">
@@ -344,8 +344,17 @@
 </div>
 
 <script>
+// Debug: Check if SweetAlert is loaded
+console.log('SweetAlert2 loaded:', typeof Swal !== 'undefined');
+
 // KYC Alert Function
 function showKycAlert() {
+    if (typeof Swal === 'undefined') {
+        alert('KYC Verification Required - Please complete KYC verification to withdraw funds.');
+        window.location.href = '{{ route('user.kyc.index') }}';
+        return;
+    }
+    
     Swal.fire({
         title: 'KYC Verification Required',
         html: `
@@ -374,7 +383,71 @@ function showKycAlert() {
     });
 }
 
+// Function to show SweetAlert messages
+function showSweetAlertMessage(type, title, message) {
+    if (typeof Swal === 'undefined') {
+        alert(title + ': ' + message);
+        return;
+    }
+    
+    const config = {
+        title: title,
+        text: message,
+        confirmButtonText: 'OK',
+        showCloseButton: true
+    };
+    
+    switch(type) {
+        case 'success':
+            config.icon = 'success';
+            config.confirmButtonColor = '#28a745';
+            config.timer = 5000;
+            config.timerProgressBar = true;
+            break;
+        case 'error':
+            config.icon = 'error';
+            config.confirmButtonColor = '#dc3545';
+            break;
+        case 'warning':
+            config.icon = 'warning';
+            config.confirmButtonColor = '#ffc107';
+            break;
+        case 'info':
+            config.icon = 'info';
+            config.confirmButtonColor = '#17a2b8';
+            break;
+    }
+    
+    Swal.fire(config);
+}
+
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded, checking for session messages...');
+    
+    // Check for session messages and show SweetAlert
+    @if(session('success'))
+        console.log('Success message found: {{ session('success') }}');
+        showSweetAlertMessage('success', 'Success!', '{{ addslashes(session('success')) }}');
+    @endif
+
+    @if(session('error'))
+        console.log('Error message found: {{ session('error') }}');
+        showSweetAlertMessage('error', 'Error!', '{{ addslashes(session('error')) }}');
+    @endif
+
+    @if(session('warning'))
+        console.log('Warning message found: {{ session('warning') }}');
+        showSweetAlertMessage('warning', 'Warning!', '{{ addslashes(session('warning')) }}');
+    @endif
+
+    @if(session('info'))
+        console.log('Info message found: {{ session('info') }}');
+        showSweetAlertMessage('info', 'Information', '{{ addslashes(session('info')) }}');
+    @endif
+    
+    // Test SweetAlert functionality
+    console.log('Testing SweetAlert...');
+    
     const amountInput = document.getElementById('amount');
     const methodSelect = document.getElementById('withdraw_method');
     const methodInfo = document.getElementById('method-info');
@@ -384,88 +457,103 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Show insufficient balance alert
     @if($totalWalletBalance <= 0)
-        Swal.fire({
-            title: 'Insufficient Balance',
-            text: 'You don\'t have sufficient wallet balance to make a withdrawal.',
-            icon: 'warning',
-            confirmButtonText: 'OK',
-            confirmButtonColor: '#ffc107'
-        });
+        console.log('Insufficient balance detected');
+        setTimeout(() => {
+            showSweetAlertMessage('warning', 'Insufficient Balance', 'You don\'t have sufficient wallet balance to make a withdrawal.');
+        }, 500);
     @endif
     
     // Amount input validation
-    amountInput.addEventListener('input', function() {
-        if (parseFloat(this.value) > maxAmount) {
-            this.value = maxAmount;
-            Swal.fire({
-                title: 'Amount Adjusted',
-                text: `Amount has been adjusted to your maximum available balance: $${maxAmount.toFixed(2)}`,
-                icon: 'info',
-                toast: true,
-                position: 'top-end',
-                showConfirmButton: false,
-                timer: 3000,
-                timerProgressBar: true
-            });
-        }
-        updateChargeCalculation();
-    });
+    if (amountInput) {
+        amountInput.addEventListener('input', function() {
+            if (parseFloat(this.value) > maxAmount) {
+                this.value = maxAmount;
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        title: 'Amount Adjusted',
+                        text: `Amount has been adjusted to your maximum available balance: $${maxAmount.toFixed(2)}`,
+                        icon: 'info',
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 3000,
+                        timerProgressBar: true
+                    });
+                }
+            }
+            updateChargeCalculation();
+        });
+    }
 
     // Method selection handler
-    methodSelect.addEventListener('change', function() {
-        const selectedOption = this.options[this.selectedIndex];
-        
-        if (this.value) {
-            const minAmount = parseFloat(selectedOption.dataset.min);
-            const maxAmount = parseFloat(selectedOption.dataset.max);
-            const fixedCharge = parseFloat(selectedOption.dataset.fixedCharge || 0);
-            const percentCharge = parseFloat(selectedOption.dataset.percentCharge || 0);
-            const dailyLimit = parseFloat(selectedOption.dataset.dailyLimit || 0);
+    if (methodSelect) {
+        methodSelect.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
             
-            // Update amount input constraints
-            amountInput.min = minAmount;
-            amountInput.max = Math.min(maxAmount, {{ $totalWalletBalance }});
-            
-            // Show method information
-            let chargeInfo = '';
-            if (fixedCharge > 0 && percentCharge > 0) {
-                chargeInfo = `$${fixedCharge.toFixed(2)} + ${percentCharge}%`;
-            } else if (fixedCharge > 0) {
-                chargeInfo = `$${fixedCharge.toFixed(2)} fixed`;
-            } else if (percentCharge > 0) {
-                chargeInfo = `${percentCharge}% of amount`;
+            if (this.value) {
+                const minAmount = parseFloat(selectedOption.dataset.min);
+                const maxAmount = parseFloat(selectedOption.dataset.max);
+                const fixedCharge = parseFloat(selectedOption.dataset.fixedCharge || 0);
+                const percentCharge = parseFloat(selectedOption.dataset.percentCharge || 0);
+                const dailyLimit = parseFloat(selectedOption.dataset.dailyLimit || 0);
+                
+                // Update amount input constraints
+                amountInput.min = minAmount;
+                amountInput.max = Math.min(maxAmount, {{ $totalWalletBalance }});
+                
+                // Show method information
+                let chargeInfo = '';
+                if (fixedCharge > 0 && percentCharge > 0) {
+                    chargeInfo = `$${fixedCharge.toFixed(2)} + ${percentCharge}%`;
+                } else if (fixedCharge > 0) {
+                    chargeInfo = `$${fixedCharge.toFixed(2)} fixed`;
+                } else if (percentCharge > 0) {
+                    chargeInfo = `${percentCharge}% of amount`;
+                } else {
+                    chargeInfo = 'No charges';
+                }
+                
+                if (methodDetails) {
+                    methodDetails.innerHTML = `
+                        <strong>Selected Method:</strong> ${selectedOption.text.split('(')[0].trim()}<br>
+                        <strong>Amount Limits:</strong> $${minAmount.toFixed(2)} - $${Math.min(maxAmount, {{ $totalWalletBalance }}).toFixed(2)}<br>
+                        <strong>Charges:</strong> ${chargeInfo}${dailyLimit > 0 ? '<br><strong>Daily Limit:</strong> $' + dailyLimit.toFixed(2) : ''}
+                    `;
+                }
+                
+                if (methodInfo) {
+                    methodInfo.style.display = 'block';
+                }
+                updateChargeCalculation();
+                
+                // Show method selection success toast
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        title: 'Method Selected',
+                        text: `${selectedOption.text.split('(')[0].trim()} selected successfully`,
+                        icon: 'success',
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 2000,
+                        timerProgressBar: true
+                    });
+                }
             } else {
-                chargeInfo = 'No charges';
+                if (methodInfo) {
+                    methodInfo.style.display = 'none';
+                }
+                if (amountInput) {
+                    amountInput.min = 1;
+                    amountInput.max = {{ $totalWalletBalance }};
+                }
             }
-            
-            methodDetails.innerHTML = `
-                <strong>Selected Method:</strong> ${selectedOption.text.split('(')[0].trim()}<br>
-                <strong>Amount Limits:</strong> $${minAmount.toFixed(2)} - $${Math.min(maxAmount, {{ $totalWalletBalance }}).toFixed(2)}<br>
-                <strong>Charges:</strong> ${chargeInfo}${dailyLimit > 0 ? '<br><strong>Daily Limit:</strong> $' + dailyLimit.toFixed(2) : ''}
-            `;
-            
-            methodInfo.style.display = 'block';
-            updateChargeCalculation();
-            
-            // Show method selection success toast
-            Swal.fire({
-                title: 'Method Selected',
-                text: `${selectedOption.text.split('(')[0].trim()} selected successfully`,
-                icon: 'success',
-                toast: true,
-                position: 'top-end',
-                showConfirmButton: false,
-                timer: 2000,
-                timerProgressBar: true
-            });
-        } else {
-            methodInfo.style.display = 'none';
-            amountInput.min = 1;
-            amountInput.max = {{ $totalWalletBalance }};
-        }
-    });
+        });
+    }
 
     function updateChargeCalculation() {
+        if (!methodSelect || !chargeCalculation) return;
+        
         const selectedOption = methodSelect.options[methodSelect.selectedIndex];
         const amount = parseFloat(amountInput.value);
         
@@ -501,105 +589,172 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Validate amount against method limits on form submission
-    document.querySelector('form').addEventListener('submit', function(e) {
-        const selectedOption = methodSelect.options[methodSelect.selectedIndex];
-        const amount = parseFloat(amountInput.value);
-        
-        if (methodSelect.value && amount > 0) {
-            const minAmount = parseFloat(selectedOption.dataset.min);
-            const maxAmount = parseFloat(selectedOption.dataset.max);
-            const availableBalance = {{ $totalWalletBalance }};
+    const withdrawForm = document.querySelector('form');
+    if (withdrawForm) {
+        withdrawForm.addEventListener('submit', function(e) {
+            console.log('Form submission started');
             
-            if (amount < minAmount) {
-                e.preventDefault();
-                Swal.fire({
-                    title: 'Invalid Amount!',
-                    text: `Minimum withdrawal amount for this method is $${minAmount.toFixed(2)}`,
-                    icon: 'warning',
-                    confirmButtonText: 'OK',
-                    confirmButtonColor: '#ffc107'
-                }).then(() => {
-                    amountInput.focus();
-                });
+            if (!methodSelect || !amountInput) {
+                console.error('Form elements not found');
                 return;
             }
             
-            if (amount > maxAmount) {
-                e.preventDefault();
-                Swal.fire({
-                    title: 'Amount Exceeds Limit!',
-                    text: `Maximum withdrawal amount for this method is $${maxAmount.toFixed(2)}`,
-                    icon: 'warning',
-                    confirmButtonText: 'OK',
-                    confirmButtonColor: '#ffc107'
-                }).then(() => {
-                    amountInput.focus();
-                });
-                return;
-            }
-            
-            if (amount > availableBalance) {
-                e.preventDefault();
-                Swal.fire({
-                    title: 'Insufficient Balance!',
-                    text: `Insufficient wallet balance. Available: $${availableBalance.toFixed(2)}`,
-                    icon: 'error',
-                    confirmButtonText: 'OK',
-                    confirmButtonColor: '#dc3545'
-                }).then(() => {
-                    amountInput.focus();
-                });
-                return;
-            }
-            
-            // Show confirmation dialog before submitting
-            e.preventDefault();
             const selectedOption = methodSelect.options[methodSelect.selectedIndex];
-            const fixedCharge = parseFloat(selectedOption.dataset.fixedCharge || 0);
-            const percentCharge = parseFloat(selectedOption.dataset.percentCharge || 0);
-            const percentageFee = (amount * percentCharge) / 100;
-            const totalCharge = fixedCharge + percentageFee;
-            const finalAmount = amount - totalCharge;
+            const amount = parseFloat(amountInput.value);
             
-            Swal.fire({
-                title: 'Confirm Withdrawal',
-                html: `
-                    <div class="text-start">
-                        <p><strong>Method:</strong> ${selectedOption.text.split('(')[0].trim()}</p>
-                        <p><strong>Requested Amount:</strong> $${amount.toFixed(2)}</p>
-                        <p><strong>Total Charges:</strong> $${totalCharge.toFixed(2)}</p>
-                        <p><strong>You'll Receive:</strong> <span class="text-success">$${finalAmount.toFixed(2)}</span></p>
-                        <hr>
-                        <p class="text-muted small">Are you sure you want to proceed with this withdrawal?</p>
-                    </div>
-                `,
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonText: 'Yes, Withdraw',
-                cancelButtonText: 'Cancel',
-                confirmButtonColor: '#28a745',
-                cancelButtonColor: '#6c757d',
-                reverseButtons: true
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    // Show processing message
+            if (methodSelect.value && amount > 0) {
+                const minAmount = parseFloat(selectedOption.dataset.min);
+                const maxAmount = parseFloat(selectedOption.dataset.max);
+                const availableBalance = {{ $totalWalletBalance }};
+                
+                console.log('Validation:', {minAmount, maxAmount, amount, availableBalance});
+                
+                if (amount < minAmount) {
+                    e.preventDefault();
+                    console.log('Amount below minimum');
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            title: 'Invalid Amount!',
+                            text: `Minimum withdrawal amount for this method is $${minAmount.toFixed(2)}`,
+                            icon: 'warning',
+                            confirmButtonText: 'OK',
+                            confirmButtonColor: '#ffc107'
+                        }).then(() => {
+                            amountInput.focus();
+                        });
+                    } else {
+                        alert(`Minimum withdrawal amount for this method is $${minAmount.toFixed(2)}`);
+                        amountInput.focus();
+                    }
+                    return;
+                }
+                
+                if (amount > maxAmount) {
+                    e.preventDefault();
+                    console.log('Amount above maximum');
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            title: 'Amount Exceeds Limit!',
+                            text: `Maximum withdrawal amount for this method is $${maxAmount.toFixed(2)}`,
+                            icon: 'warning',
+                            confirmButtonText: 'OK',
+                            confirmButtonColor: '#ffc107'
+                        }).then(() => {
+                            amountInput.focus();
+                        });
+                    } else {
+                        alert(`Maximum withdrawal amount for this method is $${maxAmount.toFixed(2)}`);
+                        amountInput.focus();
+                    }
+                    return;
+                }
+                
+                if (amount > availableBalance) {
+                    e.preventDefault();
+                    console.log('Insufficient balance');
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            title: 'Insufficient Balance!',
+                            text: `Insufficient wallet balance. Available: $${availableBalance.toFixed(2)}`,
+                            icon: 'error',
+                            confirmButtonText: 'OK',
+                            confirmButtonColor: '#dc3545'
+                        }).then(() => {
+                            amountInput.focus();
+                        });
+                    } else {
+                        alert(`Insufficient wallet balance. Available: $${availableBalance.toFixed(2)}`);
+                        amountInput.focus();
+                    }
+                    return;
+                }
+                
+                // Show confirmation dialog before submitting
+                e.preventDefault();
+                console.log('Showing confirmation dialog');
+                
+                const fixedCharge = parseFloat(selectedOption.dataset.fixedCharge || 0);
+                const percentCharge = parseFloat(selectedOption.dataset.percentCharge || 0);
+                const percentageFee = (amount * percentCharge) / 100;
+                const totalCharge = fixedCharge + percentageFee;
+                const finalAmount = amount - totalCharge;
+                
+                if (typeof Swal !== 'undefined') {
                     Swal.fire({
-                        title: 'Processing...',
-                        text: 'Please wait while we process your withdrawal request.',
-                        icon: 'info',
-                        allowOutsideClick: false,
-                        showConfirmButton: false,
-                        didOpen: () => {
-                            Swal.showLoading();
+                        title: 'Confirm Withdrawal',
+                        html: `
+                            <div class="text-start">
+                                <p><strong>Method:</strong> ${selectedOption.text.split('(')[0].trim()}</p>
+                                <p><strong>Requested Amount:</strong> $${amount.toFixed(2)}</p>
+                                <p><strong>Total Charges:</strong> $${totalCharge.toFixed(2)}</p>
+                                <p><strong>You'll Receive:</strong> <span class="text-success">$${finalAmount.toFixed(2)}</span></p>
+                                <hr>
+                                <p class="text-muted small">Are you sure you want to proceed with this withdrawal?</p>
+                            </div>
+                        `,
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonText: 'Yes, Withdraw',
+                        cancelButtonText: 'Cancel',
+                        confirmButtonColor: '#28a745',
+                        cancelButtonColor: '#6c757d',
+                        reverseButtons: true
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            console.log('User confirmed withdrawal');
+                            // Show processing message
+                            Swal.fire({
+                                title: 'Processing...',
+                                text: 'Please wait while we process your withdrawal request.',
+                                icon: 'info',
+                                allowOutsideClick: false,
+                                showConfirmButton: false,
+                                didOpen: () => {
+                                    Swal.showLoading();
+                                }
+                            });
+                            
+                            // Submit the form
+                            setTimeout(() => {
+                                e.target.submit();
+                            }, 500);
                         }
                     });
-                    
-                    // Submit the form
-                    e.target.submit();
+                } else {
+                    // Fallback confirmation
+                    const confirmed = confirm(`Confirm Withdrawal?\n\nMethod: ${selectedOption.text.split('(')[0].trim()}\nAmount: $${amount.toFixed(2)}\nCharges: $${totalCharge.toFixed(2)}\nYou'll Receive: $${finalAmount.toFixed(2)}\n\nProceed?`);
+                    if (confirmed) {
+                        e.target.submit();
+                    }
                 }
+            }
+        });
+    }
+    
+    // Test button for SweetAlert (remove in production)
+    console.log('Adding test button for SweetAlert');
+    const testButton = document.createElement('button');
+    testButton.innerHTML = 'Test SweetAlert';
+    testButton.type = 'button';
+    testButton.className = 'btn btn-secondary btn-sm';
+    testButton.style.position = 'fixed';
+    testButton.style.top = '10px';
+    testButton.style.right = '10px';
+    testButton.style.zIndex = '9999';
+    testButton.onclick = function() {
+        console.log('Test button clicked');
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: 'SweetAlert Test',
+                text: 'SweetAlert is working properly!',
+                icon: 'success',
+                confirmButtonText: 'Great!'
             });
+        } else {
+            alert('SweetAlert is not loaded!');
         }
-    });
+    };
+    document.body.appendChild(testButton);
 });
 </script>
 @endsection
