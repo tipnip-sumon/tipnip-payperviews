@@ -719,14 +719,11 @@ Route::controller(\App\Http\Controllers\User\NotificationController::class)->mid
     Route::post('/user/notifications/test', 'sendTestNotification')->name('user.notifications.test');
     Route::post('/user/notifications/{id}/read', 'markAsRead')->name('user.notifications.read');
     Route::post('/user/notifications/read-all', 'markAllAsRead')->name('user.notifications.read-all');
+    Route::delete('/user/notifications/clear-all', 'clearAll')->name('user.notifications.clear-all');
     Route::delete('/user/notifications/{id}', 'delete')->name('user.notifications.delete');
     Route::get('/user/notifications/count', 'getUnreadCount')->name('user.notifications.count');
     Route::get('/user/notifications/{id}/redirect', 'redirect')->name('user.notifications.redirect');
 });
-
-Route::delete('/user/notifications/clear-all', [\App\Http\Controllers\User\NotificationController::class, 'clearAll'])
-    ->middleware('auth')
-    ->name('user.notifications.clear-all');
 
 // Popup API Routes for Users
 Route::controller(\App\Http\Controllers\User\PopupController::class)->group(function () {
