@@ -922,7 +922,7 @@ class PaymentController extends Controller
      */
     public function exportWithdrawals(Request $request)
     {
-        $withdrawals = Withdrawal::with(['user'])
+        $withdrawals = Withdrawal::with(['user', 'withdrawMethod'])
             ->when($request->status !== null, function($query) use ($request) {
                 return $query->where('status', $request->status);
             })
@@ -947,14 +947,51 @@ class PaymentController extends Controller
         $callback = function() use ($withdrawals) {
             $file = fopen('php://output', 'w');
             
-            // CSV headers
+            // Enhanced CSV headers with payment details
             fputcsv($file, [
                 'ID', 'User', 'Email', 'Transaction ID', 'Type', 'Amount', 'Charge', 
-                'Final Amount', 'Method', 'Status', 'Date', 'Processed Date'
+                'Final Amount', 'Method', 'Currency', 'Wallet Address', 'Account Details', 
+                'Payment Information', 'Status', 'Admin Note', 'Processing Time', 'Date', 'Processed Date'
             ]);
 
             foreach ($withdrawals as $withdrawal) {
-                $info = json_decode($withdrawal->withdraw_information);
+                // Parse withdraw_information JSON
+                $withdrawInfo = is_string($withdrawal->withdraw_information) 
+                    ? json_decode($withdrawal->withdraw_information, true) 
+                    : $withdrawal->withdraw_information;
+                
+                // Extract payment details
+                $walletAddress = '';
+                $accountDetails = '';
+                $paymentInfo = '';
+                
+                if (is_array($withdrawInfo)) {
+                    // Common wallet/address fields for crypto
+                    $walletAddress = $withdrawInfo['wallet_address'] ?? 
+                                   $withdrawInfo['address'] ?? 
+                                   $withdrawInfo['bitcoin_address'] ?? 
+                                   $withdrawInfo['ethereum_address'] ?? 
+                                   $withdrawInfo['usdt_address'] ?? 
+                                   $withdrawInfo['crypto_address'] ?? '';
+                    
+                    // Account details for traditional payment methods
+                    $accountDetails = $withdrawInfo['account_number'] ?? 
+                                    $withdrawInfo['email'] ?? 
+                                    $withdrawInfo['paypal_email'] ?? 
+                                    $withdrawInfo['bank_account'] ?? 
+                                    $withdrawInfo['account_name'] ?? '';
+                    
+                    // Full payment information as formatted string
+                    $paymentInfo = collect($withdrawInfo)->map(function($value, $key) {
+                        return ucfirst(str_replace('_', ' ', $key)) . ': ' . $value;
+                    })->implode('; ');
+                } else {
+                    // Fallback for old format
+                    $paymentInfo = $withdrawInfo->method ?? 'N/A';
+                    $walletAddress = $withdrawInfo->wallet_address ?? '';
+                    $accountDetails = $withdrawInfo->account ?? '';
+                }
+
                 $status = $withdrawal->status == 1 ? 'Approved' : ($withdrawal->status == 3 ? 'Rejected' : 'Pending');
                 
                 fputcsv($file, [
@@ -963,11 +1000,17 @@ class PaymentController extends Controller
                     $withdrawal->user->email ?? '',
                     $withdrawal->trx,
                     ucfirst($withdrawal->withdraw_type ?? 'deposit'),
-                    $withdrawal->amount,
-                    $withdrawal->charge,
-                    $withdrawal->final_amount,
-                    $info->method ?? '',
+                    number_format($withdrawal->amount, 2),
+                    number_format($withdrawal->charge, 2),
+                    number_format($withdrawal->final_amount ?? ($withdrawal->amount - $withdrawal->charge), 2),
+                    $withdrawal->withdrawMethod ? $withdrawal->withdrawMethod->name : ($withdrawInfo->method ?? 'N/A'),
+                    $withdrawal->withdrawMethod ? $withdrawal->withdrawMethod->currency : 'USD',
+                    $walletAddress,
+                    $accountDetails,
+                    $paymentInfo,
                     $status,
+                    $withdrawal->admin_feedback ?? '',
+                    $withdrawal->withdrawMethod ? $withdrawal->withdrawMethod->processing_time : 'N/A',
                     $withdrawal->created_at->format('Y-m-d H:i:s'),
                     $withdrawal->processed_at ? $withdrawal->processed_at->format('Y-m-d H:i:s') : ''
                 ]);
