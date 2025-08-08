@@ -28,6 +28,22 @@ use App\Models\Transaction;
 class AdminController extends Controller
 {
     public function index(Request $request){ 
+        // Check for session expiration message
+        if ($request->has('session_expired')) {
+            $reason = $request->get('reason', 'unknown');
+            $message = 'Your session has expired due to inactivity. Please log in again.';
+            
+            if ($reason === 'timeout') {
+                $message = 'Your admin session has timed out for security reasons. Please log in again.';
+            } elseif ($reason === 'server_session_expired') {
+                $message = 'Your session has expired on the server. Please log in again.';
+            } elseif ($reason === 'not_authenticated') {
+                $message = 'Authentication required. Please log in to access the admin panel.';
+            }
+            
+            return view('admin.index')->with('error', $message);
+        }
+        
         return view('admin.index');
     }
 
@@ -302,6 +318,75 @@ class AdminController extends Controller
     }
     
     /**
+     * Emergency logout for expired sessions (no CSRF verification needed)
+     */
+    public function emergencyLogout(Request $request)
+    {
+        try {
+            Log::info('Admin emergency logout initiated', [
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+                'reason' => 'session_expired_or_csrf_mismatch',
+                'timestamp' => now()
+            ]);
+            
+            // Force logout regardless of session state
+            if (Auth::guard('admin')->check()) {
+                $adminUser = Auth::guard('admin')->user();
+                Log::info('Emergency logout for admin user', [
+                    'admin_id' => $adminUser->id,
+                    'username' => $adminUser->username
+                ]);
+            }
+            
+            // Force logout from admin guard
+            Auth::guard('admin')->logout();
+            
+            // Clear all session data
+            $request->session()->invalidate();
+            
+            // Regenerate token for security
+            $request->session()->regenerateToken();
+            
+            // Handle AJAX requests
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Session expired. Please login again.',
+                    'redirect' => route('admin.index'),
+                    'reason' => 'session_expired',
+                    'csrf_token' => csrf_token()
+                ])->withHeaders([
+                    'Cache-Control' => 'no-cache, no-store, must-revalidate',
+                    'Pragma' => 'no-cache',
+                    'X-Admin-Emergency-Logout' => 'true'
+                ]);
+            }
+            
+            // Regular redirect with message
+            return redirect()->route('admin.index')
+                ->with('warning', 'Your session has expired. Please login again.')
+                ->withHeaders([
+                    'Cache-Control' => 'no-cache, no-store, must-revalidate',
+                    'Pragma' => 'no-cache'
+                ]);
+                
+        } catch (\Exception $e) {
+            Log::error('Emergency logout error', [
+                'error' => $e->getMessage(),
+                'ip_address' => $request->ip()
+            ]);
+            
+            // Force minimal logout
+            Auth::guard('admin')->logout();
+            $request->session()->invalidate();
+            
+            return redirect()->route('admin.index')
+                ->with('error', 'Session cleanup completed. Please login again.');
+        }
+    }
+    
+    /**
      * Extend admin session
      */
     public function extendSession(Request $request)
@@ -339,6 +424,33 @@ class AdminController extends Controller
         
         return response()->json([
             'token' => csrf_token(),
+            'timestamp' => time()
+        ]);
+    }
+    
+    /**
+     * Check session status for admin
+     */
+    public function getSessionStatus(Request $request)
+    {
+        // Check if admin is authenticated
+        $isAuthenticated = Auth::guard('admin')->check();
+        
+        if (!$isAuthenticated) {
+            return response()->json([
+                'authenticated' => false,
+                'message' => 'Not authenticated'
+            ], 401);
+        }
+        
+        $admin = Auth::guard('admin')->user();
+        
+        return response()->json([
+            'authenticated' => true,
+            'admin_id' => $admin->id,
+            'admin_name' => $admin->name,
+            'session_id' => session()->getId(),
+            'last_activity' => session()->get('last_activity', time()),
             'timestamp' => time()
         ]);
     }

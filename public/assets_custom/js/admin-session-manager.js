@@ -209,9 +209,9 @@ class AdminSessionManager {
             console.log('Emergency logout failed, proceeding with redirect:', error);
         })
         .finally(() => {
-            // Always redirect to admin index page after timeout
+            // Always redirect to admin login page after timeout
             setTimeout(() => {
-                window.location.href = '/admin/index?session_expired=1&reason=timeout';
+                window.location.href = '/admin?session_expired=1&reason=timeout';
             }, 1500);
         });
     }

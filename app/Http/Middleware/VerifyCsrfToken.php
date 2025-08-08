@@ -14,6 +14,8 @@ class VerifyCsrfToken extends Middleware
     protected $except = [  
         'admin/logout',
         '/admin/logout',
+        'admin/emergency-logout',
+        '/admin/emergency-logout',
         'logout',
         '/logout',
         'api/*', // API routes typically don't need CSRF

@@ -726,13 +726,57 @@
     </script>
     
     <!-- Admin Session Manager -->
-    <script src="{{ asset('assets/js/admin-session-manager.js') }}"></script>
+    <script src="{{ asset('assets_custom/js/admin-session-manager.js') }}"></script>
     <script>
         // Initialize session manager
         document.addEventListener('DOMContentLoaded', function() {
             if (typeof AdminSessionManager !== 'undefined') {
                 console.log('Admin Session Manager loaded successfully');
             }
+            
+            // Handle admin logout with CSRF error fallback
+            document.addEventListener('submit', function(e) {
+                if (e.target.action && e.target.action.includes('admin/logout')) {
+                    e.preventDefault();
+                    
+                    const form = e.target;
+                    const formData = new FormData(form);
+                    
+                    fetch(form.action, {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(response => {
+                        if (response.status === 419) {
+                            // CSRF token expired, try emergency logout
+                            console.log('CSRF token expired, attempting emergency logout');
+                            return fetch('{{ route("admin.emergency.logout") }}', {
+                                method: 'POST',
+                                headers: {
+                                    'X-Requested-With': 'XMLHttpRequest'
+                                }
+                            });
+                        }
+                        return response;
+                    })
+                    .then(response => {
+                        if (response.ok) {
+                            // Successful logout, redirect to admin login
+                            window.location.href = '{{ route("admin.index") }}';
+                        } else {
+                            throw new Error('Logout failed');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Logout error:', error);
+                        // Force redirect to admin login as fallback
+                        window.location.href = '{{ route("admin.index") }}';
+                    });
+                }
+            });
         });
     </script>
 </body>

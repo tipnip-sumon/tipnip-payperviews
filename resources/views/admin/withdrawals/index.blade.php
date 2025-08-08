@@ -1,324 +1,342 @@
 <x-layout>
-    <x-slot name="title">{{ $pageTitle }}</x-slot>
-@section('content')   
-    <div class="d-sm-flex d-block align-items-center justify-content-between page-header-breadcrumb">
-        <h4 class="fw-medium mb-0">{{ $pageTitle }}</h4>
-        <div class="ms-sm-1 ms-0">
-            <nav>
-                <ol class="breadcrumb mb-0">
-                    <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>
-                    <li class="breadcrumb-item active" aria-current="page">{{ $pageTitle }}</li>
-                </ol>
-            </nav>
-        </div>
-    </div>
-
-    <!-- Statistics Cards -->
-    <div class="row mb-4 my-4">
-        <div class="col-xl-2 col-lg-4 col-md-6 col-sm-6">
-            <div class="card custom-card">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="me-3">
-                            <span class="avatar avatar-md bg-primary">
-                                <i class="ti ti-wallet fs-16"></i>
-                            </span>
-                        </div>
-                        <div class="flex-fill">
-                            <h6 class="fw-semibold mb-0">{{ number_format($stats['total']) }}</h6>
-                            <span class="fs-12 text-muted">Total Withdrawals</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-xl-2 col-lg-4 col-md-6 col-sm-6">
-            <div class="card custom-card">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="me-3">
-                            <span class="avatar avatar-md bg-warning">
-                                <i class="ti ti-clock fs-16"></i>
-                            </span>
-                        </div>
-                        <div class="flex-fill">
-                            <h6 class="fw-semibold mb-0">{{ number_format($stats['pending']) }}</h6>
-                            <span class="fs-12 text-muted">Pending</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-xl-2 col-lg-4 col-md-6 col-sm-6">
-            <div class="card custom-card">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="me-3">
-                            <span class="avatar avatar-md bg-success">
-                                <i class="ti ti-check fs-16"></i>
-                            </span>
-                        </div>
-                        <div class="flex-fill">
-                            <h6 class="fw-semibold mb-0">{{ number_format($stats['approved']) }}</h6>
-                            <span class="fs-12 text-muted">Approved</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-xl-2 col-lg-4 col-md-6 col-sm-6">
-            <div class="card custom-card">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="me-3">
-                            <span class="avatar avatar-md bg-danger">
-                                <i class="ti ti-x fs-16"></i>
-                            </span>
-                        </div>
-                        <div class="flex-fill">
-                            <h6 class="fw-semibold mb-0">{{ number_format($stats['rejected']) }}</h6>
-                            <span class="fs-12 text-muted">Rejected</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-xl-2 col-lg-4 col-md-6 col-sm-6">
-            <div class="card custom-card">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="me-3">
-                            <span class="avatar avatar-md bg-info">
-                                <i class="ti ti-credit-card fs-16"></i>
-                            </span>
-                        </div>
-                        <div class="flex-fill">
-                            <h6 class="fw-semibold mb-0">{{ number_format($stats['deposit_withdrawals']) }}</h6>
-                            <span class="fs-12 text-muted">Deposit Type</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-xl-2 col-lg-4 col-md-6 col-sm-6">
-            <div class="card custom-card">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="me-3">
-                            <span class="avatar avatar-md bg-secondary">
-                                <i class="ti ti-wallet fs-16"></i>
-                            </span>
-                        </div>
-                        <div class="flex-fill">
-                            <h6 class="fw-semibold mb-0">{{ number_format($stats['wallet_withdrawals']) }}</h6>
-                            <span class="fs-12 text-muted">Wallet Type</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row">
-        <div class="col-xl-12">
-            <div class="card custom-card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <div class="card-title">
-                        {{ $pageTitle }}
-                    </div>
-                    <div class="d-flex gap-2">
-                        <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#filterModal">
-                            <i class="ri-filter-line me-1"></i>Filter
-                        </button>
-                        <a href="{{ route('admin.withdrawals.export') }}" class="btn btn-sm btn-success">
-                            <i class="ri-download-line me-1"></i>Export
-                        </a>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-bordered text-nowrap w-100" id="withdrawalsTable">
-                            <thead>
-                                <tr>
-                                    <th>
-                                        <input type="checkbox" id="selectAll" class="form-check-input">
-                                    </th>
-                                    <th>ID</th>
-                                    <th>User</th>
-                                    <th>Transaction ID</th>
-                                    <th>Type</th>
-                                    <th>Amount</th>
-                                    <th>Charge</th>
-                                    <th>Final Amount</th>
-                                    <th>Method</th>
-                                    <th>Status</th>
-                                    <th>Date</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach($withdrawals as $withdrawal)
-                                <tr>
-                                    <td>
-                                        <input type="checkbox" class="form-check-input withdrawal-checkbox" value="{{ $withdrawal->id }}">
-                                    </td>
-                                    <td>{{ $withdrawal->id }}</td>
-                                    <td>
-                                        <div class="d-flex align-items-center">
-                                            <div class="avatar avatar-sm me-2">
-                                                <span class="avatar-initial bg-light text-dark">
-                                                    {{ substr($withdrawal->user->username ?? 'N/A', 0, 2) }}
-                                                </span>
-                                            </div>
-                                            <div>
-                                                <span class="fw-semibold">{{ $withdrawal->user->username ?? 'N/A' }}</span>
-                                                <br>
-                                                <small class="text-muted">{{ $withdrawal->user->email ?? 'N/A' }}</small>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-light text-dark">{{ $withdrawal->trx }}</span>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-{{ $withdrawal->withdraw_type == 'deposit' ? 'info' : 'secondary' }}">
-                                            {{ ucfirst($withdrawal->withdraw_type ?? 'deposit') }}
+    @section('page_title', 'Withdrawal Management')
+    
+    @section('css')
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css">
+    
+    <style>
+        /* Account details styling */
+        .details-content {
+            max-height: 80px;
+            overflow-y: auto;
+            border: 1px solid #e9ecef;
+            border-radius: 0.375rem;
+            padding: 0.5rem;
+            background-color: #f8f9fa;
+            font-family: 'Courier New', monospace;
+            font-size: 0.8rem !important;
+            line-height: 1.4;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        
+        .copy-btn {
+            padding: 2px 6px;
+            font-size: 0.75rem;
+            line-height: 1;
+            border-radius: 3px;
+            transition: all 0.2s ease;
+        }
+        
+        .copy-btn:hover {
+            transform: scale(1.05);
+        }
+        
+        .copy-btn i {
+            font-size: 0.8rem;
+        }
+        
+        /* DataTables responsive styling */
+        .dataTables_wrapper .dataTables_length,
+        .dataTables_wrapper .dataTables_filter {
+            margin-bottom: 1rem;
+        }
+        
+        .dataTables_wrapper .dataTables_info,
+        .dataTables_wrapper .dataTables_paginate {
+            margin-top: 1rem;
+        }
+        
+        /* Custom styling for better mobile experience */
+        @media (max-width: 768px) {
+            .details-content {
+                max-height: 60px;
+                font-size: 0.7rem !important;
+            }
+            
+            .copy-btn {
+                padding: 1px 4px;
+                font-size: 0.65rem;
+            }
+        }
+        
+        /* Bulk actions styling */
+        #bulkActions {
+            display: none;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+        
+        /* Toast container */
+        .toast-container {
+            z-index: 9999;
+        }
+        
+        .toast {
+            min-width: 300px;
+        }
+    </style>
+    @endsection
+    @section('content')
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="row align-items-center">
+                            <div class="col">
+                                <h4 class="card-title mb-0">
+                                    <i class="ri-money-dollar-circle-line me-2"></i>
+                                    Withdrawal Management
+                                </h4>
+                            </div>
+                            <div class="col-auto">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge bg-primary fs-6">
+                                        Total: {{ number_format($withdrawals->total()) }}
+                                    </span>
+                                    @if($withdrawals->total() > 5000)
+                                        <span class="badge bg-warning fs-6">
+                                            <i class="ri-speed-line me-1"></i>Large Dataset
                                         </span>
-                                    </td>
-                                    <td>${{ number_format($withdrawal->amount, 2) }}</td>
-                                    <td>${{ number_format($withdrawal->charge, 2) }}</td>
-                                    <td class="fw-semibold">${{ number_format($withdrawal->final_amount, 2) }}</td>
-                                    <td>
-                                        @php
-                                            $info = json_decode($withdrawal->withdraw_information);
-                                        @endphp
-                                        {{ $info->method ?? 'N/A' }}
-                                    </td>
-                                    <td>
-                                        @if($withdrawal->status == 2)
-                                            <span class="badge bg-warning">Pending</span>
-                                        @elseif($withdrawal->status == 1)
-                                            <span class="badge bg-success">Approved</span>
-                                        @else
-                                            <span class="badge bg-danger">Rejected</span>
-                                        @endif
-                                    </td>
-                                    <td>{{ $withdrawal->created_at->format('M d, Y h:i A') }}</td>
-                                    <td>
-                                        <div class="btn-group" role="group">
-                                            <a href="{{ route('admin.withdrawals.show', $withdrawal->id) }}" 
-                                               class="btn btn-sm btn-info" title="View Details">
-                                                <i class="ri-eye-line"></i>
-                                            </a>
-                                            @if($withdrawal->status == 2)
-                                                <button class="btn btn-sm btn-success" 
-                                                        onclick="approveWithdrawal({{ $withdrawal->id }})" 
-                                                        title="Approve">
-                                                    <i class="ri-check-line"></i>
-                                                </button>
-                                                <button class="btn btn-sm btn-danger" 
-                                                        onclick="rejectWithdrawal({{ $withdrawal->id }})" 
-                                                        title="Reject">
-                                                    <i class="ri-close-line"></i>
-                                                </button>
-                                            @endif
-                                        </div>
-                                    </td>
-                                </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-                    
-                    <!-- Pagination -->
-                    <div class="d-flex justify-content-between align-items-center mt-3">
-                        <div>
-                            Showing {{ $withdrawals->firstItem() ?? 0 }} to {{ $withdrawals->lastItem() ?? 0 }} of {{ $withdrawals->total() ?? 0 }} results
-                        </div>
-                        <div>
-                            {{ $withdrawals->links() }}
+                                    @endif
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    
-                    <!-- Bulk Actions -->
-                    <div class="d-flex justify-content-between align-items-center mt-3" id="bulkActions" style="display: none !important;">
-                        <div>
-                            <span id="selectedCount">0</span> items selected
-                        </div>
-                        <div class="btn-group">
-                            <button class="btn btn-sm btn-success" onclick="bulkApprove()">
-                                <i class="ri-check-line me-1"></i>Approve Selected
-                            </button>
-                            <button class="btn btn-sm btn-danger" onclick="bulkReject()">
-                                <i class="ri-close-line me-1"></i>Reject Selected
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <!-- Filter Modal -->
-    <div class="modal fade" id="filterModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h6 class="modal-title">Filter Withdrawals</h6>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <form method="GET" action="{{ route('admin.withdrawals.index') }}">
-                    <div class="modal-body">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Status</label>
-                                    <select name="status" class="form-select">
+                    <div class="card-body">
+                        <!-- Filter Form -->
+                        <form method="GET" action="{{ route('admin.withdrawals.index') }}" class="mb-4">
+                            <div class="row g-3">
+                                <div class="col-md-3">
+                                    <label for="status" class="form-label">Status</label>
+                                    <select name="status" id="status" class="form-select">
                                         <option value="">All Status</option>
                                         <option value="2" {{ request('status') == '2' ? 'selected' : '' }}>Pending</option>
                                         <option value="1" {{ request('status') == '1' ? 'selected' : '' }}>Approved</option>
                                         <option value="3" {{ request('status') == '3' ? 'selected' : '' }}>Rejected</option>
                                     </select>
                                 </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Withdrawal Type</label>
-                                    <select name="withdraw_type" class="form-select">
-                                        <option value="">All Types</option>
-                                        <option value="deposit" {{ request('withdraw_type') == 'deposit' ? 'selected' : '' }}>Deposit</option>
-                                        <option value="wallet" {{ request('withdraw_type') == 'wallet' ? 'selected' : '' }}>Wallet</option>
+                                <div class="col-md-3">
+                                    <label for="method" class="form-label">Payment Method</label>
+                                    <select name="method" id="method" class="form-select">
+                                        <option value="">All Methods</option>
+                                        @foreach($paymentMethods as $methodId => $methodName)
+                                            <option value="{{ $methodId }}" {{ request('method') == $methodId ? 'selected' : '' }}>
+                                                {{ $methodName }}
+                                            </option>
+                                        @endforeach
                                     </select>
                                 </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">From Date</label>
-                                    <input type="date" name="from_date" class="form-control" value="{{ request('from_date') }}">
+                                <div class="col-md-3">
+                                    <label for="per_page" class="form-label">Records per Page</label>
+                                    <select name="per_page" id="per_page" class="form-select">
+                                        <option value="50" {{ $perPage == 50 ? 'selected' : '' }}>50</option>
+                                        <option value="100" {{ $perPage == 100 ? 'selected' : '' }}>100</option>
+                                        <option value="500" {{ $perPage == 500 ? 'selected' : '' }}>500</option>
+                                        <option value="1000" {{ $perPage == 1000 ? 'selected' : '' }}>1,000</option>
+                                        <option value="5000" {{ $perPage == 5000 ? 'selected' : '' }}>5,000</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">&nbsp;</label>
+                                    <div class="d-flex gap-2">
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="ri-search-line me-1"></i>Filter
+                                        </button>
+                                        <a href="{{ route('admin.withdrawals.index') }}" class="btn btn-outline-secondary">
+                                            <i class="ri-refresh-line me-1"></i>Reset
+                                        </a>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">To Date</label>
-                                    <input type="date" name="to_date" class="form-control" value="{{ request('to_date') }}">
-                                </div>
-                            </div>
-                            <div class="col-md-12">
-                                <div class="mb-3">
-                                    <label class="form-label">Search</label>
-                                    <input type="text" name="search" class="form-control" 
-                                           placeholder="Search by transaction ID, username, or email..." 
-                                           value="{{ request('search') }}">
+                        </form>
+
+                        <!-- Bulk Actions -->
+                        <div id="bulkActions">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="fw-bold">
+                                    <span id="selectedCount">0</span> withdrawals selected
+                                </span>
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-success btn-sm" onclick="bulkApprove()">
+                                        <i class="ri-check-line me-1"></i>Bulk Approve
+                                    </button>
+                                    <button type="button" class="btn btn-danger btn-sm" onclick="bulkReject()">
+                                        <i class="ri-close-line me-1"></i>Bulk Reject
+                                    </button>
                                 </div>
                             </div>
                         </div>
+
+                        <!-- DataTable -->
+                        <div class="table-responsive">
+                            <table id="withdrawalsTable" class="table table-striped table-hover">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th width="40">
+                                            <input type="checkbox" id="selectAll" class="form-check-input">
+                                        </th>
+                                        <th>ID</th>
+                                        <th>User</th>
+                                        <th>TRX</th>
+                                        <th>Amount</th>
+                                        <th>Charge</th>
+                                        <th>Final Amount</th>
+                                        <th>Method</th>
+                                        <th>Account Details</th>
+                                        <th>Status</th>
+                                        <th>Date</th>
+                                        <th width="120">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @forelse($withdrawals as $withdrawal)
+                                        <tr>
+                                            <td>
+                                                <input type="checkbox" class="form-check-input withdrawal-checkbox" value="{{ $withdrawal->id }}">
+                                            </td>
+                                            <td><span class="badge bg-secondary">#{{ $withdrawal->id }}</span></td>
+                                            <td>
+                                                <div>
+                                                    <strong>{{ $withdrawal->user->username ?? 'N/A' }}</strong><br>
+                                                </div>
+                                            </td>
+                                            <td><code>{{ $withdrawal->trx }}</code></td>
+                                            <td>
+                                                <span class="fw-bold text-primary">
+                                                    ${{ number_format($withdrawal->amount, 2) }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span class="text-danger">
+                                                    ${{ number_format($withdrawal->charge, 2) }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span class="fw-bold text-success">
+                                                    ${{ number_format($withdrawal->final_amount, 2) }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-info">{{ ucfirst($withdrawal->method->name ?? 'N/A') }}</span>
+                                            </td>
+                                            <td>
+                                                <div class="position-relative">
+                                                    <div class="details-content">
+                                                        @php
+                                                            $withdrawalInfo = $withdrawal->withdraw_information;
+                                                            $displayData = '';
+                                                            $copyData = '';
+                                                            
+                                                            // Force decode JSON if it's a string
+                                                            if (is_string($withdrawalInfo)) {
+                                                                $decoded = json_decode($withdrawalInfo, true);
+                                                                if (json_last_error() === JSON_ERROR_NONE) {
+                                                                    $withdrawalInfo = $decoded;
+                                                                }
+                                                            }
+                                                            
+                                                            // Only show the 'details' field if it exists
+                                                            if (is_array($withdrawalInfo) || is_object($withdrawalInfo)) {
+                                                                $infoArray = (array)$withdrawalInfo;
+                                                                if (isset($infoArray['details']) && !empty($infoArray['details'])) {
+                                                                    $displayData = htmlspecialchars($infoArray['details']);
+                                                                    $copyData = $infoArray['details'];
+                                                                }
+                                                            } elseif (!empty($withdrawalInfo) && is_string($withdrawalInfo)) {
+                                                                // If it's still a string after attempted decode, show it as-is
+                                                                $displayData = "<div class='text-info'>{$withdrawalInfo}</div>";
+                                                                $copyData = $withdrawalInfo;
+                                                            }
+                                                            
+                                                            // Fallback if no data found
+                                                            if (empty($displayData)) {
+                                                                $displayData = '<span class="text-muted">No account details provided</span>';
+                                                                $copyData = 'No account details provided';
+                                                            }
+                                                        @endphp
+                                                        
+                                                        {!! $displayData !!}
+                                                    </div>
+                                                    <button type="button" class="btn btn-outline-primary btn-sm copy-btn mt-1"
+                                                            onclick="copyToClipboard(`{{ addslashes($copyData) }}`, this)"
+                                                            title="Copy account details">
+                                                        <i class="ri-file-copy-line"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                @if($withdrawal->status == 2)
+                                                    <span class="badge bg-warning">Pending</span>
+                                                @elseif($withdrawal->status == 1)
+                                                    <span class="badge bg-success">Approved</span>
+                                                @elseif($withdrawal->status == 3)
+                                                    <span class="badge bg-danger">Rejected</span>
+                                                @else
+                                                    <span class="badge bg-secondary">Unknown</span>
+                                                @endif
+                                            </td>
+                                            <td>
+                                                <small>{{ $withdrawal->created_at->format('M d, Y') }}<br>{{ $withdrawal->created_at->format('h:i A') }}</small>
+                                            </td>
+                                            <td>
+                                                @if($withdrawal->status == 2)
+                                                    <div class="btn-group btn-group-sm">
+                                                        <button type="button" class="btn btn-success btn-sm"
+                                                                onclick="approveWithdrawal({{ $withdrawal->id }})"
+                                                                title="Approve withdrawal">
+                                                            <i class="ri-check-line"></i>
+                                                        </button>
+                                                        <button type="button" class="btn btn-danger btn-sm"
+                                                                onclick="rejectWithdrawal({{ $withdrawal->id }})"
+                                                                title="Reject withdrawal">
+                                                            <i class="ri-close-line"></i>
+                                                        </button>
+                                                        <a href="{{ url('/admin/withdrawals/' . $withdrawal->id) }}" 
+                                                           class="btn btn-info btn-sm"
+                                                           title="View details">
+                                                            <i class="ri-eye-line"></i>
+                                                        </a>
+                                                    </div>
+                                                @else
+                                                    <a href="{{ url('/admin/withdrawals/' . $withdrawal->id) }}" 
+                                                       class="btn btn-info btn-sm"
+                                                       title="View details">
+                                                        <i class="ri-eye-line"></i>
+                                                    </a>
+                                                @endif
+                                            </td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="12" class="text-center py-4">
+                                                <div class="text-muted">
+                                                    <i class="ri-inbox-line fs-1 d-block mb-2"></i>
+                                                    No withdrawals found
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Pagination -->
+                        @if($withdrawals->hasPages())
+                            <div class="d-flex justify-content-center mt-4">
+                                {{ $withdrawals->links() }}
+                            </div>
+                        @endif
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                        <a href="{{ route('admin.withdrawals.index') }}" class="btn btn-warning">Clear</a>
-                        <button type="submit" class="btn btn-primary">Apply Filter</button>
-                    </div>
-                </form>
+                </div>
             </div>
         </div>
     </div>
@@ -328,23 +346,19 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h6 class="modal-title">Approve Withdrawal</h6>
+                    <h5 class="modal-title">Approve Withdrawal</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <form id="approveForm" method="POST">
-                    @csrf
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label class="form-label">Admin Feedback (Optional)</label>
-                            <textarea name="admin_feedback" class="form-control" rows="3" 
-                                      placeholder="Add any feedback for approval...">Withdrawal approved by admin</textarea>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-success">Approve Withdrawal</button>
-                    </div>
-                </form>
+                <div class="modal-body">
+                    <p>Are you sure you want to approve this withdrawal?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <form id="approveForm" method="POST" class="d-inline">
+                        @csrf
+                        <button type="submit" class="btn btn-success">Approve</button>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
@@ -354,26 +368,24 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h6 class="modal-title">Reject Withdrawal</h6>
+                    <h5 class="modal-title">Reject Withdrawal</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <form id="rejectForm" method="POST">
-                    @csrf
-                    <div class="modal-body">
-                        <div class="alert alert-warning">
-                            <strong>Warning:</strong> Rejecting this withdrawal will restore the funds to the user's account.
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Reason for Rejection <span class="text-danger">*</span></label>
-                            <textarea name="admin_feedback" class="form-control" rows="3" 
-                                      placeholder="Please provide a reason for rejection..." required></textarea>
-                        </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to reject this withdrawal?</p>
+                    <div class="mb-3">
+                        <label for="rejectReason" class="form-label">Reason for rejection:</label>
+                        <textarea class="form-control" id="rejectReason" name="reason" rows="3" placeholder="Enter reason for rejection..."></textarea>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-danger">Reject Withdrawal</button>
-                    </div>
-                </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <form id="rejectForm" method="POST" class="d-inline">
+                        @csrf
+                        <input type="hidden" name="reason" id="rejectReasonField">
+                        <button type="submit" class="btn btn-danger">Reject</button>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
@@ -383,78 +395,141 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h6 class="modal-title" id="bulkActionTitle">Bulk Action</h6>
+                    <h5 class="modal-title" id="bulkActionTitle">Bulk Action</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <form id="bulkActionForm" method="POST" action="{{ route('admin.withdrawals.bulk-action') }}">
-                    @csrf
-                    <input type="hidden" name="action" id="bulkActionType">
-                    <input type="hidden" name="withdrawals" id="bulkWithdrawals">
-                    <div class="modal-body">
-                        <div id="bulkApproveContent" style="display: none;">
-                            <div class="mb-3">
-                                <label class="form-label">Admin Feedback (Optional)</label>
-                                <textarea name="admin_feedback" class="form-control" rows="3" 
-                                          placeholder="Add feedback for bulk approval...">Bulk approved by admin</textarea>
-                            </div>
-                        </div>
-                        <div id="bulkRejectContent" style="display: none;">
-                            <div class="alert alert-warning">
-                                <strong>Warning:</strong> Rejecting these withdrawals will restore the funds to the users' accounts.
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Reason for Rejection <span class="text-danger">*</span></label>
-                                <textarea name="admin_feedback" class="form-control" rows="3" 
-                                          placeholder="Please provide a reason for rejection..." required></textarea>
-                            </div>
+                <div class="modal-body">
+                    <div id="bulkApproveContent">
+                        <p>Are you sure you want to approve the selected withdrawals?</p>
+                    </div>
+                    <div id="bulkRejectContent">
+                        <p>Are you sure you want to reject the selected withdrawals?</p>
+                        <div class="mb-3">
+                            <label for="bulkRejectReason" class="form-label">Reason for rejection:</label>
+                            <textarea class="form-control" id="bulkRejectReason" name="reason" rows="3" placeholder="Enter reason for rejection..."></textarea>
                         </div>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn" id="bulkActionBtn">Confirm</button>
-                    </div>
-                </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <form id="bulkActionForm" action="{{ route('admin.withdrawals.bulk-action') }}" method="POST" class="d-inline">
+                        @csrf
+                        <input type="hidden" id="bulkActionType" name="action">
+                        <input type="hidden" id="bulkWithdrawals" name="withdrawals">
+                        <input type="hidden" id="bulkRejectReasonField" name="reason">
+                        <button type="submit" id="bulkActionBtn" class="btn">Confirm</button>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
+    @endsection
+    @push('script')
+    <!-- DataTables JS -->
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Select all functionality
-            const selectAllCheckbox = document.getElementById('selectAll');
-            const withdrawalCheckboxes = document.querySelectorAll('.withdrawal-checkbox');
-            const bulkActions = document.getElementById('bulkActions');
-            const selectedCount = document.getElementById('selectedCount');
-
-            selectAllCheckbox.addEventListener('change', function() {
-                withdrawalCheckboxes.forEach(checkbox => {
-                    checkbox.checked = this.checked;
+        // Withdrawal management functions in isolated scope
+        (function() {
+            $(document).ready(function() {
+                // Initialize DataTables
+                $('#withdrawalsTable').DataTable({
+                    responsive: true,
+                    pageLength: {{ $perPage }},
+                    lengthMenu: [50, 100, 500, 1000, 5000],
+                    order: [[1, 'desc']], // Order by ID column descending
+                    columnDefs: [
+                        { 
+                            targets: [0, -1], // First and last columns (checkbox and actions)
+                            orderable: false 
+                        },
+                        {
+                            targets: '_all',
+                            className: 'text-nowrap'
+                        }
+                    ],
+                    language: {
+                        lengthMenu: "Show _MENU_ withdrawals per page",
+                        info: "Showing _START_ to _END_ of _TOTAL_ withdrawals",
+                        infoEmpty: "No withdrawals found",
+                        search: "Search withdrawals:",
+                        paginate: {
+                            first: "First",
+                            last: "Last",
+                            next: "Next",
+                            previous: "Previous"
+                        }
+                    },
+                    dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>' +
+                         '<"row"<"col-sm-12"tr>>' +
+                         '<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+                    drawCallback: function() {
+                        // Reinitialize tooltips after each draw
+                        $('[data-bs-toggle="tooltip"]').tooltip();
+                    }
                 });
-                updateBulkActions();
-            });
 
-            withdrawalCheckboxes.forEach(checkbox => {
-                checkbox.addEventListener('change', updateBulkActions);
-            });
+                // Handle bulk actions
+                $('#selectAll').on('change', function() {
+                    $('.withdrawal-checkbox').prop('checked', this.checked);
+                    updateBulkActions();
+                });
 
-            function updateBulkActions() {
-                const checkedBoxes = document.querySelectorAll('.withdrawal-checkbox:checked');
-                const count = checkedBoxes.length;
-                
-                selectedCount.textContent = count;
-                
-                if (count > 0) {
-                    bulkActions.style.display = 'flex';
-                } else {
-                    bulkActions.style.display = 'none';
+                $(document).on('change', '.withdrawal-checkbox', function() {
+                    updateBulkActions();
+                });
+
+                function updateBulkActions() {
+                    const checkedBoxes = $('.withdrawal-checkbox:checked');
+                    const count = checkedBoxes.length;
+                    
+                    $('#selectedCount').text(count);
+                    
+                    if (count > 0) {
+                        $('#bulkActions').show();
+                    } else {
+                        $('#bulkActions').hide();
+                    }
+                    
+                    // Update select all checkbox state
+                    const totalCheckboxes = $('.withdrawal-checkbox').length;
+                    $('#selectAll').prop('indeterminate', count > 0 && count < totalCheckboxes);
+                    $('#selectAll').prop('checked', count === totalCheckboxes);
                 }
-                
-                // Update select all checkbox state
-                selectAllCheckbox.indeterminate = count > 0 && count < withdrawalCheckboxes.length;
-                selectAllCheckbox.checked = count === withdrawalCheckboxes.length;
-            }
-        });
 
+                // Add form submission handler for bulk actions
+                const bulkForm = document.getElementById('bulkActionForm');
+                if (bulkForm) {
+                    bulkForm.addEventListener('submit', function(e) {
+                        const actionType = document.getElementById('bulkActionType').value;
+                        
+                        // If rejecting, validate that reason is provided
+                        if (actionType === 'reject') {
+                            const reason = document.getElementById('bulkRejectReason').value.trim();
+                            if (!reason) {
+                                e.preventDefault();
+                                alert('Please provide a reason for rejection.');
+                                return false;
+                            }
+                            document.getElementById('bulkRejectReasonField').value = reason;
+                        }
+                        
+                        // Show loading state
+                        const submitBtn = document.getElementById('bulkActionBtn');
+                        submitBtn.disabled = true;
+                        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing...';
+                        
+                        // Allow form to submit normally
+                        return true;
+                    });
+                }
+            });
+        })();
+
+        // Global functions that need to be accessible from onclick handlers
         function approveWithdrawal(id) {
             const modal = new bootstrap.Modal(document.getElementById('approveModal'));
             const form = document.getElementById('approveForm');
@@ -466,6 +541,19 @@
             const modal = new bootstrap.Modal(document.getElementById('rejectModal'));
             const form = document.getElementById('rejectForm');
             form.action = `/admin/withdrawals/${id}/reject`;
+            
+            // Add form submission handler for individual reject
+            form.onsubmit = function(e) {
+                const reason = document.getElementById('rejectReason').value.trim();
+                if (!reason) {
+                    e.preventDefault();
+                    alert('Please provide a reason for rejection.');
+                    return false;
+                }
+                document.getElementById('rejectReasonField').value = reason;
+                return true;
+            };
+            
             modal.show();
         }
 
@@ -480,7 +568,8 @@
             
             document.getElementById('bulkActionType').value = 'approve';
             document.getElementById('bulkWithdrawals').value = JSON.stringify(ids);
-            document.getElementById('bulkActionTitle').textContent = 'Bulk Approve Withdrawals';
+            document.getElementById('bulkRejectReasonField').value = ''; // Clear reason for approve
+            document.getElementById('bulkActionTitle').textContent = `Bulk Approve ${ids.length} Withdrawals`;
             document.getElementById('bulkApproveContent').style.display = 'block';
             document.getElementById('bulkRejectContent').style.display = 'none';
             document.getElementById('bulkActionBtn').className = 'btn btn-success';
@@ -501,7 +590,7 @@
             
             document.getElementById('bulkActionType').value = 'reject';
             document.getElementById('bulkWithdrawals').value = JSON.stringify(ids);
-            document.getElementById('bulkActionTitle').textContent = 'Bulk Reject Withdrawals';
+            document.getElementById('bulkActionTitle').textContent = `Bulk Reject ${ids.length} Withdrawals`;
             document.getElementById('bulkApproveContent').style.display = 'none';
             document.getElementById('bulkRejectContent').style.display = 'block';
             document.getElementById('bulkActionBtn').className = 'btn btn-danger';
@@ -510,6 +599,89 @@
             const modal = new bootstrap.Modal(document.getElementById('bulkActionModal'));
             modal.show();
         }
+
+        // Copy to clipboard functionality
+        function copyToClipboard(text, button) {
+            navigator.clipboard.writeText(text).then(function() {
+                // Show success feedback
+                const originalHtml = button.innerHTML;
+                button.innerHTML = '<i class="ri-check-line text-success"></i>';
+                button.classList.add('btn-success');
+                button.classList.remove('btn-outline-primary');
+                
+                // Show toast notification
+                showToast('Account details copied to clipboard!', 'success');
+                
+                // Reset button after 2 seconds
+                setTimeout(() => {
+                    button.innerHTML = originalHtml;
+                    button.classList.remove('btn-success');
+                    button.classList.add('btn-outline-primary');
+                }, 2000);
+            }).catch(function(err) {
+                // Fallback for older browsers
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                
+                showToast('Account details copied to clipboard!', 'success');
+                
+                const originalHtml = button.innerHTML;
+                button.innerHTML = '<i class="ri-check-line text-success"></i>';
+                button.classList.add('btn-success');
+                button.classList.remove('btn-outline-primary');
+                
+                setTimeout(() => {
+                    button.innerHTML = originalHtml;
+                    button.classList.remove('btn-success');
+                    button.classList.add('btn-outline-primary');
+                }, 2000);
+            });
+        }
+
+        // Show toast notification
+        function showToast(message, type = 'info') {
+            // Create toast container if it doesn't exist
+            let toastContainer = document.querySelector('.toast-container');
+            if (!toastContainer) {
+                toastContainer = document.createElement('div');
+                toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+                document.body.appendChild(toastContainer);
+            }
+
+            // Create toast element
+            const toastId = 'toast_' + Date.now();
+            const toast = document.createElement('div');
+            toast.id = toastId;
+            toast.className = `toast align-items-center text-white bg-${type === 'success' ? 'success' : 'primary'} border-0`;
+            toast.setAttribute('role', 'alert');
+            toast.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <i class="ri-${type === 'success' ? 'check-circle' : 'information'}-line me-2"></i>
+                        ${message}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            `;
+
+            toastContainer.appendChild(toast);
+
+            // Show toast
+            const bsToast = new bootstrap.Toast(toast, {
+                autohide: true,
+                delay: 3000
+            });
+            bsToast.show();
+
+            // Remove toast element after it's hidden
+            toast.addEventListener('hidden.bs.toast', function() {
+                toast.remove();
+            });
+        }
     </script>
-    @endsection
+    @endpush
 </x-layout>

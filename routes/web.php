@@ -334,9 +334,14 @@ Route::prefix('admin')->group(function () {
     Route::post('/logout', [AdminController::class, 'logout'])->name('admin.logout')->middleware(['ok-user','prevent-back']);
     Route::get('/logout', [AdminController::class, 'logout'])->name('admin.logout.get')->middleware(['ok-user','prevent-back']); // Allow GET for logout links
     
+    // Emergency logout route for expired sessions (no CSRF verification)
+    Route::post('/emergency-logout', [AdminController::class, 'emergencyLogout'])->name('admin.emergency.logout');
+    Route::get('/emergency-logout', [AdminController::class, 'emergencyLogout'])->name('admin.emergency.logout.get');
+    
     // Session management routes
     Route::post('/extend-session', [AdminController::class, 'extendSession'])->name('admin.extend-session')->middleware(['ok-user']);
     Route::get('/csrf-token', [AdminController::class, 'getCsrfToken'])->name('admin.csrf-token');
+    Route::get('/session-status', [AdminController::class, 'getSessionStatus'])->name('admin.session-status');
     
     Route::get('/profile', [AdminController::class, 'profile'])->name('admin.profile');
     Route::post('/profile/update', [AdminController::class, 'updateProfile'])->name('admin.profile.update');
