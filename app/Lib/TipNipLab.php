@@ -467,10 +467,10 @@ class TipNipLab
             return false;
         }
 
-        // Check if sponsor has minimum investment amount
+        // Check if sponsor has minimum investment amount (only current active investments)
         $minimumSponsorInvestment = 25.00; // Configurable minimum investment
         $totalSponsorInvestment = \App\Models\Invest::where('user_id', $sponsorUserId)
-                                                   ->where('status', 1) // Active investments only
+                                                   ->where('status', 1) // Only active investments
                                                    ->sum('amount');
 
         if ($totalSponsorInvestment < $minimumSponsorInvestment) {
@@ -478,18 +478,7 @@ class TipNipLab
             return false;
         }
 
-        // Check if sponsor has any active investment (not just historical)
-        $hasActiveInvestment = \App\Models\Invest::where('user_id', $sponsorUserId)
-                                                 ->where('status', 1) // Active status
-                                                 ->where('next_time', '>', now()) // Still earning
-                                                 ->exists();
-
-        if (!$hasActiveInvestment) {
-            Log::info("Sponsor {$sponsorUserId} does not have any active investments");
-            return false;
-        }
-
-        Log::info("Sponsor {$sponsorUserId} qualified! Total investment: ${totalSponsorInvestment}, Has active investments: YES");
+        Log::info("Sponsor {$sponsorUserId} qualified! Active investment: ${totalSponsorInvestment}");
         return true;
     }
 

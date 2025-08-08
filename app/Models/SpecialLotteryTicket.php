@@ -153,7 +153,7 @@ class SpecialLotteryTicket extends Model
     {
         $currentDraw = \App\Models\LotteryDraw::getCurrentDraw();
         
-        // Calculate number of special tickets (1 per $25, same as commission tickets)
+        // Calculate number of special tickets (1 ticket per $25 invested)
         $numberOfTickets = floor($purchaseAmount / 25);
         
         \Illuminate\Support\Facades\Log::info("SpecialLotteryTicket: Creating {$numberOfTickets} special tickets for sponsor {$sponsorUserId} from user {$referralUserId} investment of \${$purchaseAmount}");
@@ -172,14 +172,14 @@ class SpecialLotteryTicket extends Model
             
             $ticket = \App\Models\LotteryTicket::create([
                 'ticket_number' => $ticketNumber,
-                'user_id' => $sponsorUserId, // Sponsor gets the tickets
+                'user_id' => $sponsorUserId, // The sponsor who gets the tickets
                 'lottery_draw_id' => $currentDraw->id,
                 'ticket_price' => 2.00, // Same as regular lottery ticket
                 'purchased_at' => now(),
                 'status' => 'active',
                 'token_type' => 'special', // Mark as special ticket
-                'sponsor_user_id' => $sponsorUserId,
-                'referral_user_id' => $referralUserId,
+                'sponsor_user_id' => $sponsorUserId, // The sponsor who gets the reward
+                'referral_user_id' => $referralUserId, // Track which referral triggered this
                 'current_owner_id' => $sponsorUserId, // Initially owned by sponsor
                 'original_owner_id' => $sponsorUserId, // Original owner is sponsor
                 'is_valid_token' => true,

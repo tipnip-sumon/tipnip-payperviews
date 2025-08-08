@@ -144,7 +144,7 @@ class FirstPurchaseCommission extends Model
      */
     public static function createCommissionTickets($sponsorUserId, $referralUserId, $purchaseAmount)
     {
-        // Calculate number of commission tickets (1 per $25 deposited)
+        // Calculate number of commission tickets (1 ticket per $25 invested)
         $numberOfTickets = floor($purchaseAmount / 25);
         
         if ($numberOfTickets <= 0) {
@@ -163,7 +163,8 @@ class FirstPurchaseCommission extends Model
             
             $ticket = \App\Models\LotteryTicket::create([
                 'ticket_number' => $ticketNumber,
-                'user_id' => $sponsorUserId,
+                'user_id' => $sponsorUserId, // The sponsor who gets and owns the tickets
+                'sponsor_user_id' => $sponsorUserId, // The sponsor who gets the commission ticket
                 'current_owner_id' => $sponsorUserId,
                 'original_owner_id' => $sponsorUserId,
                 'lottery_draw_id' => \App\Models\LotteryDraw::getCurrentDraw()->id,
