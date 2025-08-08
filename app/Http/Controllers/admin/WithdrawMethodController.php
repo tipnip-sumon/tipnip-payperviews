@@ -259,6 +259,86 @@ class WithdrawMethodController extends Controller
                 'sort_order' => 3
             ],
             [
+                'name' => 'Ethereum',
+                'method_key' => 'ethereum',
+                'status' => true,
+                'min_amount' => 15.00,
+                'max_amount' => 30000.00,
+                'daily_limit' => 8000.00,
+                'charge_type' => 'fixed',
+                'charge' => 3.00,
+                'description' => 'Ethereum cryptocurrency withdrawal',
+                'icon' => 'fab fa-ethereum',
+                'processing_time' => '1-3 hours',
+                'currency' => 'ETH',
+                'instructions' => 'Please provide your Ethereum wallet address.',
+                'sort_order' => 4
+            ],
+            [
+                'name' => 'Litecoin',
+                'method_key' => 'litecoin',
+                'status' => true,
+                'min_amount' => 10.00,
+                'max_amount' => 20000.00,
+                'daily_limit' => 6000.00,
+                'charge_type' => 'percent',
+                'charge' => 1.5,
+                'description' => 'Litecoin cryptocurrency withdrawal',
+                'icon' => 'fas fa-coins',
+                'processing_time' => '30 minutes - 2 hours',
+                'currency' => 'LTC',
+                'instructions' => 'Please provide your Litecoin wallet address.',
+                'sort_order' => 5
+            ],
+            [
+                'name' => 'USDT (ERC20)',
+                'method_key' => 'usdterc20',
+                'status' => true,
+                'min_amount' => 10.00,
+                'max_amount' => 25000.00,
+                'daily_limit' => 7000.00,
+                'charge_type' => 'fixed',
+                'charge' => 5.00,
+                'description' => 'USDT on Ethereum network (ERC-20)',
+                'icon' => 'fab fa-ethereum',
+                'processing_time' => '5-30 minutes',
+                'currency' => 'USDT',
+                'instructions' => 'Please provide your ERC-20 compatible USDT wallet address. Network: Ethereum (ERC-20)',
+                'sort_order' => 6
+            ],
+            [
+                'name' => 'USDT (BSC)',
+                'method_key' => 'usdtbsc',
+                'status' => true,
+                'min_amount' => 5.00,
+                'max_amount' => 30000.00,
+                'daily_limit' => 8000.00,
+                'charge_type' => 'fixed',
+                'charge' => 2.00,
+                'description' => 'USDT on Binance Smart Chain (BSC)',
+                'icon' => 'fas fa-coins',
+                'processing_time' => '1-10 minutes',
+                'currency' => 'USDT',
+                'instructions' => 'Please provide your BSC (BEP-20) compatible USDT wallet address. Network: Binance Smart Chain',
+                'sort_order' => 7
+            ],
+            [
+                'name' => 'USDT (TRC20)',
+                'method_key' => 'usdttrc20',
+                'status' => true,
+                'min_amount' => 5.00,
+                'max_amount' => 35000.00,
+                'daily_limit' => 9000.00,
+                'charge_type' => 'fixed',
+                'charge' => 1.00,
+                'description' => 'USDT on TRON network (TRC-20)',
+                'icon' => 'fas fa-bolt',
+                'processing_time' => '1-5 minutes',
+                'currency' => 'USDT',
+                'instructions' => 'Please provide your TRC-20 compatible USDT wallet address. Network: TRON (TRC-20)',
+                'sort_order' => 8
+            ],
+            [
                 'name' => 'Skrill',
                 'method_key' => 'skrill',
                 'status' => false,
@@ -272,7 +352,7 @@ class WithdrawMethodController extends Controller
                 'processing_time' => '1-24 hours',
                 'currency' => 'USD',
                 'instructions' => 'Please provide your Skrill email address.',
-                'sort_order' => 4
+                'sort_order' => 9
             ],
             [
                 'name' => 'Perfect Money',
@@ -288,7 +368,7 @@ class WithdrawMethodController extends Controller
                 'processing_time' => '1-6 hours',
                 'currency' => 'USD',
                 'instructions' => 'Please provide your Perfect Money account number.',
-                'sort_order' => 5
+                'sort_order' => 10
             ]
         ];
 
