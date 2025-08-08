@@ -437,14 +437,14 @@
                                                                     <i class="fas fa-share text-dark" style="font-size: 10px;"></i>
                                                                 </button>
                                                                 <ul class="dropdown-menu dropdown-menu-end">
-                                                                    <li><a class="dropdown-item" href="#" onclick="shareTicket({{ $ticket->id }}, 'whatsapp')">
+                                                                    <li><a class="dropdown-item" href="#" onclick="shareTicket({{ $ticket->id }}, 'whatsapp', '{{ $ticket->ticket_number }}')">
                                                                         <i class="fab fa-whatsapp text-success me-2"></i>WhatsApp
                                                                     </a></li>
-                                                                    <li><a class="dropdown-item" href="#" onclick="shareTicket({{ $ticket->id }}, 'messenger')">
+                                                                    <li><a class="dropdown-item" href="#" onclick="shareTicket({{ $ticket->id }}, 'messenger', '{{ $ticket->ticket_number }}')">
                                                                         <i class="fab fa-facebook-messenger text-primary me-2"></i>Messenger
                                                                     </a></li>
-                                                                    <li><a class="dropdown-item" href="#" onclick="shareTicket({{ $ticket->id }}, 'manual')">
-                                                                        <i class="fas fa-copy text-info me-2"></i>Copy Link
+                                                                    <li><a class="dropdown-item" href="#" onclick="shareTicket({{ $ticket->id }}, 'manual', '{{ $ticket->ticket_number }}')">
+                                                                        <i class="fas fa-copy text-info me-2"></i>Copy Ticket Number
                                                                     </a></li>
                                                                 </ul>
                                                             </div>
@@ -1307,7 +1307,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Ticket sharing functions
-function shareTicket(ticketId, platform) {
+function shareTicket(ticketId, platform, ticketNumber = null) {
     console.log(`Sharing ticket ${ticketId} via ${platform}`);
     
     const baseUrl = window.location.origin;
@@ -1326,7 +1326,9 @@ function shareTicket(ticketId, platform) {
             break;
             
         case 'manual':
-            copyToClipboard(shareUrl, shareText);
+            // Copy only the ticket number instead of the full URL and text
+            const textToCopy = ticketNumber || ticketId;
+            copyToClipboard(textToCopy, `Ticket number ${textToCopy} copied to clipboard!`);
             break;
             
         default:
@@ -1358,7 +1360,7 @@ function shareAllTickets(platform) {
             break;
             
         case 'manual':
-            copyToClipboard(shareUrl, shareText);
+            copyToClipboard(shareText + ' ' + shareUrl, 'All tickets info copied to clipboard!');
             break;
             
         default:
@@ -1366,10 +1368,10 @@ function shareAllTickets(platform) {
     }
 }
 
-function copyToClipboard(url, text) {
+function copyToClipboard(textToCopy, successMessage) {
     // Create a temporary textarea element
     const tempTextArea = document.createElement('textarea');
-    tempTextArea.value = text + ' ' + url;
+    tempTextArea.value = textToCopy;
     tempTextArea.style.position = 'fixed';
     tempTextArea.style.left = '-999999px';
     tempTextArea.style.top = '-999999px';
@@ -1383,35 +1385,35 @@ function copyToClipboard(url, text) {
         // Try modern clipboard API first
         if (navigator.clipboard && window.isSecureContext) {
             navigator.clipboard.writeText(tempTextArea.value).then(() => {
-                showCopySuccess('Link copied to clipboard!');
+                showCopySuccess(successMessage || 'Copied to clipboard!');
             }).catch(() => {
                 // Fallback to execCommand
-                fallbackCopy(tempTextArea);
+                fallbackCopy(tempTextArea, successMessage);
             });
         } else {
             // Fallback to execCommand
-            fallbackCopy(tempTextArea);
+            fallbackCopy(tempTextArea, successMessage);
         }
     } catch (err) {
         console.error('Failed to copy text: ', err);
-        showCopyError('Failed to copy link. Please copy manually.');
+        showCopyError('Failed to copy. Please copy manually.');
     } finally {
         // Clean up
         document.body.removeChild(tempTextArea);
     }
 }
 
-function fallbackCopy(textArea) {
+function fallbackCopy(textArea, successMessage) {
     try {
         const successful = document.execCommand('copy');
         if (successful) {
-            showCopySuccess('Link copied to clipboard!');
+            showCopySuccess(successMessage || 'Copied to clipboard!');
         } else {
-            showCopyError('Failed to copy link. Please copy manually.');
+            showCopyError('Failed to copy. Please copy manually.');
         }
     } catch (err) {
         console.error('Fallback copy failed: ', err);
-        showCopyError('Failed to copy link. Please copy manually.');
+        showCopyError('Failed to copy. Please copy manually.');
     }
 }
 
