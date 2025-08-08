@@ -5,6 +5,15 @@
 @section('content')
 <!-- Ensure SweetAlert2 is loaded -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<style>
+.spin {
+    animation: spin 1s linear infinite;
+}
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+</style>
 
 <div class="container-fluid">
     <!-- Page Header -->
@@ -736,25 +745,18 @@ function initializeWithdrawalPage() {
                             isSubmitting = true;
                             sessionStorage.setItem('withdrawalSubmitting', 'true');
                             
-                            // Show processing message
-                            Swal.fire({
-                                title: 'Processing...',
-                                text: 'Please wait while we process your withdrawal request.',
-                                icon: 'info',
-                                allowOutsideClick: false,
-                                showConfirmButton: false,
-                                didOpen: () => {
-                                    Swal.showLoading();
-                                }
-                            });
+                            // Show loading on submit button
+                            const submitButton = withdrawForm.querySelector('button[type="submit"]');
+                            if (submitButton) {
+                                submitButton.disabled = true;
+                                submitButton.innerHTML = '<i class="fe fe-loader me-2 spin"></i>Processing...';
+                            }
                             
                             // Submit the form directly
-                            setTimeout(() => {
-                                // Remove the event listener temporarily to avoid recursion
-                                const newForm = withdrawForm.cloneNode(true);
-                                withdrawForm.parentNode.replaceChild(newForm, withdrawForm);
-                                newForm.submit();
-                            }, 500);
+                            console.log('Submitting form...');
+                            const newForm = withdrawForm.cloneNode(true);
+                            withdrawForm.parentNode.replaceChild(newForm, withdrawForm);
+                            newForm.submit();
                         }
                     });
                 } else {
@@ -763,6 +765,15 @@ function initializeWithdrawalPage() {
                     if (confirmed) {
                         isSubmitting = true;
                         sessionStorage.setItem('withdrawalSubmitting', 'true');
+                        
+                        // Show loading on submit button
+                        const submitButton = withdrawForm.querySelector('button[type="submit"]');
+                        if (submitButton) {
+                            submitButton.disabled = true;
+                            submitButton.innerHTML = '<i class="fe fe-loader me-2 spin"></i>Processing...';
+                        }
+                        
+                        console.log('Submitting form via fallback...');
                         const newForm = withdrawForm.cloneNode(true);
                         withdrawForm.parentNode.replaceChild(newForm, withdrawForm);
                         newForm.submit();
