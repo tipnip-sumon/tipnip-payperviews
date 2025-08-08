@@ -349,6 +349,9 @@
 <script>
 // Wait for DOM and SweetAlert to be loaded
 document.addEventListener('DOMContentLoaded', function() {
+    // Clear any existing submission flags on page load
+    sessionStorage.removeItem('withdrawalSubmitting');
+    
     // Wait a bit more for SweetAlert to load from CDN
     setTimeout(function() {
         console.log('SweetAlert2 loaded:', typeof Swal !== 'undefined');
@@ -435,6 +438,9 @@ function showSweetAlertMessage(type, title, message) {
 // Main initialization function
 function initializeWithdrawalPage() {
     console.log('Initializing withdrawal page...');
+    
+    // Add flag to prevent multiple confirmations
+    let isSubmitting = false;
     
     // Check for session messages and show SweetAlert
     @if(session('success'))
@@ -607,7 +613,15 @@ function initializeWithdrawalPage() {
     const withdrawForm = document.querySelector('form');
     if (withdrawForm) {
         withdrawForm.addEventListener('submit', function(e) {
-            console.log('Form submission started');
+            // Check if we're already in the middle of submitting
+            const alreadySubmitting = sessionStorage.getItem('withdrawalSubmitting') === 'true' || isSubmitting;
+            console.log('Form submission started, alreadySubmitting:', alreadySubmitting);
+            
+            // If already submitting, allow the form to go through normally
+            if (alreadySubmitting) {
+                console.log('Form already being submitted, allowing submission...');
+                return true;
+            }
             
             if (!methodSelect || !amountInput) {
                 console.error('Form elements not found');
@@ -717,6 +731,11 @@ function initializeWithdrawalPage() {
                     }).then((result) => {
                         if (result.isConfirmed) {
                             console.log('User confirmed withdrawal');
+                            
+                            // Set flags to prevent multiple confirmations
+                            isSubmitting = true;
+                            sessionStorage.setItem('withdrawalSubmitting', 'true');
+                            
                             // Show processing message
                             Swal.fire({
                                 title: 'Processing...',
@@ -729,9 +748,12 @@ function initializeWithdrawalPage() {
                                 }
                             });
                             
-                            // Submit the form
+                            // Submit the form directly
                             setTimeout(() => {
-                                e.target.submit();
+                                // Remove the event listener temporarily to avoid recursion
+                                const newForm = withdrawForm.cloneNode(true);
+                                withdrawForm.parentNode.replaceChild(newForm, withdrawForm);
+                                newForm.submit();
                             }, 500);
                         }
                     });
@@ -739,7 +761,11 @@ function initializeWithdrawalPage() {
                     // Fallback confirmation
                     const confirmed = confirm(`Confirm Withdrawal?\n\nMethod: ${selectedOption.text.split('(')[0].trim()}\nAmount: $${amount.toFixed(2)}\nCharges: $${totalCharge.toFixed(2)}\nYou'll Receive: $${finalAmount.toFixed(2)}\n\nProceed?`);
                     if (confirmed) {
-                        e.target.submit();
+                        isSubmitting = true;
+                        sessionStorage.setItem('withdrawalSubmitting', 'true');
+                        const newForm = withdrawForm.cloneNode(true);
+                        withdrawForm.parentNode.replaceChild(newForm, withdrawForm);
+                        newForm.submit();
                     }
                 }
             }
