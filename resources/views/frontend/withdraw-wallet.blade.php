@@ -358,8 +358,19 @@
 <script>
 // Wait for DOM and SweetAlert to be loaded
 document.addEventListener('DOMContentLoaded', function() {
-    // Clear any existing submission flags on page load
-    sessionStorage.removeItem('withdrawalSubmitting');
+    // Check if this is a fresh page load or a redirect after form submission
+    const urlParams = new URLSearchParams(window.location.search);
+    const isRedirectAfterSubmission = sessionStorage.getItem('withdrawalSubmitted') === 'true';
+    
+    // Clear submission flags on fresh load
+    if (!isRedirectAfterSubmission) {
+        sessionStorage.removeItem('withdrawalSubmitting');
+        sessionStorage.removeItem('withdrawalSubmitted');
+    } else {
+        // Mark that we've handled the redirect
+        sessionStorage.removeItem('withdrawalSubmitted');
+        console.log('Page reloaded after withdrawal submission - handling gracefully');
+    }
     
     // Wait a bit more for SweetAlert to load from CDN
     setTimeout(function() {
@@ -452,25 +463,38 @@ function initializeWithdrawalPage() {
     let isSubmitting = false;
     
     // Check for session messages and show SweetAlert
-    @if(session('success'))
-        console.log('Success message found: {{ session('success') }}');
-        showSweetAlertMessage('success', 'Success!', '{{ addslashes(session('success')) }}');
-    @endif
+    // Only show messages if this isn't a rapid succession of page loads
+    const lastMessageTime = sessionStorage.getItem('lastMessageTime');
+    const currentTime = Date.now();
+    const shouldShowMessage = !lastMessageTime || (currentTime - parseInt(lastMessageTime)) > 2000; // 2 second cooldown
+    
+    if (shouldShowMessage) {
+        @if(session('success'))
+            console.log('Success message found: {{ session('success') }}');
+            showSweetAlertMessage('success', 'Success!', '{{ addslashes(session('success')) }}');
+            sessionStorage.setItem('lastMessageTime', currentTime.toString());
+        @endif
 
-    @if(session('error'))
-        console.log('Error message found: {{ session('error') }}');
-        showSweetAlertMessage('error', 'Error!', '{{ addslashes(session('error')) }}');
-    @endif
+        @if(session('error'))
+            console.log('Error message found: {{ session('error') }}');
+            showSweetAlertMessage('error', 'Error!', '{{ addslashes(session('error')) }}');
+            sessionStorage.setItem('lastMessageTime', currentTime.toString());
+        @endif
 
-    @if(session('warning'))
-        console.log('Warning message found: {{ session('warning') }}');
-        showSweetAlertMessage('warning', 'Warning!', '{{ addslashes(session('warning')) }}');
-    @endif
+        @if(session('warning'))
+            console.log('Warning message found: {{ session('warning') }}');
+            showSweetAlertMessage('warning', 'Warning!', '{{ addslashes(session('warning')) }}');
+            sessionStorage.setItem('lastMessageTime', currentTime.toString());
+        @endif
 
-    @if(session('info'))
-        console.log('Info message found: {{ session('info') }}');
-        showSweetAlertMessage('info', 'Information', '{{ addslashes(session('info')) }}');
-    @endif
+        @if(session('info'))
+            console.log('Info message found: {{ session('info') }}');
+            showSweetAlertMessage('info', 'Information', '{{ addslashes(session('info')) }}');
+            sessionStorage.setItem('lastMessageTime', currentTime.toString());
+        @endif
+    } else {
+        console.log('Skipping duplicate message display - too soon after last message');
+    }
     
     // Get DOM elements
     const amountInput = document.getElementById('amount');
@@ -744,6 +768,7 @@ function initializeWithdrawalPage() {
                             // Set flags to prevent multiple confirmations
                             isSubmitting = true;
                             sessionStorage.setItem('withdrawalSubmitting', 'true');
+                            sessionStorage.setItem('withdrawalSubmitted', 'true');
                             
                             // Show loading on submit button
                             const submitButton = withdrawForm.querySelector('button[type="submit"]');
@@ -765,6 +790,7 @@ function initializeWithdrawalPage() {
                     if (confirmed) {
                         isSubmitting = true;
                         sessionStorage.setItem('withdrawalSubmitting', 'true');
+                        sessionStorage.setItem('withdrawalSubmitted', 'true');
                         
                         // Show loading on submit button
                         const submitButton = withdrawForm.querySelector('button[type="submit"]');
