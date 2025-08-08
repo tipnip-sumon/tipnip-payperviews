@@ -922,104 +922,132 @@ class PaymentController extends Controller
      */
     public function exportWithdrawals(Request $request)
     {
-        $withdrawals = Withdrawal::with(['user', 'withdrawMethod'])
-            ->when($request->status !== null, function($query) use ($request) {
-                return $query->where('status', $request->status);
-            })
-            ->when($request->withdraw_type, function($query) use ($request) {
-                return $query->where('withdraw_type', $request->withdraw_type);
-            })
-            ->when($request->from_date, function($query) use ($request) {
-                return $query->whereDate('created_at', '>=', $request->from_date);
-            })
-            ->when($request->to_date, function($query) use ($request) {
-                return $query->whereDate('created_at', '<=', $request->to_date);
-            })
-            ->get();
-
-        $filename = 'withdrawals_' . now()->format('Y_m_d_H_i_s') . '.csv';
-
-        $headers = [
-            'Content-Type' => 'text/csv',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
-        ];
-
-        $callback = function() use ($withdrawals) {
-            $file = fopen('php://output', 'w');
+        try {
+            Log::info('Export withdrawals started', ['request' => $request->all()]);
             
-            // Enhanced CSV headers with payment details
-            fputcsv($file, [
-                'ID', 'User', 'Email', 'Transaction ID', 'Type', 'Amount', 'Charge', 
-                'Final Amount', 'Method', 'Currency', 'Wallet Address', 'Account Details', 
-                'Payment Information', 'Status', 'Admin Note', 'Processing Time', 'Date', 'Processed Date'
-            ]);
+            $withdrawals = Withdrawal::with(['user', 'withdrawMethod'])
+                ->when($request->status !== null && $request->status !== '', function($query) use ($request) {
+                    return $query->where('status', $request->status);
+                })
+                ->when($request->withdraw_type, function($query) use ($request) {
+                    return $query->where('withdraw_type', $request->withdraw_type);
+                })
+                ->when($request->from_date, function($query) use ($request) {
+                    return $query->whereDate('created_at', '>=', $request->from_date);
+                })
+                ->when($request->to_date, function($query) use ($request) {
+                    return $query->whereDate('created_at', '<=', $request->to_date);
+                })
+                ->get();
 
-            foreach ($withdrawals as $withdrawal) {
-                // Parse withdraw_information JSON
-                $withdrawInfo = is_string($withdrawal->withdraw_information) 
-                    ? json_decode($withdrawal->withdraw_information, true) 
-                    : $withdrawal->withdraw_information;
+            Log::info('Found withdrawals', ['count' => $withdrawals->count()]);
+
+            $filename = 'withdrawals_' . now()->format('Y_m_d_H_i_s') . '.csv';
+
+            $headers = [
+                'Content-Type' => 'text/csv; charset=UTF-8',
+                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+                'Cache-Control' => 'max-age=0',
+            ];
+
+            $callback = function() use ($withdrawals) {
+                $file = fopen('php://output', 'w');
                 
-                // Extract payment details
-                $walletAddress = '';
-                $accountDetails = '';
-                $paymentInfo = '';
+                Log::info('Starting CSV generation');
                 
-                if (is_array($withdrawInfo)) {
-                    // Common wallet/address fields for crypto
-                    $walletAddress = $withdrawInfo['wallet_address'] ?? 
-                                   $withdrawInfo['address'] ?? 
-                                   $withdrawInfo['bitcoin_address'] ?? 
-                                   $withdrawInfo['ethereum_address'] ?? 
-                                   $withdrawInfo['usdt_address'] ?? 
-                                   $withdrawInfo['crypto_address'] ?? '';
-                    
-                    // Account details for traditional payment methods
-                    $accountDetails = $withdrawInfo['account_number'] ?? 
-                                    $withdrawInfo['email'] ?? 
-                                    $withdrawInfo['paypal_email'] ?? 
-                                    $withdrawInfo['bank_account'] ?? 
-                                    $withdrawInfo['account_name'] ?? '';
-                    
-                    // Full payment information as formatted string
-                    $paymentInfo = collect($withdrawInfo)->map(function($value, $key) {
-                        return ucfirst(str_replace('_', ' ', $key)) . ': ' . $value;
-                    })->implode('; ');
-                } else {
-                    // Fallback for old format
-                    $paymentInfo = $withdrawInfo->method ?? 'N/A';
-                    $walletAddress = $withdrawInfo->wallet_address ?? '';
-                    $accountDetails = $withdrawInfo->account ?? '';
+                // Write BOM for UTF-8
+                fwrite($file, "\xEF\xBB\xBF");
+                
+                // Enhanced CSV headers with payment details
+                fputcsv($file, [
+                    'ID', 'User', 'Email', 'Transaction ID', 'Type', 'Amount', 'Charge', 
+                    'Final Amount', 'Method', 'Currency', 'Wallet Address', 'Account Details', 
+                    'Payment Information', 'Status', 'Admin Note', 'Processing Time', 'Date', 'Processed Date'
+                ]);
+
+                $processedCount = 0;
+                foreach ($withdrawals as $withdrawal) {
+                    try {
+                        // Simple extraction for wallet address and payment info
+                        $walletAddress = '';
+                        $accountDetails = '';
+                        $paymentInfo = '';
+                        
+                        if ($withdrawal->withdraw_information) {
+                            $withdrawInfo = $withdrawal->withdraw_information;
+                            
+                            // If it's a string, decode it
+                            if (is_string($withdrawInfo)) {
+                                $withdrawInfo = json_decode($withdrawInfo, true) ?? [];
+                            }
+                            
+                            // If it's an object, convert to array
+                            if (is_object($withdrawInfo)) {
+                                $withdrawInfo = (array) $withdrawInfo;
+                            }
+                            
+                            if (is_array($withdrawInfo)) {
+                                // Look for wallet address in common fields
+                                $walletAddress = $withdrawInfo['wallet_address'] ?? 
+                                               $withdrawInfo['address'] ?? 
+                                               $withdrawInfo['details'] ?? '';
+                                
+                                // Get method from the info
+                                $methodFromInfo = $withdrawInfo['method'] ?? '';
+                                
+                                // Create payment info string
+                                $paymentInfo = implode('; ', array_filter([
+                                    $methodFromInfo ? "Method: {$methodFromInfo}" : '',
+                                    $walletAddress ? "Address: {$walletAddress}" : ''
+                                ]));
+                            }
+                        }
+
+                        $status = $withdrawal->status == 1 ? 'Approved' : ($withdrawal->status == 3 ? 'Rejected' : 'Pending');
+                        
+                        fputcsv($file, [
+                            $withdrawal->id,
+                            $withdrawal->user ? $withdrawal->user->username : '',
+                            $withdrawal->user ? $withdrawal->user->email : '',
+                            $withdrawal->trx,
+                            ucfirst($withdrawal->withdraw_type ?? 'deposit'),
+                            number_format($withdrawal->amount, 2),
+                            number_format($withdrawal->charge, 2),
+                            number_format($withdrawal->final_amount, 2),
+                            $withdrawal->withdrawMethod ? $withdrawal->withdrawMethod->name : 'N/A',
+                            $withdrawal->withdrawMethod ? $withdrawal->withdrawMethod->currency : 'USD',
+                            $walletAddress,
+                            $accountDetails,
+                            $paymentInfo,
+                            $status,
+                            $withdrawal->admin_feedback ?? '',
+                            $withdrawal->withdrawMethod ? $withdrawal->withdrawMethod->processing_time : 'N/A',
+                            $withdrawal->created_at->format('Y-m-d H:i:s'),
+                            $withdrawal->processed_at ? $withdrawal->processed_at->format('Y-m-d H:i:s') : ''
+                        ]);
+                        
+                        $processedCount++;
+                    } catch (\Exception $e) {
+                        Log::error('Error processing withdrawal row', [
+                            'withdrawal_id' => $withdrawal->id ?? 'unknown',
+                            'error' => $e->getMessage()
+                        ]);
+                        continue;
+                    }
                 }
 
-                $status = $withdrawal->status == 1 ? 'Approved' : ($withdrawal->status == 3 ? 'Rejected' : 'Pending');
-                
-                fputcsv($file, [
-                    $withdrawal->id,
-                    $withdrawal->user->username ?? '',
-                    $withdrawal->user->email ?? '',
-                    $withdrawal->trx,
-                    ucfirst($withdrawal->withdraw_type ?? 'deposit'),
-                    number_format($withdrawal->amount, 2),
-                    number_format($withdrawal->charge, 2),
-                    number_format($withdrawal->final_amount ?? ($withdrawal->amount - $withdrawal->charge), 2),
-                    $withdrawal->withdrawMethod ? $withdrawal->withdrawMethod->name : ($withdrawInfo->method ?? 'N/A'),
-                    $withdrawal->withdrawMethod ? $withdrawal->withdrawMethod->currency : 'USD',
-                    $walletAddress,
-                    $accountDetails,
-                    $paymentInfo,
-                    $status,
-                    $withdrawal->admin_feedback ?? '',
-                    $withdrawal->withdrawMethod ? $withdrawal->withdrawMethod->processing_time : 'N/A',
-                    $withdrawal->created_at->format('Y-m-d H:i:s'),
-                    $withdrawal->processed_at ? $withdrawal->processed_at->format('Y-m-d H:i:s') : ''
-                ]);
-            }
+                Log::info('CSV generation completed', ['processed' => $processedCount]);
+                fclose($file);
+            };
 
-            fclose($file);
-        };
-
-        return response()->stream($callback, 200, $headers);
+            return response()->stream($callback, 200, $headers);
+            
+        } catch (\Exception $e) {
+            Log::error('Withdrawal export error: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
+            return redirect()->back()->with('error', 'Export failed: ' . $e->getMessage());
+        }
     }
 
     /**
