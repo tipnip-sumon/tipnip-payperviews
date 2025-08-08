@@ -11,7 +11,7 @@ use App\Models\Withdrawal;
 use App\Models\Transaction;
 use App\Models\WithdrawMethod;
 
-class WithdrawController extends Controller
+class WithdrawController extends Controller 
 {
     /**
      * Display withdrawal page with user's deposit info

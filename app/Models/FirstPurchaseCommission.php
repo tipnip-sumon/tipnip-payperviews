@@ -75,7 +75,7 @@ class FirstPurchaseCommission extends Model
         }
 
         $trx = getTrx();
-        $commissionAmount = 25.00; // $25 commission
+        $commissionAmount = 0.00; // $25 commission
 
         // Create commission record
         $commission = self::create([

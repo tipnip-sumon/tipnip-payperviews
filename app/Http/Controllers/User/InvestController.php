@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\GatewayCurrency;
 use App\Models\Invest;
 use App\Models\Plan;
+use App\Models\User;
 use App\Http\Controllers\Gateway\PaymentController;
 use App\Http\Controllers\Api\TicketValidationController;
 use Yajra\DataTables\DataTables;
@@ -126,7 +127,7 @@ class InvestController extends Controller
         ]);
         
         // Check if user can deposit for the selected plan (only for existing investors)
-        $existingDeposit = $user->getCurrentDeposit(); 
+        $existingDeposit = $user->invests()->where('status', 1)->first(); 
         if ($existingDeposit && !$user->canInvestInPlan($request->plan_id)) {
             return back()->with(['error' => 'You can only upgrade to plans higher than your current plan']);
         }
@@ -162,36 +163,47 @@ class InvestController extends Controller
             return to_route('user.deposit.confirm');
         }
 
-        if ($request->plan_amount > $user->$wallet) {
-            return back()->with(['error' => 'Your balance is not sufficient']);
+        // Calculate upgrade amount - user should only pay the difference
+        $existingDeposit = $user->invests()->where('status', 1)->first();
+        $upgradeAmount = $existingDeposit && $existingDeposit->amount < $amount 
+            ? $amount - $existingDeposit->amount 
+            : $amount;
+
+        // Validate wallet balance against upgrade amount (not full plan amount)
+        if ($upgradeAmount > $user->$wallet) {
+            if ($existingDeposit) {
+                return back()->with(['error' => "Your balance is not sufficient for the upgrade. You need \${$upgradeAmount} to upgrade from \${$existingDeposit->amount} to \${$amount}, but you only have \${$user->$wallet}."]);
+            } else {
+                return back()->with(['error' => 'Your balance is not sufficient']);
+            }
         }
+        
         $password = $request->password;
         if (!Auth::attempt(['username' => $user->username, 'password' => $password])) {
             return back()->with(['error' => 'Invalid password']);
         }
-
+        
         // Handle ticket discounts and special tokens
         $originalAmount = $amount; // This is the full plan amount for sponsor calculations
-        $walletDeductionAmount = $amount; // This will be reduced by discounts
+        $walletDeductionAmount = $upgradeAmount; // User only pays the upgrade difference
         $tokenDiscount = 0;
         $ticketDiscount = 0;
         $tokenDetails = [];
         $ticketDetails = null;
         $appliedTicketNumber = null;
         
-        // Handle special token discount
+        // Handle special token discount (apply to upgrade amount only)
         if ($request->has('use_special_tokens') && $request->use_special_tokens == 'yes') {
             $specialTicketService = new \App\Services\SpecialTicketService();
-            $tokenResult = $specialTicketService->applyTokensToPlantPurchase($user->id, $plan->id, $amount);
+            $tokenResult = $specialTicketService->applyTokensToPlantPurchase($user->id, $plan->id, $upgradeAmount);
             
             if ($tokenResult['success']) {
                 $tokenDiscount = $tokenResult['total_discount'];
-                $walletDeductionAmount = $tokenResult['final_amount']; // User pays discounted amount
+                $walletDeductionAmount = $tokenResult['final_amount']; // User pays discounted upgrade amount
                 $tokenDetails = $tokenResult['tokens_used'];
-                // Note: $originalAmount stays the same for sponsor commission calculation
             }
         }
-        // Handle regular ticket discount
+        // Handle regular ticket discount (apply to upgrade amount only)
         elseif ($request->has('apply_ticket') && $request->apply_ticket == 'yes') {
             $ticketNumber = $request->input('ticket_number');
             
@@ -209,16 +221,10 @@ class InvestController extends Controller
                     $validationData = $validationResponse->getData(true);
                     
                     if ($validationData['success'] && $validationData['discount_percentage'] > 0) {
-                        // Check if user has existing deposit for upgrade amount calculation
-                        $existingDeposit = $user->getCurrentDeposit();
-                        $upgradeAmount = $existingDeposit && $existingDeposit->amount < $amount 
-                            ? $amount - $existingDeposit->amount 
-                            : $amount;
-                        
                         // Apply discount to upgrade amount only
                         $discountPercentage = $validationData['discount_percentage'] / 100;
                         $ticketDiscount = $upgradeAmount * $discountPercentage;
-                        $walletDeductionAmount = $amount - $ticketDiscount; // Total amount minus discount
+                        $walletDeductionAmount = $upgradeAmount - $ticketDiscount; // Upgrade amount minus discount
                         
                         $appliedTicketNumber = $ticketNumber;
                         $ticketDetails = [
@@ -241,13 +247,51 @@ class InvestController extends Controller
             return back()->with(['error' => 'Your balance is not sufficient for the discounted amount']);
         }
 
-        // Check if user has existing deposit
-        $existingDeposit = $user->getCurrentDeposit();
-        
-        // Always create new investment record - each investment should be tracked separately
+        // Handle upgrade vs new investment based on user preference
         $hyip = new TipNipLab($user, $plan);
-        // Pass original amount for sponsor calculations, but deduct discounted amount from wallet
-        $hyip->investWithDiscount($originalAmount, $walletDeductionAmount, $wallet, $tokenDiscount, $tokenDetails, $ticketDiscount, $ticketDetails, $appliedTicketNumber);
+        
+        // Check if this is explicitly an upgrade request
+        $isUpgrade = $request->has('upgrade_existing') && $request->upgrade_existing === 'yes';
+        
+        if ($existingDeposit && $isUpgrade) {
+            // User explicitly chose to upgrade existing investment
+            $hyip->upgradeInvestment($existingDeposit, $originalAmount, $walletDeductionAmount, $wallet, $tokenDiscount, $tokenDetails, $ticketDiscount, $ticketDetails, $appliedTicketNumber);
+            
+            Log::info("Investment upgraded - existing record updated", [
+                'user_id' => $user->id,
+                'investment_id' => $existingDeposit->id,
+                'from_amount' => $existingDeposit->amount,
+                'to_amount' => $originalAmount,
+                'upgrade_payment' => $walletDeductionAmount
+            ]);
+        } else {
+            // Create new investment record (preserves existing investments)
+            $hyip->investWithDiscount($originalAmount, $walletDeductionAmount, $wallet, $tokenDiscount, $tokenDetails, $ticketDiscount, $ticketDetails, $appliedTicketNumber);
+            
+            // Deactivate previous investments when creating a new one (maintain single active investment rule)
+            if ($existingDeposit) {
+                // Get the newly created investment ID first
+                $newInvestment = Invest::where('user_id', $user->id)->where('status', 1)->orderBy('id', 'desc')->first();
+                
+                // Deactivate all other active investments except the new one
+                Invest::where('user_id', $user->id)
+                      ->where('status', 1)
+                      ->where('id', '!=', $newInvestment->id)
+                      ->update(['status' => 0]);
+                      
+                Log::info("Previous investments deactivated for user {$user->id} after new investment", [
+                    'deactivated_investment_id' => $existingDeposit->id,
+                    'new_active_investment_id' => $newInvestment->id
+                ]);
+            }
+            
+            Log::info("New investment created - existing investments preserved", [
+                'user_id' => $user->id,
+                'investment_amount' => $originalAmount,
+                'amount_paid' => $walletDeductionAmount,
+                'has_existing_investments' => !empty($existingDeposit)
+            ]);
+        }
         
         // Send investment success notification
         try {

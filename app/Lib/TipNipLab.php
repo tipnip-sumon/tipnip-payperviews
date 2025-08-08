@@ -6,6 +6,7 @@ use App\Models\AdminNotification;
 use App\Models\Holiday;
 use App\Models\Invest;
 use App\Models\Referral;
+use App\Models\SpecialTicket;
 use App\Models\TimeSetting;
 use App\Models\Transaction;
 use Carbon\Carbon;
@@ -214,6 +215,14 @@ class TipNipLab
         // Regular referral commission system using ORIGINAL amount
         $commissionType = 'invest_commission';
         self::levelCommission($user, $originalAmount, $commissionType, $trx, $this->setting);
+        
+        Log::info("New investment completed", [
+            'user_id' => $user->id,
+            'investment_amount' => $originalAmount,
+            'amount_paid' => $walletDeductionAmount,
+            'has_sponsor' => !empty($user->ref_by),
+            'sponsor_tickets_processed' => !empty($user->ref_by)
+        ]);
 
         $adminNotification = new AdminNotification();
         $adminNotification->user_id = $user->id;
@@ -509,5 +518,166 @@ class TipNipLab
         } catch (\Exception $e) {
             Log::error("Failed to queue first investment congratulation email: " . $e->getMessage());
         }
+    }
+
+    /**
+     * Handle investment upgrade - update existing investment instead of creating new one
+     *
+     * @param \App\Models\Invest $existingInvest
+     * @param float $newAmount
+     * @param float $walletDeductionAmount
+     * @param string $wallet
+     * @param float $tokenDiscount
+     * @param array $tokenDetails
+     * @param float $ticketDiscount
+     * @param array|null $ticketDetails
+     * @param string|null $appliedTicketNumber
+     */
+    public function upgradeInvestment($existingInvest, $newAmount, $walletDeductionAmount, $wallet, $tokenDiscount = 0, $tokenDetails = [], $ticketDiscount = 0, $ticketDetails = null, $appliedTicketNumber = null)
+    {
+        $plan = $this->plan;
+        $user = $this->user;
+
+        // Validate plan has proper time configuration
+        if (empty($plan->time) || !is_numeric($plan->time)) {
+            throw new \Exception('Invalid plan configuration: time field is missing or invalid');
+        }
+
+        // Deduct only the upgrade amount from user's wallet
+        $user->$wallet -= $walletDeductionAmount;
+        $user->save();
+
+        $trx = getTrx();
+        $transaction = new \App\Models\Transaction();
+        $transaction->user_id = $user->id;
+        $transaction->amount = $walletDeductionAmount; // Record actual amount deducted for upgrade
+        $transaction->post_balance = $user->$wallet;
+        $transaction->charge = 0;
+        $transaction->trx_type = '-';
+        
+        $discountNote = '';
+        if ($tokenDiscount > 0) {
+            $discountNote .= " (Special token discount: \${$tokenDiscount})";
+        }
+        if ($ticketDiscount > 0) {
+            $discountNote .= " (Ticket discount: \${$ticketDiscount})";
+        }
+        $transaction->details = 'Upgraded to ' . $plan->name . ' plan' . $discountNote;
+        $transaction->trx = $trx;
+        $transaction->wallet_type = $wallet;
+        $transaction->remark = 'upgrade';
+        $transaction->save();
+
+        // Calculate new interest based on new plan amount
+        if ($plan->interest_type == 1) {
+            $interestAmount = ($newAmount * $plan->interest) / 100;
+        } else {
+            $interestAmount = $plan->interest;
+        }
+
+        $period = ($plan->lifetime == 1) ? -1 : $plan->repeat_time;
+        $shouldPay = -1;
+        if ($period > 0) {
+            $shouldPay = $interestAmount * $period;
+        }
+
+        // Update existing investment record
+        $existingInvest->plan_id = $plan->id;
+        $existingInvest->amount = $newAmount; // Store new plan amount
+        $existingInvest->actual_paid += $walletDeductionAmount; // Add to total paid amount
+        $existingInvest->token_discount += $tokenDiscount; // Add to total discount
+        $existingInvest->ticket_discount += $ticketDiscount; // Add to total ticket discount
+        $existingInvest->interest = $interestAmount; // Update interest based on new plan
+        $existingInvest->period = $period;
+        $existingInvest->time_name = "Month";
+        $existingInvest->hours = (string)($plan->time ?? 24);
+        $existingInvest->next_time = now()->addHours($plan->time ?? 24);
+        $existingInvest->should_pay = $shouldPay;
+        $existingInvest->wallet_type = $wallet;
+        $existingInvest->capital_status = $plan->capital_back;
+        $existingInvest->save();
+
+        // Mark ticket as used if a ticket was applied
+        if ($appliedTicketNumber) {
+            try {
+                $metadata = [
+                    'plan_id' => $plan->id,
+                    'plan_name' => $plan->name,
+                    'upgrade_from' => $existingInvest->getOriginal('amount'),
+                    'upgrade_to' => $newAmount,
+                    'upgrade_amount' => $walletDeductionAmount,
+                    'ticket_discount' => $ticketDiscount,
+                    'token_discount' => $tokenDiscount,
+                    'wallet_type' => $wallet,
+                    'transaction_trx' => $trx,
+                    'upgrade_date' => now()->toDateTimeString(),
+                    'user_username' => $user->username,
+                    'user_email' => $user->email,
+                    'applied_at' => now()->toDateTimeString(),
+                    'ip_address' => request()->ip() ?? 'unknown',
+                    'user_agent' => request()->userAgent() ?? 'unknown'
+                ];
+
+                $usedTicket = new \App\Models\UsedTicket();
+                $usedTicket->user_id = $user->id;
+                $usedTicket->ticket_number = $appliedTicketNumber;
+                $usedTicket->used_for = 'investment_upgrade';
+                $usedTicket->discount_amount = $ticketDiscount;
+                $usedTicket->original_amount = $walletDeductionAmount + $ticketDiscount;
+                $usedTicket->final_amount = $walletDeductionAmount;
+                $usedTicket->metadata = json_encode($metadata);
+                $usedTicket->used_at = now();
+                $usedTicket->save();
+
+                Log::info("Ticket {$appliedTicketNumber} marked as used for investment upgrade by user {$user->id}");
+            } catch (\Exception $e) {
+                Log::error("Failed to mark ticket as used: " . $e->getMessage());
+            }
+        }
+
+        // Mark special tokens as used
+        if (!empty($tokenDetails)) {
+            foreach ($tokenDetails as $tokenInfo) {
+                try {
+                    $token = SpecialTicket::find($tokenInfo['token_id']);
+                    if ($token) {
+                        $token->status = 'used';
+                        $token->used_at = now();
+                        $token->used_for = 'plan_upgrade';
+                        $token->used_metadata = json_encode([
+                            'invest_id' => $existingInvest->id,
+                            'upgrade_from' => $existingInvest->getOriginal('amount'),
+                            'upgrade_to' => $newAmount,
+                            'discount_applied' => $tokenInfo['discount_amount'],
+                            'transaction_trx' => $trx
+                        ]);
+                        $token->save();
+                    }
+                } catch (\Exception $e) {
+                    Log::error("Failed to mark special token {$tokenInfo['token_id']} as used: " . $e->getMessage());
+                }
+            }
+        }
+
+        // Level commission calculation using upgrade amount for sponsor referral rewards
+        // Note: For upgrades, we only give referral commission, NOT sponsor tickets (to prevent duplicate rewards)
+        self::levelCommission($user, $newAmount, 'invest', $trx);
+        
+        Log::info("Investment upgrade completed - no sponsor tickets created", [
+            'user_id' => $user->id,
+            'from_amount' => $existingInvest->getOriginal('amount'),
+            'to_amount' => $newAmount,
+            'upgrade_amount_paid' => $walletDeductionAmount,
+            'referral_commission_amount' => $newAmount,
+            'sponsor_tickets_created' => false
+        ]);
+
+        // Admin notification
+        $adminNotification = new \App\Models\AdminNotification();
+        $adminNotification->user_id = $user->id;
+        $adminNotification->title = showAmount($newAmount) . ' plan upgraded to ' . $plan->name . ($tokenDiscount > 0 ? " (with \${$tokenDiscount} discount)" : '');
+        $adminNotification->message = "User {$user->username} has upgraded to {$plan->name} plan worth " . showAmount($newAmount) . ($tokenDiscount > 0 ? " with a special discount of \${$tokenDiscount}" : '') . ". Paid: \${$walletDeductionAmount}";
+        $adminNotification->click_url = '#';
+        $adminNotification->save();
     }
 }
