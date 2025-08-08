@@ -142,17 +142,51 @@
                             <label for="withdraw_method" class="form-label fs-14 text-dark fw-semibold">
                                 <i class="ri-bank-card-line me-2 text-primary"></i>Withdrawal Method:
                             </label>
-                            <select class="form-control form-select" name="withdraw_method" id="withdraw_method" required>
-                                <option value="">Select withdrawal method</option>
-                                <option value="bank_transfer">Bank Transfer</option>
-                                <option value="paypal">PayPal</option>
-                                <option value="skrill">Skrill</option>
-                                <option value="perfect_money">Perfect Money</option>
-                                <option value="usdt">USDT (Crypto)</option>
-                            </select>
-                            @error('withdraw_method')
+                            <select class="form-select @error('method_id') is-invalid @enderror" 
+                                                id="withdraw_method" name="method_id" required>
+                                            <option value="">Select Method</option>
+                                            @forelse($withdrawMethods as $method)
+                                                <option value="{{ $method->id }}" 
+                                                        data-min="{{ $method->min_amount }}"
+                                                        data-max="{{ $method->max_amount }}"
+                                                        data-charge="{{ $method->charge }}"
+                                                        data-charge-type="{{ $method->charge_type }}"
+                                                        data-daily-limit="{{ $method->daily_limit ?? 0 }}"
+                                                        data-currency="{{ $method->currency ?? 'USD' }}"
+                                                        data-icon="{{ $method->icon ?? 'fe fe-credit-card' }}"
+                                                        data-processing-time="{{ $method->processing_time }}"
+                                                        data-instructions="{{ $method->instructions }}"
+                                                        {{ old('method_id') == $method->id ? 'selected' : '' }}>
+                                                    @if($method->icon)
+                                                        <i class="{{ $method->icon }} me-2"></i>
+                                                    @endif
+                                                    {{ $method->currency ?? 'USD' }} - {{ $method->name }} 
+                                                    @if($method->charge > 0)
+                                                        - Fee: 
+                                                        @if($method->charge_type == 'fixed')
+                                                            {{-- ${{ number_format($method->charge, 2) }} --}}
+                                                            20%
+                                                        @else
+                                                            {{-- {{ $method->charge }}% --}}
+                                                            20%
+                                                        @endif
+                                                    @endif
+                                                </option>
+                                            @empty
+                                                <option value="" disabled>No withdrawal methods available</option>
+                                            @endforelse
+                                        </select>
+                            @error('method_id')
                                 <div class="text-danger small mt-1"><i class="ri-error-warning-line me-1"></i>{{ $message }}</div>
                             @enderror
+                            <div id="method-info" class="mt-2" style="display: none;">
+                                <div class="alert alert-info border-0">
+                                    <small>
+                                        <strong>Processing Time:</strong> <span id="processing-time"></span><br>
+                                        <strong>Instructions:</strong> <span id="method-instructions"></span>
+                                    </small>
+                                </div>
+                            </div>
                         </div>
                         
                         <!-- Account Details -->
@@ -353,23 +387,59 @@
     @push('script')
     <script>
         $(document).ready(function() {
+            // Handle withdrawal method change
+            $('#withdraw_method').change(function() {
+                const selectedOption = $(this).find('option:selected');
+                const processingTime = selectedOption.data('processing-time');
+                const instructions = selectedOption.data('instructions');
+                
+                if (selectedOption.val()) {
+                    $('#processing-time').text(processingTime || 'Not specified');
+                    $('#method-instructions').text(instructions || 'No specific instructions');
+                    $('#method-info').show();
+                } else {
+                    $('#method-info').hide();
+                }
+            });
+
+            // Handle form submission with SweetAlert
             $('#withdrawForm').on('submit', function(e) {
+                e.preventDefault();
+                
                 const password = $('#password').val();
                 const method = $('#withdraw_method').val();
                 const details = $('#account_details').val();
+                const methodName = $('#withdraw_method option:selected').text();
 
                 if (!password || !method || !details) {
-                    e.preventDefault();
-                    alert('Please fill in all required fields');
+                    Swal.fire({
+                        title: 'Missing Information!',
+                        text: 'Please fill in all required fields',
+                        icon: 'warning',
+                        confirmButtonText: 'OK'
+                    });
                     return false;
                 }
 
-                if (!confirm('Are you sure you want to withdraw your deposit? This action cannot be undone.')) {
-                    e.preventDefault();
-                    return false;
-                }
-
-                $('#withdrawBtn').html('<i class="ri-loader-4-line me-2 spin"></i>Processing Withdrawal...').prop('disabled', true);
+                Swal.fire({
+                    title: 'Confirm Withdrawal',
+                    html: `Are you sure you want to withdraw your deposit via <strong>${methodName}</strong>?<br><br>
+                           <small class="text-muted">• A 20% processing fee will be deducted<br>
+                           • You will lose access to ad viewing<br>
+                           • This action cannot be undone</small>`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#dc3545',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: 'Yes, Withdraw',
+                    cancelButtonText: 'Cancel',
+                    reverseButtons: true
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $('#withdrawBtn').html('<i class="ri-loader-4-line me-2 spin"></i>Processing Withdrawal...').prop('disabled', true);
+                        this.submit();
+                    }
+                });
             });
             
             // Add spinning animation
@@ -378,6 +448,25 @@
                 .html('.spin { animation: spin 1s linear infinite; } @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }')
                 .appendTo('head');
         });
+
+        // Handle SweetAlert messages from backend
+        @if(session('swal_success'))
+            Swal.fire({
+                title: '{{ session("swal_success.title") }}',
+                text: '{{ session("swal_success.text") }}',
+                icon: '{{ session("swal_success.icon") }}',
+                confirmButtonText: 'OK'
+            });
+        @endif
+
+        @if(session('swal_error'))
+            Swal.fire({
+                title: '{{ session("swal_error.title") }}',
+                text: '{{ session("swal_error.text") }}',
+                icon: '{{ session("swal_error.icon") }}',
+                confirmButtonText: 'OK'
+            });
+        @endif
     </script>
     @endpush
 </x-smart_layout>
