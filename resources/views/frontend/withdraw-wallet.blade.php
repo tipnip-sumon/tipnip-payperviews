@@ -203,8 +203,13 @@
                                                         data-fixed-charge="{{ $method->fixed_charge ?? 0 }}"
                                                         data-percent-charge="{{ $method->percent_charge ?? 0 }}"
                                                         data-daily-limit="{{ $method->daily_limit ?? 0 }}"
+                                                        data-currency="{{ $method->currency ?? 'USD' }}"
+                                                        data-icon="{{ $method->icon ?? 'fe fe-credit-card' }}"
                                                         {{ old('method_id') == $method->id ? 'selected' : '' }}>
-                                                    {{ $method->name }} 
+                                                    @if($method->icon)
+                                                        <i class="{{ $method->icon }} me-2"></i>
+                                                    @endif
+                                                    {{ $method->currency ?? 'USD' }} - {{ $method->name }} 
                                                     (Min: ${{ number_format($method->min_amount, 2) }}, Max: ${{ number_format($method->max_amount, 2) }})
                                                     @if($method->fixed_charge > 0 || $method->percent_charge > 0)
                                                         - Charges: 
@@ -553,6 +558,8 @@ function initializeWithdrawalPage() {
                 const fixedCharge = parseFloat(selectedOption.dataset.fixedCharge || 0);
                 const percentCharge = parseFloat(selectedOption.dataset.percentCharge || 0);
                 const dailyLimit = parseFloat(selectedOption.dataset.dailyLimit || 0);
+                const currency = selectedOption.dataset.currency || 'USD';
+                const icon = selectedOption.dataset.icon || 'fe fe-credit-card';
                 
                 // Update amount input constraints
                 if (amountInput) {
@@ -574,8 +581,12 @@ function initializeWithdrawalPage() {
                 
                 if (methodDetails) {
                     methodDetails.innerHTML = `
-                        <strong>Selected Method:</strong> ${selectedOption.text.split('(')[0].trim()}<br>
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="${icon} me-2 text-primary"></i>
+                            <strong>Selected Method:</strong> <span class="ms-1">${currency} - ${selectedOption.text.split('(')[0].trim().replace(/^[A-Z]{3,4}\s-\s/, '')}</span>
+                        </div>
                         <strong>Amount Limits:</strong> $${minAmount.toFixed(2)} - $${Math.min(maxAmount, {{ $totalWalletBalance }}).toFixed(2)}<br>
+                        <strong>Currency:</strong> ${currency}<br>
                         <strong>Charges:</strong> ${chargeInfo}${dailyLimit > 0 ? '<br><strong>Daily Limit:</strong> $' + dailyLimit.toFixed(2) : ''}
                     `;
                 }
@@ -587,9 +598,11 @@ function initializeWithdrawalPage() {
                 
                 // Show method selection success toast
                 if (typeof Swal !== 'undefined') {
+                    const currency = selectedOption.dataset.currency || 'USD';
+                    const methodName = selectedOption.text.split('(')[0].trim().replace(/^[A-Z]{3,4}\s-\s/, '');
                     Swal.fire({
                         title: 'Method Selected',
-                        text: `${selectedOption.text.split('(')[0].trim()} selected successfully`,
+                        html: `<i class="${icon} me-2 text-primary"></i>${currency} - ${methodName} selected successfully`,
                         icon: 'success',
                         toast: true,
                         position: 'top-end',
@@ -741,11 +754,18 @@ function initializeWithdrawalPage() {
                 const finalAmount = amount - totalCharge;
                 
                 if (typeof Swal !== 'undefined') {
+                    const currency = selectedOption.dataset.currency || 'USD';
+                    const icon = selectedOption.dataset.icon || 'fe fe-credit-card';
+                    const methodName = selectedOption.text.split('(')[0].trim().replace(/^[A-Z]{3,4}\s-\s/, '');
+                    
                     Swal.fire({
                         title: 'Confirm Withdrawal',
                         html: `
                             <div class="text-start">
-                                <p><strong>Method:</strong> ${selectedOption.text.split('(')[0].trim()}</p>
+                                <div class="d-flex align-items-center mb-3">
+                                    <i class="${icon} me-2 text-primary fs-18"></i>
+                                    <strong>Method:</strong> <span class="ms-1">${currency} - ${methodName}</span>
+                                </div>
                                 <p><strong>Requested Amount:</strong> $${amount.toFixed(2)}</p>
                                 <p><strong>Total Charges:</strong> $${totalCharge.toFixed(2)}</p>
                                 <p><strong>You'll Receive:</strong> <span class="text-success">$${finalAmount.toFixed(2)}</span></p>
