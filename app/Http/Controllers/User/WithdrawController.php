@@ -293,6 +293,14 @@ class WithdrawController extends Controller
     {
         $user = Auth::user();
         
+        // Debug logging
+        Log::info('Withdrawal attempt started', [
+            'user_id' => $user->id,
+            'request_data' => $request->only(['amount', 'method_id']),
+            'user_kv' => $user->kv,
+            'email_verified' => $user->email_verified_at ? 'yes' : 'no'
+        ]);
+        
         // Check withdrawal conditions first
         if (!function_exists('checkWithdrawalConditions')) {
             require_once app_path('helpers/ConditionHelper.php');
@@ -300,7 +308,19 @@ class WithdrawController extends Controller
         
         $conditionCheck = checkWithdrawalConditions($user);
         
+        // Debug log condition check results
+        Log::info('Withdrawal condition check', [
+            'user_id' => $user->id,
+            'allowed' => $conditionCheck['allowed'],
+            'failures' => $conditionCheck['failures'],
+            'conditions' => $conditionCheck['conditions'] ?? 'unknown'
+        ]);
+        
         if (!$conditionCheck['allowed']) {
+            Log::warning('Withdrawal blocked by conditions', [
+                'user_id' => $user->id,
+                'failures' => $conditionCheck['failures']
+            ]);
             return back()->with('error', 'Withdrawal requirements not met: ' . implode(', ', $conditionCheck['failures']));
         }
         
@@ -452,11 +472,24 @@ class WithdrawController extends Controller
             
             DB::commit();
             
+            Log::info('Withdrawal request successful', [
+                'user_id' => $user->id,
+                'withdrawal_id' => $withdrawal->id,
+                'amount' => $withdrawalAmount,
+                'net_amount' => $netAmount,
+                'trx' => $withdrawal->trx
+            ]);
+            
             return back()->with(['success' => 'Wallet withdrawal request submitted successfully! You will receive $' . number_format($netAmount, 2) . ' after admin approval.']);
             
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Wallet withdrawal request error: ' . $e->getMessage());
+            Log::error('Wallet withdrawal request error: ' . $e->getMessage(), [
+                'user_id' => $user->id,
+                'exception' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
             
             return back()->with(['error' => 'An error occurred while processing your wallet withdrawal request. Please try again.']);
         }
