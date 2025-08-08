@@ -18,19 +18,35 @@
     </div>
 
     @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <i class="fe fe-check-circle me-2"></i>
-            {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                Swal.fire({
+                    title: 'Success!',
+                    text: '{{ session('success') }}',
+                    icon: 'success',
+                    confirmButtonText: 'OK',
+                    confirmButtonColor: '#28a745',
+                    timer: 5000,
+                    timerProgressBar: true,
+                    showCloseButton: true
+                });
+            });
+        </script>
     @endif
 
     @if(session('error'))
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <i class="fe fe-alert-triangle me-2"></i>
-            {{ session('error') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                Swal.fire({
+                    title: 'Error!',
+                    text: '{{ session('error') }}',
+                    icon: 'error',
+                    confirmButtonText: 'OK',
+                    confirmButtonColor: '#dc3545',
+                    showCloseButton: true
+                });
+            });
+        </script>
     @endif
 
     <div class="row">
@@ -118,9 +134,9 @@
                             <div class="flex-grow-1 ms-3">
                                 <h5 class="text-warning mb-2">KYC Verification Required</h5>
                                 <p class="mb-3">You need to complete KYC verification before you can process wallet withdrawals.</p>
-                                <a href="{{ route('user.kyc.index') }}" class="btn btn-warning">
+                                <button type="button" class="btn btn-warning" onclick="showKycAlert()">
                                     <i class="fas fa-user-check me-2"></i>Complete KYC Verification
-                                </a>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -234,9 +250,9 @@
                             
                             @if(!isset($kycVerified) || !$kycVerified)
                                 <div class="mt-3">
-                                    <a href="{{ route('user.kyc.index') }}" class="btn btn-warning">
+                                    <button type="button" class="btn btn-warning" onclick="showKycAlert()">
                                         <i class="fas fa-user-check me-2"></i>Complete KYC to Withdraw
-                                    </a>
+                                    </button>
                                 </div>
                             @endif
                         </form>
@@ -328,6 +344,36 @@
 </div>
 
 <script>
+// KYC Alert Function
+function showKycAlert() {
+    Swal.fire({
+        title: 'KYC Verification Required',
+        html: `
+            <div class="text-start">
+                <p><i class="fas fa-shield-alt text-warning me-2"></i>To ensure the security of your withdrawals, you need to complete KYC verification.</p>
+                <p><strong>Required for:</strong></p>
+                <ul class="text-start">
+                    <li>Wallet withdrawals</li>
+                    <li>Higher transaction limits</li>
+                    <li>Account security</li>
+                </ul>
+                <p class="text-muted small mt-3">This process typically takes 24-48 hours for approval.</p>
+            </div>
+        `,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Complete KYC Now',
+        cancelButtonText: 'Later',
+        confirmButtonColor: '#ffc107',
+        cancelButtonColor: '#6c757d',
+        reverseButtons: true
+    }).then((result) => {
+        if (result.isConfirmed) {
+            window.location.href = '{{ route('user.kyc.index') }}';
+        }
+    });
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     const amountInput = document.getElementById('amount');
     const methodSelect = document.getElementById('withdraw_method');
@@ -336,10 +382,31 @@ document.addEventListener('DOMContentLoaded', function() {
     const chargeCalculation = document.getElementById('charge-calculation');
     const maxAmount = {{ $totalWalletBalance }};
     
+    // Show insufficient balance alert
+    @if($totalWalletBalance <= 0)
+        Swal.fire({
+            title: 'Insufficient Balance',
+            text: 'You don\'t have sufficient wallet balance to make a withdrawal.',
+            icon: 'warning',
+            confirmButtonText: 'OK',
+            confirmButtonColor: '#ffc107'
+        });
+    @endif
+    
     // Amount input validation
     amountInput.addEventListener('input', function() {
         if (parseFloat(this.value) > maxAmount) {
             this.value = maxAmount;
+            Swal.fire({
+                title: 'Amount Adjusted',
+                text: `Amount has been adjusted to your maximum available balance: $${maxAmount.toFixed(2)}`,
+                icon: 'info',
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true
+            });
         }
         updateChargeCalculation();
     });
@@ -379,6 +446,18 @@ document.addEventListener('DOMContentLoaded', function() {
             
             methodInfo.style.display = 'block';
             updateChargeCalculation();
+            
+            // Show method selection success toast
+            Swal.fire({
+                title: 'Method Selected',
+                text: `${selectedOption.text.split('(')[0].trim()} selected successfully`,
+                icon: 'success',
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 2000,
+                timerProgressBar: true
+            });
         } else {
             methodInfo.style.display = 'none';
             amountInput.min = 1;
@@ -433,24 +512,92 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (amount < minAmount) {
                 e.preventDefault();
-                alert(`Minimum withdrawal amount for this method is $${minAmount.toFixed(2)}`);
-                amountInput.focus();
+                Swal.fire({
+                    title: 'Invalid Amount!',
+                    text: `Minimum withdrawal amount for this method is $${minAmount.toFixed(2)}`,
+                    icon: 'warning',
+                    confirmButtonText: 'OK',
+                    confirmButtonColor: '#ffc107'
+                }).then(() => {
+                    amountInput.focus();
+                });
                 return;
             }
             
             if (amount > maxAmount) {
                 e.preventDefault();
-                alert(`Maximum withdrawal amount for this method is $${maxAmount.toFixed(2)}`);
-                amountInput.focus();
+                Swal.fire({
+                    title: 'Amount Exceeds Limit!',
+                    text: `Maximum withdrawal amount for this method is $${maxAmount.toFixed(2)}`,
+                    icon: 'warning',
+                    confirmButtonText: 'OK',
+                    confirmButtonColor: '#ffc107'
+                }).then(() => {
+                    amountInput.focus();
+                });
                 return;
             }
             
             if (amount > availableBalance) {
                 e.preventDefault();
-                alert(`Insufficient wallet balance. Available: $${availableBalance.toFixed(2)}`);
-                amountInput.focus();
+                Swal.fire({
+                    title: 'Insufficient Balance!',
+                    text: `Insufficient wallet balance. Available: $${availableBalance.toFixed(2)}`,
+                    icon: 'error',
+                    confirmButtonText: 'OK',
+                    confirmButtonColor: '#dc3545'
+                }).then(() => {
+                    amountInput.focus();
+                });
                 return;
             }
+            
+            // Show confirmation dialog before submitting
+            e.preventDefault();
+            const selectedOption = methodSelect.options[methodSelect.selectedIndex];
+            const fixedCharge = parseFloat(selectedOption.dataset.fixedCharge || 0);
+            const percentCharge = parseFloat(selectedOption.dataset.percentCharge || 0);
+            const percentageFee = (amount * percentCharge) / 100;
+            const totalCharge = fixedCharge + percentageFee;
+            const finalAmount = amount - totalCharge;
+            
+            Swal.fire({
+                title: 'Confirm Withdrawal',
+                html: `
+                    <div class="text-start">
+                        <p><strong>Method:</strong> ${selectedOption.text.split('(')[0].trim()}</p>
+                        <p><strong>Requested Amount:</strong> $${amount.toFixed(2)}</p>
+                        <p><strong>Total Charges:</strong> $${totalCharge.toFixed(2)}</p>
+                        <p><strong>You'll Receive:</strong> <span class="text-success">$${finalAmount.toFixed(2)}</span></p>
+                        <hr>
+                        <p class="text-muted small">Are you sure you want to proceed with this withdrawal?</p>
+                    </div>
+                `,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Yes, Withdraw',
+                cancelButtonText: 'Cancel',
+                confirmButtonColor: '#28a745',
+                cancelButtonColor: '#6c757d',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Show processing message
+                    Swal.fire({
+                        title: 'Processing...',
+                        text: 'Please wait while we process your withdrawal request.',
+                        icon: 'info',
+                        allowOutsideClick: false,
+                        showConfirmButton: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+                    
+                    // Submit the form
+                    e.target.submit();
+                }
+            });
         }
     });
 });
