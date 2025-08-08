@@ -53,6 +53,48 @@
                 </div>
             </div>
         </div>
+        
+        <!-- Total Earnings Hub -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card custom-card border-0 shadow-lg" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                    <div class="card-body text-white p-4">
+                        <div class="row align-items-center">
+                            <div class="col-lg-8">
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-white bg-opacity-20 rounded-circle p-3 me-3">
+                                        <i class="fas fa-chart-line fa-2x text-white"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="mb-1">Total Earnings Hub</h4>
+                                        <div class="d-flex align-items-center">
+                                            <span class="me-3">All Income: 0%</span>
+                                            <button class="btn btn-sm btn-outline-light me-2" id="toggleEarnings" onclick="toggleEarningsVisibility()">
+                                                <i class="fas fa-eye" id="earningsIcon"></i>
+                                            </button>
+                                            <h3 class="mb-0 fw-bold" id="earningsAmount" style="display: none;">
+                                                ${{ showAmount($investments['total_interest_earned'] + $referrals['referral_earnings'] + $videoSystem['video_earnings']) }}
+                                            </h3>
+                                            <h3 class="mb-0 fw-bold" id="hiddenEarnings">
+                                                ****
+                                            </h3>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
+                                <div class="text-white-50 small">
+                                    <div>Interest: ${{ showAmount($investments['total_interest_earned']) }}</div>
+                                    <div>Referrals: ${{ showAmount($referrals['referral_earnings']) }}</div>
+                                    <div>Videos: ${{ showAmount($videoSystem['video_earnings']) }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
         <!-- Main Statistics Cards -->
         <div class="row mb-4">
             <!-- Add Funds Call-to-Action -->
@@ -74,61 +116,111 @@
                 </div>
             </div>
             
-            <div class="col-sm-6 col-lg-3 mb-3">
-                <div class="card custom-card border-0 shadow-sm">
+            <!-- Wallet Cards - Vertical Layout with Eye Buttons -->
+            <div class="col-lg-6 mb-3">
+                <div class="card custom-card border-0 shadow-sm h-100">
+                    <div class="card-header bg-transparent border-0">
+                        <h5 class="mb-0 text-primary"><i class="fas fa-wallet me-2"></i>Account Wallets</h5>
+                    </div>
                     <div class="card-body">
-                        <div class="d-flex align-items-center">
-                            <div class="flex-grow-1">
-                                <h6 class="text-muted mb-1">Current Balance</h6>
-                                <h3 class="mb-0 fw-bold" style="color: #0d6efd;">${{ showAmount($currentBalance) }}</h3>
+                        <!-- Account Wallet - Total -->
+                        <div class="wallet-item border-bottom pb-3 mb-3">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-primary bg-opacity-10 rounded-circle p-2 me-3">
+                                    <i class="fas fa-wallet text-primary"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h6 class="text-muted mb-1">💙 Account Wallet - Total</h6>
+                                    <div class="d-flex align-items-center">
+                                        <button class="btn btn-sm btn-outline-primary me-2" onclick="toggleWalletVisibility('total')" title="Toggle visibility">
+                                            <i class="fas fa-eye" id="totalWalletIcon"></i>
+                                        </button>
+                                        <h4 class="mb-0 fw-bold text-primary" id="totalWalletAmount" style="display: none;">
+                                            ${{ showAmount($currentBalance) }}
+                                        </h4>
+                                        <h4 class="mb-0 fw-bold text-primary" id="totalWalletHidden">
+                                            ****
+                                        </h4>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="bg-primary-light rounded-circle p-3">
-                                <i class="fas fa-wallet fa-lg" style="color: #0d6efd;"></i>
+                        </div>
+                        
+                        <!-- Account Wallet - Purchase -->
+                        <div class="wallet-item">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-warning bg-opacity-10 rounded-circle p-2 me-3">
+                                    <i class="fas fa-coins text-warning"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h6 class="text-muted mb-1">💛 Account Wallet - Purchase</h6>
+                                    <div class="d-flex align-items-center">
+                                        <button class="btn btn-sm btn-outline-warning me-2" onclick="toggleWalletVisibility('purchase')" title="Toggle visibility">
+                                            <i class="fas fa-eye" id="purchaseWalletIcon"></i>
+                                        </button>
+                                        <h4 class="mb-0 fw-bold text-warning" id="purchaseWalletAmount" style="display: none;">
+                                            ${{ showAmount(auth()->user()->deposit_wallet) }}
+                                        </h4>
+                                        <h4 class="mb-0 fw-bold text-warning" id="purchaseWalletHidden">
+                                            ****
+                                        </h4>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="col-sm-6 col-lg-3 mb-3">
-                <div class="card custom-card border-0 shadow-sm">
+            
+            <div class="col-lg-6 mb-3">
+                <div class="card custom-card border-0 shadow-sm h-100">
+                    <div class="card-header bg-transparent border-0">
+                        <h5 class="mb-0 text-success"><i class="fas fa-chart-bar me-2"></i>Earnings & Investments</h5>
+                    </div>
                     <div class="card-body">
-                        <div class="d-flex align-items-center">
-                            <div class="flex-grow-1">
-                                <h6 class="text-muted mb-1">Purchase Wallet</h6>
-                                <h3 class="mb-0 fw-bold" style="color: #ffc107;">${{ showAmount(auth()->user()->deposit_wallet) }}</h3>
-                            </div>
-                            <div class="bg-warning-light rounded-circle p-3">
-                                <i class="fas fa-coins fa-lg" style="color: #ffc107;"></i>
+                        <!-- Interest Wallet -->
+                        <div class="wallet-item border-bottom pb-3 mb-3">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-success bg-opacity-10 rounded-circle p-2 me-3">
+                                    <i class="fas fa-chart-line text-success"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h6 class="text-muted mb-1">💚 Interest Wallet</h6>
+                                    <div class="d-flex align-items-center">
+                                        <button class="btn btn-sm btn-outline-success me-2" onclick="toggleWalletVisibility('interest')" title="Toggle visibility">
+                                            <i class="fas fa-eye" id="interestWalletIcon"></i>
+                                        </button>
+                                        <h4 class="mb-0 fw-bold text-success" id="interestWalletAmount" style="display: none;">
+                                            ${{ showAmount(auth()->user()->interest_wallet) }}
+                                        </h4>
+                                        <h4 class="mb-0 fw-bold text-success" id="interestWalletHidden">
+                                            ****
+                                        </h4>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-sm-6 col-lg-3 mb-3">
-                <div class="card custom-card border-0 shadow-sm">
-                    <div class="card-body">
-                        <div class="d-flex align-items-center">
-                            <div class="flex-grow-1">
-                                <h6 class="text-muted mb-1">Interest Wallet</h6>
-                                <h3 class="mb-0 fw-bold" style="color: #198754;">${{ showAmount(auth()->user()->interest_wallet) }}</h3>
-                            </div>
-                            <div class="bg-success-light rounded-circle p-3">
-                                <i class="fas fa-chart-line fa-lg" style="color: #198754;"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-sm-6 col-lg-3 mb-3">
-                <div class="card custom-card border-0 shadow-sm">
-                    <div class="card-body">
-                        <div class="d-flex align-items-center">
-                            <div class="flex-grow-1">
-                                <h6 class="text-muted mb-1">Total Investment</h6>
-                                <h3 class="mb-0 fw-bold" style="color: #0dcaf0;">${{ showAmount($totalInvest) }}</h3>
-                            </div>
-                            <div class="bg-info-light rounded-circle p-3">
-                                <i class="fas fa-piggy-bank fa-lg" style="color: #0dcaf0;"></i>
+                        
+                        <!-- Total Investment -->
+                        <div class="wallet-item">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-info bg-opacity-10 rounded-circle p-2 me-3">
+                                    <i class="fas fa-piggy-bank text-info"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h6 class="text-muted mb-1">💎 Total Investment</h6>
+                                    <div class="d-flex align-items-center">
+                                        <button class="btn btn-sm btn-outline-info me-2" onclick="toggleWalletVisibility('investment')" title="Toggle visibility">
+                                            <i class="fas fa-eye" id="investmentWalletIcon"></i>
+                                        </button>
+                                        <h4 class="mb-0 fw-bold text-info" id="investmentWalletAmount" style="display: none;">
+                                            ${{ showAmount($totalInvest) }}
+                                        </h4>
+                                        <h4 class="mb-0 fw-bold text-info" id="investmentWalletHidden">
+                                            ****
+                                        </h4>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -186,7 +278,7 @@
                                         <small><i class="fas fa-shield-alt me-1"></i>KYC verification required for lottery</small>
                                     </div>
                                 @endif
-                                <div class="d-grid gap-2">
+                                <div class="d-grid gap-2"> 
                                     @if(auth()->user()->kv == 1)
                                         <a href="{{ route('lottery.index') }}" class="btn btn-light btn-lg fw-bold shadow">
                                             <i class="fas fa-ticket-alt me-2"></i>Buy Lottery Tickets
@@ -871,6 +963,44 @@
                 }
             }
 
+            // Toggle earnings visibility function
+            function toggleEarningsVisibility() {
+                const earningsAmount = document.getElementById('earningsAmount');
+                const hiddenEarnings = document.getElementById('hiddenEarnings');
+                const earningsIcon = document.getElementById('earningsIcon');
+                
+                if (earningsAmount.style.display === 'none') {
+                    // Show earnings
+                    earningsAmount.style.display = 'block';
+                    hiddenEarnings.style.display = 'none';
+                    earningsIcon.className = 'fas fa-eye-slash';
+                } else {
+                    // Hide earnings
+                    earningsAmount.style.display = 'none';
+                    hiddenEarnings.style.display = 'block';
+                    earningsIcon.className = 'fas fa-eye';
+                }
+            }
+
+            // Toggle wallet visibility function
+            function toggleWalletVisibility(walletType) {
+                const amountElement = document.getElementById(walletType + 'WalletAmount');
+                const hiddenElement = document.getElementById(walletType + 'WalletHidden');
+                const iconElement = document.getElementById(walletType + 'WalletIcon');
+                
+                if (amountElement.style.display === 'none') {
+                    // Show amount
+                    amountElement.style.display = 'block';
+                    hiddenElement.style.display = 'none';
+                    iconElement.className = 'fas fa-eye-slash';
+                } else {
+                    // Hide amount
+                    amountElement.style.display = 'none';
+                    hiddenElement.style.display = 'block';
+                    iconElement.className = 'fas fa-eye';
+                }
+            }
+
             // Function to check for session notifications (DISABLED)
             function checkSessionNotifications() {
                 // Temporarily disabled to prevent 500 errors
@@ -1370,5 +1500,49 @@
                 }
             }
         </script>
+        
+        <style>
+            .wallet-item {
+                transition: all 0.3s ease;
+                padding: 1rem;
+                border-radius: 0.5rem;
+            }
+            
+            .wallet-item:hover {
+                background-color: rgba(0, 0, 0, 0.02);
+                transform: translateY(-2px);
+            }
+            
+            .wallet-item .btn {
+                min-width: 35px;
+                height: 35px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: all 0.2s ease;
+            }
+            
+            .wallet-item .btn:hover {
+                transform: scale(1.1);
+            }
+            
+            .card-header h5 {
+                font-weight: 600;
+                letter-spacing: 0.5px;
+            }
+            
+            .bg-opacity-10 {
+                background-opacity: 0.1 !important;
+            }
+            
+            h4.fw-bold {
+                font-size: 1.25rem;
+                font-weight: 700;
+            }
+            
+            .border-bottom {
+                border-bottom: 1px solid rgba(0, 0, 0, 0.1) !important;
+            }
+        </style>
     @endpush
 </x-smart_layout>

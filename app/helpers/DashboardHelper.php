@@ -79,8 +79,8 @@ if (!function_exists('getInvestmentData')) {
         $investmentStats = DB::table('invests')
             ->where('user_id', $userId)
             ->selectRaw('
-                SUM(amount) as total_invested,
-                SUM(CASE WHEN status = 1 THEN amount ELSE 0 END) as running_investments,
+                MAX(CASE WHEN status = 1 THEN amount ELSE 0 END) as total_invested,
+                MAX(CASE WHEN status = 1 THEN amount ELSE 0 END) as running_investments,
                 SUM(CASE WHEN status = 0 THEN amount ELSE 0 END) as completed_investments,
                 SUM(CASE WHEN status = 2 THEN amount ELSE 0 END) as pending_investments,
                 COUNT(*) as investment_count
@@ -631,7 +631,7 @@ if (!function_exists('getDashboardQuickStats')) {
             'team_bonus' => Transaction::where('user_id', $userId)
                 ->where('remark', 'referral_commission')->sum('amount'),
             'interest_wallet' => $user->interest_wallet,
-            'total_investment' => Invest::where('user_id', $userId)->sum('amount'),
+            'total_investment' => Invest::where('user_id', $userId)->where('status', 1)->max('amount') ?? 0,
             'today_earnings' => Transaction::where('user_id', $userId)
                 ->whereIn('remark', ['interest', 'referral_commission', 'video_earning'])
                 ->whereDate('created_at', today())

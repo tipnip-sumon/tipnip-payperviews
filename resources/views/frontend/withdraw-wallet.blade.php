@@ -209,14 +209,15 @@
                                                     @if($method->icon)
                                                         <i class="{{ $method->icon }} me-2"></i>
                                                     @endif
-                                                    {{ $method->currency ?? 'USD' }} - {{ $method->name }} 
-                                                    (Min: ${{ number_format($method->min_amount, 2) }}, Max: ${{ number_format($method->max_amount, 2) }})
-                                                    @if($method->fixed_charge > 0 || $method->percent_charge > 0)
+                                                    {{ $method->name }}
+                                                    {{-- {{ $method->currency ?? 'USD' }} - {{ $method->name }}  --}}
+                                                    {{-- (Min: ${{ number_format($method->min_amount, 2) }}, Max: ${{ number_format($method->max_amount, 2) }}) --}}
+                                                    {{-- @if($method->fixed_charge > 0 || $method->percent_charge > 0)
                                                         - Charges: 
                                                         @if($method->fixed_charge > 0)${{ number_format($method->fixed_charge, 2) }}@endif
                                                         @if($method->fixed_charge > 0 && $method->percent_charge > 0) + @endif
                                                         @if($method->percent_charge > 0){{ $method->percent_charge }}%@endif
-                                                    @endif
+                                                    @endif --}}
                                                 </option>
                                             @empty
                                                 <option value="" disabled>No withdrawal methods available</option>
