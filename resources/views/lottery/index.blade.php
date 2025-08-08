@@ -1310,25 +1310,23 @@ document.addEventListener('DOMContentLoaded', function() {
 function shareTicket(ticketId, platform, ticketNumber = null) {
     console.log(`Sharing ticket ${ticketId} via ${platform}`);
     
-    const baseUrl = window.location.origin;
-    const shareUrl = `${baseUrl}/lottery/ticket/${ticketId}`;
-    const shareText = `🎰 Check out my lottery ticket #${ticketId}! Join the draw and win amazing prizes! 🎉`;
+    // Use only the ticket number for sharing
+    const textToShare = ticketNumber || ticketId;
     
     switch (platform) {
         case 'whatsapp':
-            const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText + ' ' + shareUrl)}`;
+            const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(textToShare)}`;
             window.open(whatsappUrl, '_blank');
             break;
             
         case 'messenger':
-            const messengerUrl = `https://www.messenger.com/t/?text=${encodeURIComponent(shareText + ' ' + shareUrl)}`;
+            const messengerUrl = `https://www.messenger.com/t/?text=${encodeURIComponent(textToShare)}`;
             window.open(messengerUrl, '_blank');
             break;
             
         case 'manual':
-            // Copy only the ticket number instead of the full URL and text
-            const textToCopy = ticketNumber || ticketId;
-            copyToClipboard(textToCopy, `Ticket number ${textToCopy} copied to clipboard!`);
+            // Copy only the ticket number
+            copyToClipboard(textToShare, `Ticket number ${textToShare} copied to clipboard!`);
             break;
             
         default:
@@ -1339,33 +1337,45 @@ function shareTicket(ticketId, platform, ticketNumber = null) {
 function shareAllTickets(platform) {
     console.log(`Sharing all tickets via ${platform}`);
     
-    // Get all ticket numbers from the page
+    // Get all ticket numbers from the page by looking at the ticket display text
     const ticketElements = document.querySelectorAll('[data-ticket-id]');
-    const ticketNumbers = Array.from(ticketElements).map(el => el.dataset.ticketId);
+    const ticketNumbers = [];
     
-    const baseUrl = window.location.origin;
-    const shareUrl = `${baseUrl}/lottery`;
-    const ticketCount = ticketElements.length;
-    const shareText = `🎰 I have ${ticketCount} lottery tickets in the current draw! Join me and win amazing prizes! 🎉`;
+    ticketElements.forEach(element => {
+        // Find the ticket number in the card (look for "Ticket #" text)
+        const ticketNumberElement = element.querySelector('h6');
+        if (ticketNumberElement) {
+            const ticketText = ticketNumberElement.textContent;
+            // Extract ticket number from "Ticket #D620-2037-84EB-75C6" format
+            const match = ticketText.match(/Ticket #(.+)/);
+            if (match) {
+                ticketNumbers.push(match[1]);
+            }
+        }
+    });
+    
+    // Create simple list of ticket numbers
+    const ticketNumbersText = ticketNumbers.join(', ');
     
     switch (platform) {
         case 'whatsapp':
-            const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText + ' ' + shareUrl)}`;
+            const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(ticketNumbersText)}`;
             window.open(whatsappUrl, '_blank');
             break;
             
         case 'messenger':
-            const messengerUrl = `https://www.messenger.com/t/?text=${encodeURIComponent(shareText + ' ' + shareUrl)}`;
+            const messengerUrl = `https://www.messenger.com/t/?text=${encodeURIComponent(ticketNumbersText)}`;
             window.open(messengerUrl, '_blank');
             break;
             
         case 'manual':
-            copyToClipboard(shareText + ' ' + shareUrl, 'All tickets info copied to clipboard!');
+            copyToClipboard(ticketNumbersText, 'All ticket numbers copied to clipboard!');
             break;
             
         default:
             console.error('Unknown sharing platform:', platform);
     }
+}
 }
 
 function copyToClipboard(textToCopy, successMessage) {
