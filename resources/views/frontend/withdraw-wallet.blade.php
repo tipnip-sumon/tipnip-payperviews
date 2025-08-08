@@ -30,7 +30,7 @@
     </div>
 
     @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert" style="display: none;">
+        <div class="alert alert-success alert-dismissible fade show" role="alert" id="session-success">
             <i class="fe fe-check-circle me-2"></i>
             {{ session('success') }}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
@@ -38,7 +38,7 @@
     @endif
 
     @if(session('error'))
-        <div class="alert alert-danger alert-dismissible fade show" role="alert" style="display: none;">
+        <div class="alert alert-danger alert-dismissible fade show" role="alert" id="session-error">
             <i class="fe fe-alert-triangle me-2"></i>
             {{ session('error') }}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
@@ -46,7 +46,7 @@
     @endif
 
     @if(session('warning'))
-        <div class="alert alert-warning alert-dismissible fade show" role="alert" style="display: none;">
+        <div class="alert alert-warning alert-dismissible fade show" role="alert" id="session-warning">
             <i class="fe fe-alert-triangle me-2"></i>
             {{ session('warning') }}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
@@ -54,7 +54,7 @@
     @endif
 
     @if(session('info'))
-        <div class="alert alert-info alert-dismissible fade show" role="alert" style="display: none;">
+        <div class="alert alert-info alert-dismissible fade show" role="alert" id="session-info">
             <i class="fe fe-info-circle me-2"></i>
             {{ session('info') }}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
@@ -420,8 +420,8 @@ function showKycAlert() {
 // Function to show SweetAlert messages
 function showSweetAlertMessage(type, title, message) {
     if (typeof Swal === 'undefined') {
-        alert(title + ': ' + message);
-        return;
+        console.log('SweetAlert not available, keeping HTML alert visible');
+        return false; // SweetAlert not available, keep HTML alert
     }
     
     const config = {
@@ -452,7 +452,13 @@ function showSweetAlertMessage(type, title, message) {
             break;
     }
     
-    Swal.fire(config);
+    try {
+        Swal.fire(config);
+        return true; // SweetAlert shown successfully
+    } catch (error) {
+        console.error('Error showing SweetAlert:', error);
+        return false; // Failed to show SweetAlert, keep HTML alert
+    }
 }
 
 // Main initialization function
@@ -471,25 +477,41 @@ function initializeWithdrawalPage() {
     if (shouldShowMessage) {
         @if(session('success'))
             console.log('Success message found: {{ session('success') }}');
-            showSweetAlertMessage('success', 'Success!', '{{ addslashes(session('success')) }}');
+            if (showSweetAlertMessage('success', 'Success!', '{{ addslashes(session('success')) }}')) {
+                // Hide HTML alert if SweetAlert was shown successfully
+                const htmlAlert = document.getElementById('session-success');
+                if (htmlAlert) htmlAlert.style.display = 'none';
+            }
             sessionStorage.setItem('lastMessageTime', currentTime.toString());
         @endif
 
         @if(session('error'))
             console.log('Error message found: {{ session('error') }}');
-            showSweetAlertMessage('error', 'Error!', '{{ addslashes(session('error')) }}');
+            if (showSweetAlertMessage('error', 'Error!', '{{ addslashes(session('error')) }}')) {
+                // Hide HTML alert if SweetAlert was shown successfully
+                const htmlAlert = document.getElementById('session-error');
+                if (htmlAlert) htmlAlert.style.display = 'none';
+            }
             sessionStorage.setItem('lastMessageTime', currentTime.toString());
         @endif
 
         @if(session('warning'))
             console.log('Warning message found: {{ session('warning') }}');
-            showSweetAlertMessage('warning', 'Warning!', '{{ addslashes(session('warning')) }}');
+            if (showSweetAlertMessage('warning', 'Warning!', '{{ addslashes(session('warning')) }}')) {
+                // Hide HTML alert if SweetAlert was shown successfully
+                const htmlAlert = document.getElementById('session-warning');
+                if (htmlAlert) htmlAlert.style.display = 'none';
+            }
             sessionStorage.setItem('lastMessageTime', currentTime.toString());
         @endif
 
         @if(session('info'))
             console.log('Info message found: {{ session('info') }}');
-            showSweetAlertMessage('info', 'Information', '{{ addslashes(session('info')) }}');
+            if (showSweetAlertMessage('info', 'Information', '{{ addslashes(session('info')) }}')) {
+                // Hide HTML alert if SweetAlert was shown successfully
+                const htmlAlert = document.getElementById('session-info');
+                if (htmlAlert) htmlAlert.style.display = 'none';
+            }
             sessionStorage.setItem('lastMessageTime', currentTime.toString());
         @endif
     } else {

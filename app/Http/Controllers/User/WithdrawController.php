@@ -321,6 +321,13 @@ class WithdrawController extends Controller
                 'user_id' => $user->id,
                 'failures' => $conditionCheck['failures']
             ]);
+            
+            // Check if profile completion is the specific issue
+            $failures = $conditionCheck['failures'];
+            if (count($failures) === 1 && strpos($failures[0], 'Profile completion') !== false) {
+                return back()->with('error', 'Please complete your profile information before making withdrawals. Update your profile with all required details including name, mobile, country, and address.');
+            }
+            
             return back()->with('error', 'Withdrawal requirements not met: ' . implode(', ', $conditionCheck['failures']));
         }
         
