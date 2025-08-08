@@ -58,10 +58,12 @@
                                             @php
                                                 // Calculate actual prize pool based on draw completion status
                                                 $displayPrizePool = 0;
+                                                $calculationMethod = 'fallback';
                                                 
                                                 if ($draw->status == 'completed') {
                                                     // For completed draws: use actual total prize amounts awarded to winners
                                                     $displayPrizePool = $draw->winners()->sum('prize_amount');
+                                                    $calculationMethod = 'actual_winners';
                                                 } else {
                                                     // For pending draws: calculate estimated prize pool from settings
                                                     $settings = \App\Models\LotterySetting::getSettings();
@@ -69,6 +71,16 @@
                                                     $totalRevenue = $totalTickets * ($settings->ticket_price ?? 2);
                                                     $adminCommission = $totalRevenue * (($settings->admin_commission_percentage ?? 10) / 100);
                                                     $displayPrizePool = $totalRevenue - $adminCommission;
+                                                    $calculationMethod = 'percentage_settings';
+                                                    
+                                                    // Try to use draw-specific prize data if available
+                                                    if (($draw->first_prize ?? 0) > 0 || ($draw->second_prize ?? 0) > 0 || ($draw->third_prize ?? 0) > 0) {
+                                                        $displayPrizePool = ($draw->first_prize ?? 0) + ($draw->second_prize ?? 0) + ($draw->third_prize ?? 0);
+                                                        $calculationMethod = 'draw_prizes';
+                                                    } elseif (($draw->total_prize_pool ?? 0) > 0) {
+                                                        $displayPrizePool = $draw->total_prize_pool;
+                                                        $calculationMethod = 'stored_total';
+                                                    }
                                                 }
                                                 
                                                 // Ensure minimum display value
@@ -128,11 +140,18 @@
                         </h4>
                         <small class="text-white-50">
                             Total Prize Pool: ${{ number_format($displayPrizePool, 2) }}
-                            @if($calculationMethod === 'draw_prizes')
+                            @if($calculationMethod === 'actual_winners')
+                                | From actual winner payouts
+                            @elseif($calculationMethod === 'draw_prizes')
                                 | From individual prize amounts
                             @elseif($calculationMethod === 'stored_total')
                                 | From draw total
                             @elseif($calculationMethod === 'percentage_settings')
+                                @php
+                                    $settings = \App\Models\LotterySetting::getSettings();
+                                    $totalTickets = $draw->tickets ? $draw->tickets->count() : ($draw->total_tickets_sold ?? 0);
+                                    $totalRevenue = $totalTickets * ($settings->ticket_price ?? 2);
+                                @endphp
                                 | {{ number_format(($displayPrizePool / max($totalRevenue, 1)) * 100, 1) }}% of ${{ number_format($totalRevenue, 2) }} revenue
                             @elseif($calculationMethod === 'fixed_settings')
                                 @php
