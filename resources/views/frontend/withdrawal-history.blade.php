@@ -116,7 +116,7 @@
                                 <span class="fw-semibold text-success">${{ number_format($withdrawal->final_amount, 2) }}</span>
                             </td>
                             <td>
-                                @if($withdrawal->status == 0)
+                                @if($withdrawal->status == 2)
                                     <span class="badge bg-warning">
                                         <i class="ri-time-line me-1"></i>Pending
                                     </span>
@@ -124,9 +124,13 @@
                                     <span class="badge bg-success">
                                         <i class="ri-check-line me-1"></i>Approved
                                     </span>
-                                @else
+                                @elseif($withdrawal->status == 3)
                                     <span class="badge bg-danger">
                                         <i class="ri-close-line me-1"></i>Rejected
+                                    </span>
+                                @else
+                                    <span class="badge bg-secondary">
+                                        <i class="ri-question-line me-1"></i>Unknown
                                     </span>
                                 @endif
                             </td>

@@ -35,29 +35,41 @@ class WithdrawMethodController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'name' => 'required|string|max:255',
-            'method_key' => 'required|string|max:50|unique:withdraw_methods,method_key',
+            'name' => 'required|string|max:40',
+            'method_key' => 'required|string|max:191|unique:withdraw_methods,method_key',
             'status' => 'boolean',
             'min_amount' => 'required|numeric|min:0',
             'max_amount' => 'required|numeric|gt:min_amount',
             'daily_limit' => 'required|numeric|gt:0',
+            'fixed_charge' => 'nullable|numeric|min:0',
+            'percent_charge' => 'nullable|numeric|min:0|max:100',
             'charge_type' => 'required|in:fixed,percent',
             'charge' => 'required|numeric|min:0',
             'description' => 'nullable|string',
-            'icon' => 'nullable|string|max:255',
-            'processing_time' => 'required|string|max:255',
-            'currency' => 'required|string|max:10',
+            'icon' => 'nullable|string|max:191',
+            'processing_time' => 'required|string|max:191',
+            'currency' => 'nullable|string|max:40',
             'instructions' => 'nullable|string',
-            'sort_order' => 'integer|min:0'
+            'sort_order' => 'integer|min:0',
+            'form_id' => 'nullable|integer',
+            'min_limit' => 'nullable|numeric|min:0',
+            'max_limit' => 'nullable|numeric',
+            'rate' => 'nullable|numeric|min:0'
         ], [
             'method_key.unique' => 'This method key is already taken.',
             'max_amount.gt' => 'Maximum amount must be greater than minimum amount.',
-            'daily_limit.gt' => 'Daily limit must be greater than 0.'
+            'daily_limit.gt' => 'Daily limit must be greater than 0.' 
         ]);
 
         $data = $request->all();
         $data['status'] = $request->has('status');
         $data['sort_order'] = $request->sort_order ?? 0;
+        $data['form_id'] = $request->form_id ?? 0;
+        $data['fixed_charge'] = $request->fixed_charge ?? 0;
+        $data['percent_charge'] = $request->percent_charge ?? 0;
+        $data['min_limit'] = $request->min_amount ?? 0; // Sync legacy field
+        $data['max_limit'] = $request->max_amount ?? 0; // Sync legacy field
+        $data['rate'] = $request->rate ?? 0;
 
         WithdrawMethod::create($data);
 
@@ -89,25 +101,37 @@ class WithdrawMethodController extends Controller
     public function update(Request $request, WithdrawMethod $withdrawMethod)
     {
         $request->validate([
-            'name' => 'required|string|max:255',
-            'method_key' => 'required|string|max:50|unique:withdraw_methods,method_key,' . $withdrawMethod->id,
+            'name' => 'required|string|max:40',
+            'method_key' => 'required|string|max:191|unique:withdraw_methods,method_key,' . $withdrawMethod->id,
             'status' => 'boolean',
             'min_amount' => 'required|numeric|min:0',
             'max_amount' => 'required|numeric|gt:min_amount',
             'daily_limit' => 'required|numeric|gt:0',
+            'fixed_charge' => 'nullable|numeric|min:0',
+            'percent_charge' => 'nullable|numeric|min:0|max:100',
             'charge_type' => 'required|in:fixed,percent',
             'charge' => 'required|numeric|min:0',
             'description' => 'nullable|string',
-            'icon' => 'nullable|string|max:255',
-            'processing_time' => 'required|string|max:255',
-            'currency' => 'required|string|max:10',
+            'icon' => 'nullable|string|max:191',
+            'processing_time' => 'required|string|max:191',
+            'currency' => 'nullable|string|max:40',
             'instructions' => 'nullable|string',
-            'sort_order' => 'integer|min:0'
+            'sort_order' => 'integer|min:0',
+            'form_id' => 'nullable|integer',
+            'min_limit' => 'nullable|numeric|min:0',
+            'max_limit' => 'nullable|numeric',
+            'rate' => 'nullable|numeric|min:0'
         ]);
 
         $data = $request->all();
         $data['status'] = $request->has('status');
         $data['sort_order'] = $request->sort_order ?? 0;
+        $data['form_id'] = $request->form_id ?? 0;
+        $data['fixed_charge'] = $request->fixed_charge ?? 0;
+        $data['percent_charge'] = $request->percent_charge ?? 0;
+        $data['min_limit'] = $request->min_amount ?? 0; // Sync legacy field
+        $data['max_limit'] = $request->max_amount ?? 0; // Sync legacy field
+        $data['rate'] = $request->rate ?? 0;
 
         $withdrawMethod->update($data);
 

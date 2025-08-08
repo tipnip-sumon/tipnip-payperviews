@@ -165,27 +165,31 @@
                                 <div class="col-md-6">
                                     <div class="mb-3">
                                         <label for="withdraw_method" class="form-label">Withdrawal Method <span class="text-danger">*</span></label>
-                                        <select class="form-select @error('withdraw_method') is-invalid @enderror" 
-                                                id="withdraw_method" name="withdraw_method" required>
+                                        <select class="form-select @error('method_id') is-invalid @enderror" 
+                                                id="withdraw_method" name="method_id" required>
                                             <option value="">Select Method</option>
-                                            @php
-                                                $withdrawMethods = \App\Models\WithdrawMethod::active()->ordered()->get();
-                                            @endphp
                                             @forelse($withdrawMethods as $method)
-                                                <option value="{{ $method->method_key }}" 
+                                                <option value="{{ $method->id }}" 
                                                         data-min="{{ $method->min_amount }}"
                                                         data-max="{{ $method->max_amount }}"
-                                                        data-charge-type="{{ $method->charge_type }}"
-                                                        data-charge="{{ $method->charge }}"
-                                                        {{ old('withdraw_method') == $method->method_key ? 'selected' : '' }}>
+                                                        data-fixed-charge="{{ $method->fixed_charge ?? 0 }}"
+                                                        data-percent-charge="{{ $method->percent_charge ?? 0 }}"
+                                                        data-daily-limit="{{ $method->daily_limit ?? 0 }}"
+                                                        {{ old('method_id') == $method->id ? 'selected' : '' }}>
                                                     {{ $method->name }} 
-                                                    ({{ $method->charge_display }} charge - Min: ${{ number_format($method->min_amount, 2) }}, Max: ${{ number_format($method->max_amount, 2) }})
+                                                    (Min: ${{ number_format($method->min_amount, 2) }}, Max: ${{ number_format($method->max_amount, 2) }})
+                                                    @if($method->fixed_charge > 0 || $method->percent_charge > 0)
+                                                        - Charges: 
+                                                        @if($method->fixed_charge > 0)${{ number_format($method->fixed_charge, 2) }}@endif
+                                                        @if($method->fixed_charge > 0 && $method->percent_charge > 0) + @endif
+                                                        @if($method->percent_charge > 0){{ $method->percent_charge }}%@endif
+                                                    @endif
                                                 </option>
                                             @empty
                                                 <option value="" disabled>No withdrawal methods available</option>
                                             @endforelse
                                         </select>
-                                        @error('withdraw_method')
+                                        @error('method_id')
                                             <div class="invalid-feedback">{{ $message }}</div>
                                         @enderror
                                         <div id="method-info" class="mt-2" style="display: none;">
@@ -219,7 +223,7 @@
 
                             <div class="alert alert-info">
                                 <i class="fe fe-info me-2"></i>
-                                <strong>Important:</strong> Wallet withdrawals have no fees. The amount you request is the amount you'll receive after approval.
+                                <strong>Important:</strong> Withdrawal charges depend on the selected method. Please check the charge calculation below before submitting your request.
                             </div>
 
                             <button type="submit" class="btn btn-primary" 
@@ -304,12 +308,14 @@
                                 <small class="text-muted">{{ $withdrawal->created_at->format('M d, Y') }}</small>
                             </div>
                             <div>
-                                @if($withdrawal->status == 0)
+                                @if($withdrawal->status == 2)
                                     <span class="badge bg-warning">Pending</span>
                                 @elseif($withdrawal->status == 1)
                                     <span class="badge bg-success">Approved</span>
-                                @else
+                                @elseif($withdrawal->status == 3)
                                     <span class="badge bg-danger">Rejected</span>
+                                @else
+                                    <span class="badge bg-secondary">Unknown</span>
                                 @endif
                             </div>
                         </div>
@@ -345,18 +351,30 @@ document.addEventListener('DOMContentLoaded', function() {
         if (this.value) {
             const minAmount = parseFloat(selectedOption.dataset.min);
             const maxAmount = parseFloat(selectedOption.dataset.max);
-            const chargeType = selectedOption.dataset.chargeType;
-            const charge = parseFloat(selectedOption.dataset.charge);
+            const fixedCharge = parseFloat(selectedOption.dataset.fixedCharge || 0);
+            const percentCharge = parseFloat(selectedOption.dataset.percentCharge || 0);
+            const dailyLimit = parseFloat(selectedOption.dataset.dailyLimit || 0);
             
             // Update amount input constraints
             amountInput.min = minAmount;
             amountInput.max = Math.min(maxAmount, {{ $totalWalletBalance }});
             
             // Show method information
+            let chargeInfo = '';
+            if (fixedCharge > 0 && percentCharge > 0) {
+                chargeInfo = `$${fixedCharge.toFixed(2)} + ${percentCharge}%`;
+            } else if (fixedCharge > 0) {
+                chargeInfo = `$${fixedCharge.toFixed(2)} fixed`;
+            } else if (percentCharge > 0) {
+                chargeInfo = `${percentCharge}% of amount`;
+            } else {
+                chargeInfo = 'No charges';
+            }
+            
             methodDetails.innerHTML = `
                 <strong>Selected Method:</strong> ${selectedOption.text.split('(')[0].trim()}<br>
-                <strong>Limits:</strong> $${minAmount.toFixed(2)} - $${Math.min(maxAmount, {{ $totalWalletBalance }}).toFixed(2)}<br>
-                <strong>Charge:</strong> ${chargeType === 'percent' ? charge + '%' : '$' + charge.toFixed(2)}
+                <strong>Amount Limits:</strong> $${minAmount.toFixed(2)} - $${Math.min(maxAmount, {{ $totalWalletBalance }}).toFixed(2)}<br>
+                <strong>Charges:</strong> ${chargeInfo}${dailyLimit > 0 ? '<br><strong>Daily Limit:</strong> $' + dailyLimit.toFixed(2) : ''}
             `;
             
             methodInfo.style.display = 'block';
@@ -373,17 +391,13 @@ document.addEventListener('DOMContentLoaded', function() {
         const amount = parseFloat(amountInput.value);
         
         if (methodSelect.value && amount > 0) {
-            const chargeType = selectedOption.dataset.chargeType;
-            const chargeRate = parseFloat(selectedOption.dataset.charge);
+            const fixedCharge = parseFloat(selectedOption.dataset.fixedCharge || 0);
+            const percentCharge = parseFloat(selectedOption.dataset.percentCharge || 0);
             
-            let chargeAmount = 0;
-            if (chargeType === 'percent') {
-                chargeAmount = (amount * chargeRate) / 100;
-            } else {
-                chargeAmount = chargeRate;
-            }
-            
-            const finalAmount = amount - chargeAmount;
+            // Calculate total charges
+            const percentageFee = (amount * percentCharge) / 100;
+            const totalCharge = fixedCharge + percentageFee;
+            const finalAmount = amount - totalCharge;
             
             chargeCalculation.innerHTML = `
                 <div class="row text-center">
@@ -392,8 +406,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         <span class="text-primary">$${amount.toFixed(2)}</span>
                     </div>
                     <div class="col-4">
-                        <strong>Charge:</strong><br>
-                        <span class="text-warning">$${chargeAmount.toFixed(2)}</span>
+                        <strong>Total Charge:</strong><br>
+                        <span class="text-warning">$${totalCharge.toFixed(2)}</span>
+                        ${(fixedCharge > 0 && percentCharge > 0) ? '<br><small>($' + fixedCharge.toFixed(2) + ' + ' + percentageFee.toFixed(2) + ')</small>' : ''}
                     </div>
                     <div class="col-4">
                         <strong>You'll Receive:</strong><br>
@@ -414,16 +429,26 @@ document.addEventListener('DOMContentLoaded', function() {
         if (methodSelect.value && amount > 0) {
             const minAmount = parseFloat(selectedOption.dataset.min);
             const maxAmount = parseFloat(selectedOption.dataset.max);
+            const availableBalance = {{ $totalWalletBalance }};
             
             if (amount < minAmount) {
                 e.preventDefault();
                 alert(`Minimum withdrawal amount for this method is $${minAmount.toFixed(2)}`);
+                amountInput.focus();
                 return;
             }
             
             if (amount > maxAmount) {
                 e.preventDefault();
                 alert(`Maximum withdrawal amount for this method is $${maxAmount.toFixed(2)}`);
+                amountInput.focus();
+                return;
+            }
+            
+            if (amount > availableBalance) {
+                e.preventDefault();
+                alert(`Insufficient wallet balance. Available: $${availableBalance.toFixed(2)}`);
+                amountInput.focus();
                 return;
             }
         }

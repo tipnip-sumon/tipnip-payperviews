@@ -694,11 +694,37 @@ class PaymentController extends Controller
                 $info = json_decode($withdrawal->withdraw_information);
                 
                 if (isset($info->wallet_breakdown)) {
-                    // Restore the exact amounts that were deducted
-                    $amountToRestore = $withdrawal->amount;
+                    // Get the original wallet balances at the time of withdrawal
+                    $originalDepositWallet = $info->wallet_breakdown->deposit_wallet ?? 0;
+                    $originalInterestWallet = $info->wallet_breakdown->interest_wallet ?? 0;
+                    $withdrawalAmount = $withdrawal->amount;
                     
-                    // You might want to restore to the same wallets or just add to deposit_wallet
-                    $user->deposit_wallet += $amountToRestore;
+                    // Calculate how much was deducted from each wallet using the same logic as withdrawal
+                    $remainingAmount = $withdrawalAmount;
+                    $depositDeduction = 0;
+                    $interestDeduction = 0;
+                    
+                    // First calculate deduction from deposit wallet
+                    if ($remainingAmount > 0 && $originalDepositWallet > 0) {
+                        $depositDeduction = min($remainingAmount, $originalDepositWallet);
+                        $remainingAmount -= $depositDeduction;
+                    }
+                    
+                    // Then calculate deduction from interest wallet
+                    if ($remainingAmount > 0 && $originalInterestWallet > 0) {
+                        $interestDeduction = min($remainingAmount, $originalInterestWallet);
+                    }
+                    
+                    // Restore the exact amounts that were deducted
+                    $user->deposit_wallet += $depositDeduction;
+                    $user->interest_wallet += $interestDeduction;
+                    $user->save();
+                    
+                    // Log the restoration for debugging
+                    Log::info("Withdrawal restoration - TRX: {$withdrawal->trx}, Deposit: +{$depositDeduction}, Interest: +{$interestDeduction}");
+                } else {
+                    // Fallback: restore full amount to deposit wallet if wallet_breakdown is missing
+                    $user->deposit_wallet += $withdrawal->amount;
                     $user->save();
                 }
             }
@@ -773,8 +799,40 @@ class PaymentController extends Controller
                             $deposit->update(['status' => 1]);
                         }
                     } elseif ($withdrawal->withdraw_type == 'wallet') {
-                        $withdrawal->user->deposit_wallet += $withdrawal->amount;
-                        $withdrawal->user->save();
+                        $user = $withdrawal->user;
+                        $info = json_decode($withdrawal->withdraw_information);
+                        
+                        if (isset($info->wallet_breakdown)) {
+                            // Get the original wallet balances at the time of withdrawal
+                            $originalDepositWallet = $info->wallet_breakdown->deposit_wallet ?? 0;
+                            $originalInterestWallet = $info->wallet_breakdown->interest_wallet ?? 0;
+                            $withdrawalAmount = $withdrawal->amount;
+                            
+                            // Calculate how much was deducted from each wallet using the same logic as withdrawal
+                            $remainingAmount = $withdrawalAmount;
+                            $depositDeduction = 0;
+                            $interestDeduction = 0;
+                            
+                            // First calculate deduction from deposit wallet
+                            if ($remainingAmount > 0 && $originalDepositWallet > 0) {
+                                $depositDeduction = min($remainingAmount, $originalDepositWallet);
+                                $remainingAmount -= $depositDeduction;
+                            }
+                            
+                            // Then calculate deduction from interest wallet
+                            if ($remainingAmount > 0 && $originalInterestWallet > 0) {
+                                $interestDeduction = min($remainingAmount, $originalInterestWallet);
+                            }
+                            
+                            // Restore the exact amounts that were deducted
+                            $user->deposit_wallet += $depositDeduction;
+                            $user->interest_wallet += $interestDeduction;
+                            $user->save();
+                        } else {
+                            // Fallback: restore full amount to deposit wallet if wallet_breakdown is missing
+                            $user->deposit_wallet += $withdrawal->amount;
+                            $user->save();
+                        }
                     }
                 }
                 $processed++;

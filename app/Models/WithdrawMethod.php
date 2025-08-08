@@ -7,26 +7,38 @@ use Illuminate\Database\Eloquent\Model;
 class WithdrawMethod extends Model
 {
     protected $fillable = [
+        'form_id',
         'name',
         'method_key',
+        'min_limit',
+        'max_limit',
+        'fixed_charge',
+        'rate',
+        'percent_charge',
+        'currency',
+        'instructions',
+        'sort_order',
+        'description',
+        'icon',
+        'processing_time',
         'status',
         'min_amount',
         'max_amount',
         'daily_limit',
         'charge_type',
         'charge',
-        'description',
-        'icon',
-        'processing_time',
-        'currency',
-        'instructions',
-        'sort_order',
         'user_data'
     ];
 
     protected $casts = [
         'user_data' => 'object',
         'status' => 'boolean',
+        'form_id' => 'integer',
+        'min_limit' => 'decimal:8',
+        'max_limit' => 'decimal:8',
+        'fixed_charge' => 'decimal:8',
+        'rate' => 'decimal:8',
+        'percent_charge' => 'decimal:2',
         'min_amount' => 'decimal:8',
         'max_amount' => 'decimal:8',
         'daily_limit' => 'decimal:8',
@@ -68,10 +80,21 @@ class WithdrawMethod extends Model
      */
     public function calculateCharge($amount)
     {
-        if ($this->charge_type === 'percent') {
-            return ($amount * $this->charge) / 100;
+        // Use modern fields if available, otherwise fall back to legacy
+        $fixedCharge = $this->fixed_charge ?? 0;
+        $percentCharge = $this->percent_charge ?? 0;
+        
+        // If modern fields are not set, use legacy fields
+        if ($fixedCharge == 0 && $percentCharge == 0 && $this->charge > 0) {
+            if ($this->charge_type === 'percent') {
+                return ($amount * $this->charge) / 100;
+            }
+            return $this->charge;
         }
-        return $this->charge;
+        
+        // Calculate using modern fields (both fixed and percent can be applied)
+        $totalCharge = $fixedCharge + (($amount * $percentCharge) / 100);
+        return $totalCharge;
     }
 
     /**
@@ -88,7 +111,27 @@ class WithdrawMethod extends Model
      */
     public function isAmountValid($amount)
     {
-        return $amount >= $this->min_amount && $amount <= $this->max_amount;
+        // Use modern fields if available, otherwise fall back to legacy
+        $minAmount = $this->min_amount ?? $this->min_limit ?? 0;
+        $maxAmount = $this->max_amount ?? $this->max_limit ?? PHP_FLOAT_MAX;
+        
+        return $amount >= $minAmount && $amount <= $maxAmount;
+    }
+
+    /**
+     * Get minimum amount (prefer modern field over legacy)
+     */
+    public function getMinimumAmountAttribute()
+    {
+        return $this->min_amount ?? $this->min_limit ?? 0;
+    }
+
+    /**
+     * Get maximum amount (prefer modern field over legacy)
+     */
+    public function getMaximumAmountAttribute()
+    {
+        return $this->max_amount ?? $this->max_limit ?? PHP_FLOAT_MAX;
     }
 
     /**
@@ -96,10 +139,27 @@ class WithdrawMethod extends Model
      */
     public function getChargeDisplayAttribute()
     {
-        if ($this->charge_type === 'percent') {
-            return $this->charge . '%';
+        $fixedCharge = $this->fixed_charge ?? 0;
+        $percentCharge = $this->percent_charge ?? 0;
+        
+        // If modern fields are not set, use legacy fields
+        if ($fixedCharge == 0 && $percentCharge == 0 && $this->charge > 0) {
+            if ($this->charge_type === 'percent') {
+                return $this->charge . '%';
+            }
+            return '$' . number_format($this->charge, 2);
         }
-        return '$' . number_format($this->charge, 2);
+        
+        // Format modern fields
+        $display = [];
+        if ($fixedCharge > 0) {
+            $display[] = '$' . number_format($fixedCharge, 2) . ' fixed';
+        }
+        if ($percentCharge > 0) {
+            $display[] = $percentCharge . '% of amount';
+        }
+        
+        return !empty($display) ? implode(' + ', $display) : 'Free';
     }
 
     /**

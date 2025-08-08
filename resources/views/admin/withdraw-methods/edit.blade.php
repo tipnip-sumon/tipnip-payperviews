@@ -53,6 +53,34 @@
                                 </div>
                             </div>
                             
+                            <!-- Form ID and Rate -->
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Form ID</label>
+                                    <input type="number" name="form_id" class="form-control @error('form_id') is-invalid @enderror" 
+                                           value="{{ old('form_id', $withdrawMethod->form_id ?? 0) }}" min="0">
+                                    <small class="text-muted">Form configuration ID (0 for default)</small>
+                                    @error('form_id')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Exchange Rate</label>
+                                    <div class="input-group">
+                                        <input type="number" name="rate" class="form-control @error('rate') is-invalid @enderror" 
+                                               value="{{ old('rate', $withdrawMethod->rate ?? 1) }}" step="0.00000001" min="0">
+                                        <span class="input-group-text">USD</span>
+                                    </div>
+                                    <small class="text-muted">Conversion rate to USD (1 for USD)</small>
+                                    @error('rate')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                            
                             <!-- Amount Limits -->
                             <div class="col-md-4">
                                 <div class="mb-3">
@@ -99,12 +127,14 @@
                             <!-- Charge Configuration -->
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label class="form-label">Charge Type <span class="text-danger">*</span></label>
-                                    <select name="charge_type" class="form-select @error('charge_type') is-invalid @enderror" required>
-                                        <option value="fixed" {{ old('charge_type', $withdrawMethod->charge_type) == 'fixed' ? 'selected' : '' }}>Fixed Amount</option>
-                                        <option value="percent" {{ old('charge_type', $withdrawMethod->charge_type) == 'percent' ? 'selected' : '' }}>Percentage</option>
-                                    </select>
-                                    @error('charge_type')
+                                    <label class="form-label">Fixed Charge</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">$</span>
+                                        <input type="number" name="fixed_charge" class="form-control @error('fixed_charge') is-invalid @enderror" 
+                                               value="{{ old('fixed_charge', $withdrawMethod->fixed_charge) }}" step="0.01" min="0">
+                                    </div>
+                                    <small class="text-muted">Fixed amount charged per withdrawal (0 for no fixed charge)</small>
+                                    @error('fixed_charge')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>
@@ -112,16 +142,67 @@
                             
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label class="form-label">Charge Amount <span class="text-danger">*</span></label>
+                                    <label class="form-label">Percentage Charge</label>
                                     <div class="input-group">
-                                        <span class="input-group-text charge-symbol">{{ $withdrawMethod->charge_type == 'percent' ? '%' : '$' }}</span>
-                                        <input type="number" name="charge" class="form-control @error('charge') is-invalid @enderror" 
-                                               value="{{ old('charge', $withdrawMethod->charge) }}" step="0.01" min="0" required>
+                                        <input type="number" name="percent_charge" class="form-control @error('percent_charge') is-invalid @enderror" 
+                                               value="{{ old('percent_charge', $withdrawMethod->percent_charge) }}" step="0.01" min="0" max="100">
+                                        <span class="input-group-text">%</span>
                                     </div>
-                                    <small class="text-muted">Enter amount for fixed or percentage for percent type</small>
-                                    @error('charge')
+                                    <small class="text-muted">Percentage of withdrawal amount charged (0 for no percentage charge)</small>
+                                    @error('percent_charge')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
+                                </div>
+                            </div>
+                            
+                            <!-- Charge Preview -->
+                            <div class="col-md-12">
+                                <div class="mb-3">
+                                    <div class="alert alert-info">
+                                        <strong>Charge Preview:</strong>
+                                        <div id="charge-preview">
+                                            Loading charge preview...
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Legacy Fields (for backward compatibility) -->
+                            <div class="col-md-12">
+                                <div class="mb-3">
+                                    <div class="card bg-light">
+                                        <div class="card-header">
+                                            <h6 class="mb-0">Legacy Fields (Auto-calculated)</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="row">
+                                                <div class="col-md-3">
+                                                    <label class="form-label">Min Limit</label>
+                                                    <input type="hidden" name="min_limit" value="{{ old('min_limit', $withdrawMethod->min_limit ?? 0) }}">
+                                                    <input type="number" class="form-control" id="min_limit_display" readonly>
+                                                    <small class="text-muted">Auto-synced with min_amount</small>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <label class="form-label">Max Limit</label>
+                                                    <input type="hidden" name="max_limit" value="{{ old('max_limit', $withdrawMethod->max_limit ?? 0) }}">
+                                                    <input type="number" class="form-control" id="max_limit_display" readonly>
+                                                    <small class="text-muted">Auto-synced with max_amount</small>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <label class="form-label">Charge Type</label>
+                                                    <input type="hidden" name="charge_type" value="{{ old('charge_type', $withdrawMethod->charge_type ?? 'fixed') }}">
+                                                    <input type="text" class="form-control" id="charge_type_display" readonly>
+                                                    <small class="text-muted">Auto-determined</small>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <label class="form-label">Legacy Charge</label>
+                                                    <input type="hidden" name="charge" value="{{ old('charge', $withdrawMethod->charge ?? 0) }}">
+                                                    <input type="number" class="form-control" id="charge_display" readonly>
+                                                    <small class="text-muted">Auto-calculated</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             
@@ -155,8 +236,12 @@
                                     <div class="input-group">
                                         <input type="text" name="icon" class="form-control @error('icon') is-invalid @enderror" 
                                                value="{{ old('icon', $withdrawMethod->icon) }}" placeholder="e.g., fe fe-credit-card, fab fa-paypal">
-                                        <span class="input-group-text">
-                                            {!! $withdrawMethod->icon_html !!}
+                                        <span class="input-group-text icon-preview">
+                                            @if($withdrawMethod->icon)
+                                                <i class="{{ $withdrawMethod->icon }}"></i>
+                                            @else
+                                                <i class="fe fe-credit-card"></i>
+                                            @endif
                                         </span>
                                     </div>
                                     <small class="text-muted">Font Awesome or Feather icon class</small>
@@ -243,19 +328,76 @@
     <script src="{{ asset('assets/js/jquery-3.7.1.min.js') }}"></script>
     <script>
         $(document).ready(function() {
-            // Update charge symbol based on charge type
-            $('select[name="charge_type"]').on('change', function() {
-                const chargeSymbol = $(this).val() === 'percent' ? '%' : '$';
-                $('.charge-symbol').text(chargeSymbol);
-            });
+            // Update charge preview
+            function updateChargePreview() {
+                const fixedCharge = parseFloat($('input[name="fixed_charge"]').val()) || 0;
+                const percentCharge = parseFloat($('input[name="percent_charge"]').val()) || 0;
+                
+                let previewText = '';
+                
+                if (fixedCharge > 0 && percentCharge > 0) {
+                    previewText = `Combined charges: $${fixedCharge.toFixed(2)} fixed + ${percentCharge}% of amount<br>`;
+                    previewText += `<strong>Example:</strong> For $100 withdrawal = $${fixedCharge.toFixed(2)} + $${(100 * percentCharge / 100).toFixed(2)} = $${(fixedCharge + (100 * percentCharge / 100)).toFixed(2)} total charge`;
+                } else if (fixedCharge > 0) {
+                    previewText = `Fixed charge: $${fixedCharge.toFixed(2)} per withdrawal<br>`;
+                    previewText += `<strong>Example:</strong> Any withdrawal amount will have $${fixedCharge.toFixed(2)} charge`;
+                } else if (percentCharge > 0) {
+                    previewText = `Percentage charge: ${percentCharge}% of withdrawal amount<br>`;
+                    previewText += `<strong>Example:</strong> For $100 withdrawal = $${(100 * percentCharge / 100).toFixed(2)} charge`;
+                } else {
+                    previewText = 'No charges - Free withdrawals<br>';
+                    previewText += '<strong>Example:</strong> Users will receive the full amount they request';
+                }
+                
+                $('#charge-preview').html(previewText);
+                
+                // Update legacy fields
+                updateLegacyFields();
+            }
+            
+            // Update legacy fields for backward compatibility
+            function updateLegacyFields() {
+                const minAmount = parseFloat($('input[name="min_amount"]').val()) || 0;
+                const maxAmount = parseFloat($('input[name="max_amount"]').val()) || 0;
+                const fixedCharge = parseFloat($('input[name="fixed_charge"]').val()) || 0;
+                const percentCharge = parseFloat($('input[name="percent_charge"]').val()) || 0;
+                
+                // Update hidden fields
+                $('input[name="min_limit"]').val(minAmount);
+                $('input[name="max_limit"]').val(maxAmount);
+                
+                // Determine charge type and value
+                let chargeType = 'fixed';
+                let chargeValue = fixedCharge;
+                
+                if (fixedCharge > 0 && percentCharge > 0) {
+                    chargeType = 'fixed'; // Default to fixed when both exist
+                    chargeValue = fixedCharge;
+                } else if (percentCharge > 0) {
+                    chargeType = 'percent';
+                    chargeValue = percentCharge;
+                }
+                
+                $('input[name="charge_type"]').val(chargeType);
+                $('input[name="charge"]').val(chargeValue);
+                
+                // Update display fields
+                $('#min_limit_display').val(minAmount.toFixed(2));
+                $('#max_limit_display').val(maxAmount.toFixed(2));
+                $('#charge_type_display').val(chargeType);
+                $('#charge_display').val(chargeValue.toFixed(2));
+            }
+
+            $('input[name="fixed_charge"], input[name="percent_charge"]').on('input change', updateChargePreview);
+            $('input[name="min_amount"], input[name="max_amount"]').on('input change', updateLegacyFields);
 
             // Update icon preview
             $('input[name="icon"]').on('input', function() {
                 const iconClass = $(this).val();
                 if (iconClass) {
-                    $('.input-group-text').html('<i class="' + iconClass + '"></i>');
+                    $('.icon-preview').html('<i class="' + iconClass + '"></i>');
                 } else {
-                    $('.input-group-text').html('<i class="fe fe-credit-card"></i>');
+                    $('.icon-preview').html('<i class="fe fe-credit-card"></i>');
                 }
             });
 
@@ -273,6 +415,9 @@
                     toastr.warning('Daily limit should be greater than or equal to maximum amount');
                 }
             });
+            
+            // Initialize charge preview
+            updateChargePreview();
         });
     </script>
     @endpush

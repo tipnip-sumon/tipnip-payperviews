@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Models\Withdrawal;
 use App\Models\Transaction;
+use App\Models\WithdrawMethod;
 
 class WithdrawController extends Controller
 {
@@ -22,12 +23,15 @@ class WithdrawController extends Controller
         // Get user's current active deposit
         $activeDeposit = $user->invests()->where('status', 1)->first();
         
+        // Get available withdrawal methods
+        $withdrawMethods = WithdrawMethod::where('status', 1)->get();
+        
         // Get withdrawal statistics
         $withdrawalStats = [
             'total_withdrawals' => Withdrawal::where('user_id', $user->id)->count(),
             'total_withdrawn' => Withdrawal::where('user_id', $user->id)->where('status', 1)->sum('amount'),
-            'pending_withdrawals' => Withdrawal::where('user_id', $user->id)->where('status', 0)->count(),
-            'pending_amount' => Withdrawal::where('user_id', $user->id)->where('status', 0)->sum('amount'),
+            'pending_withdrawals' => Withdrawal::where('user_id', $user->id)->where('status', 2)->count(),
+            'pending_amount' => Withdrawal::where('user_id', $user->id)->where('status', 2)->sum('amount'),
         ];
         
         // Calculate withdrawal details if user has active deposit
@@ -57,6 +61,7 @@ class WithdrawController extends Controller
             'pageTitle' => 'Withdraw Deposit',
             'activeDeposit' => $activeDeposit,
             'withdrawalDetails' => $withdrawalDetails,
+            'withdrawMethods' => $withdrawMethods,
             'withdrawalStats' => $withdrawalStats,
             'recentWithdrawals' => $recentWithdrawals,
             'kycVerified' => $user->kv == 1
@@ -86,11 +91,12 @@ class WithdrawController extends Controller
         // Validate request
         $request->validate([
             'password' => 'required',
-            'withdraw_method' => 'required|string',
+            'method_id' => 'required|exists:withdraw_methods,id',
             'account_details' => 'required|string|max:500'
         ], [
             'password.required' => 'Transaction password is required',
-            'withdraw_method.required' => 'Please select a withdrawal method',
+            'method_id.required' => 'Please select a withdrawal method',
+            'method_id.exists' => 'Invalid withdrawal method selected',
             'account_details.required' => 'Account details are required'
         ]);
         
@@ -107,7 +113,7 @@ class WithdrawController extends Controller
         
         // Check if there's already a pending withdrawal
         $pendingWithdrawal = Withdrawal::where('user_id', $user->id)
-            ->where('status', 0)
+            ->where('status', 2)
             ->exists();
             
         if ($pendingWithdrawal) {
@@ -117,27 +123,36 @@ class WithdrawController extends Controller
         try {
             DB::beginTransaction();
             
-            // Calculate withdrawal amounts
+            // Get the selected withdrawal method
+            $withdrawMethod = WithdrawMethod::findOrFail($request->method_id);
+            
+            // Calculate withdrawal amounts (deposit withdrawals use 20% fee)
             $depositAmount = $activeDeposit->amount;
-            $withdrawalFee = $depositAmount * 0.20; // 20% fee
+            $withdrawalFee = $depositAmount * 0.20; // 20% fee for deposit withdrawals
             $netAmount = $depositAmount - $withdrawalFee;
             
             // Create withdrawal request
             $withdrawal = Withdrawal::create([
                 'user_id' => $user->id,
-                'method_id' => 1, // We'll use a default method for now
+                'method_id' => $request->method_id, // Use selected method
                 'amount' => $netAmount,
                 'charge' => $withdrawalFee,
                 'final_amount' => $netAmount,
-                'currency' => 'USD',
-                'rate' => 1,
+                'currency' => $withdrawMethod->currency ?? 'USD',
+                'rate' => $withdrawMethod->rate ?? 1,
                 'trx' => getTrx(),
                 'withdraw_type' => 'deposit',
                 'withdraw_information' => json_encode([
-                    'method' => $request->withdraw_method,
-                    'details' => $request->account_details
+                    'method' => $withdrawMethod->name,
+                    'details' => $request->account_details,
+                    'deposit_info' => [
+                        'plan_name' => $activeDeposit->plan->name ?? 'Unknown Plan',
+                        'deposit_amount' => $depositAmount,
+                        'withdrawal_fee' => $withdrawalFee,
+                        'fee_percentage' => 20
+                    ]
                 ]),
-                'status' => 0, // Pending
+                'status' => 2, // Pending (correct status code)
             ]);
             
             // Update deposit status to withdrawn (status = 2)
@@ -199,12 +214,12 @@ class WithdrawController extends Controller
                 ->where(function($query) {
                     $query->where('withdraw_type', 'deposit')
                           ->orWhereNull('withdraw_type');
-                })->where('status', 0)->count(),
+                })->where('status', 2)->count(),
             'rejected_requests' => Withdrawal::where('user_id', $user->id)
                 ->where(function($query) {
                     $query->where('withdraw_type', 'deposit')
                           ->orWhereNull('withdraw_type');
-                })->where('status', 2)->count(),
+                })->where('status', 3)->count(),
             'total_withdrawn' => Withdrawal::where('user_id', $user->id)
                 ->where(function($query) {
                     $query->where('withdraw_type', 'deposit')
@@ -238,12 +253,15 @@ class WithdrawController extends Controller
         $interestWallet = $user->interest_wallet ?? 0;
         $totalWalletBalance = $depositWallet + $interestWallet;
         
+        // Get available withdrawal methods
+        $withdrawMethods = WithdrawMethod::where('status', 1)->get();
+        
         // Get wallet withdrawal statistics
         $withdrawalStats = [
             'total_wallet_withdrawals' => Withdrawal::where('user_id', $user->id)->where('withdraw_type', 'wallet')->count(),
             'total_wallet_withdrawn' => Withdrawal::where('user_id', $user->id)->where('withdraw_type', 'wallet')->where('status', 1)->sum('amount'),
-            'pending_wallet_withdrawals' => Withdrawal::where('user_id', $user->id)->where('withdraw_type', 'wallet')->where('status', 0)->count(),
-            'pending_wallet_amount' => Withdrawal::where('user_id', $user->id)->where('withdraw_type', 'wallet')->where('status', 0)->sum('amount'),
+            'pending_wallet_withdrawals' => Withdrawal::where('user_id', $user->id)->where('withdraw_type', 'wallet')->where('status', 2)->count(),
+            'pending_wallet_amount' => Withdrawal::where('user_id', $user->id)->where('withdraw_type', 'wallet')->where('status', 2)->sum('amount'),
         ];
         
         // Get recent wallet withdrawal history
@@ -259,6 +277,7 @@ class WithdrawController extends Controller
             'depositWallet' => $depositWallet,
             'interestWallet' => $interestWallet,
             'totalWalletBalance' => $totalWalletBalance,
+            'withdrawMethods' => $withdrawMethods,
             'withdrawalStats' => $withdrawalStats,
             'recentWithdrawals' => $recentWithdrawals,
             'kycVerified' => $user->kv == 1
@@ -285,17 +304,28 @@ class WithdrawController extends Controller
             return back()->with('error', 'Withdrawal requirements not met: ' . implode(', ', $conditionCheck['failures']));
         }
         
-        // Validate request
+        // Get the selected withdrawal method for validation
+        $withdrawMethod = WithdrawMethod::findOrFail($request->method_id);
+        
+        // Validate request with dynamic min/max from withdrawal method
         $request->validate([
-            'amount' => 'required|numeric|min:1',
+            'amount' => [
+                'required',
+                'numeric',
+                'min:' . ($withdrawMethod->min_amount ?? 1),
+                'max:' . ($withdrawMethod->max_amount ?? 999999)
+            ],
             'password' => 'required',
-            'withdraw_method' => 'required|string',
+            'method_id' => 'required|exists:withdraw_methods,id',
             'account_details' => 'required|string|max:500'
         ], [
             'amount.required' => 'Withdrawal amount is required',
-            'amount.min' => 'Minimum withdrawal amount is $1',
+            'amount.min' => 'Minimum withdrawal amount for ' . $withdrawMethod->name . ' is $' . number_format($withdrawMethod->min_amount ?? 1, 2),
+            'amount.max' => 'Maximum withdrawal amount for ' . $withdrawMethod->name . ' is $' . number_format($withdrawMethod->max_amount ?? 999999, 2),
+            'amount.numeric' => 'Withdrawal amount must be a valid number',
             'password.required' => 'Transaction password is required',
-            'withdraw_method.required' => 'Please select a withdrawal method',
+            'method_id.required' => 'Please select a withdrawal method',
+            'method_id.exists' => 'Invalid withdrawal method selected',
             'account_details.required' => 'Account details are required'
         ]);
         
@@ -314,10 +344,27 @@ class WithdrawController extends Controller
             return back()->with(['error' => 'Insufficient wallet balance. Available: $' . number_format($totalWalletBalance, 2)]);
         }
         
+        // Check daily withdrawal limit for this method
+        if ($withdrawMethod->daily_limit && $withdrawMethod->daily_limit > 0) {
+            $todayWithdrawals = Withdrawal::where('user_id', $user->id)
+                ->where('method_id', $request->method_id)
+                ->where('withdraw_type', 'wallet')
+                ->where('status', '!=', 3) // Exclude rejected withdrawals
+                ->whereDate('created_at', today())
+                ->sum('amount');
+                
+            $totalTodayAmount = $todayWithdrawals + $request->amount;
+            
+            if ($totalTodayAmount > $withdrawMethod->daily_limit) {
+                $remainingLimit = max(0, $withdrawMethod->daily_limit - $todayWithdrawals);
+                return back()->with(['error' => 'Daily withdrawal limit exceeded for ' . $withdrawMethod->name . '. Remaining limit: $' . number_format($remainingLimit, 2)]);
+            }
+        }
+        
         // Check if there's already a pending wallet withdrawal
         $pendingWithdrawal = Withdrawal::where('user_id', $user->id)
             ->where('withdraw_type', 'wallet')
-            ->where('status', 0)
+            ->where('status', 2)
             ->exists();
             
         if ($pendingWithdrawal) {
@@ -327,32 +374,48 @@ class WithdrawController extends Controller
         try {
             DB::beginTransaction();
             
-            // No fee for wallet withdrawals (or you can add a small fee if needed)
+            // Note: withdrawMethod already retrieved above for validation
+            // Calculate withdrawal fees using both fixed_charge and percent_charge
             $withdrawalAmount = $request->amount;
-            $withdrawalFee = 0; // No fee for wallet withdrawals
-            $netAmount = $withdrawalAmount - $withdrawalFee;
+            $fixedCharge = $withdrawMethod->fixed_charge ?? 0;
+            $percentCharge = ($withdrawMethod->percent_charge ?? 0) / 100;
+            
+            // Calculate total charge: fixed charge + percentage charge
+            $percentageFee = $withdrawalAmount * $percentCharge;
+            $totalCharge = $fixedCharge + $percentageFee;
+            $netAmount = $withdrawalAmount - $totalCharge;
+            
+            // Ensure net amount is not negative
+            if ($netAmount <= 0) {
+                return back()->with(['error' => 'Withdrawal amount is too low after charges. Minimum required: $' . number_format($totalCharge + 0.01, 2)]);
+            }
             
             // Create withdrawal request
             $withdrawal = Withdrawal::create([
                 'user_id' => $user->id,
-                'method_id' => 1, // Default method
+                'method_id' => $request->method_id, // Use selected method
                 'amount' => $withdrawalAmount,
-                'charge' => $withdrawalFee,
+                'charge' => $totalCharge,
                 'final_amount' => $netAmount,
-                'currency' => 'USD',
-                'rate' => 1,
+                'currency' => $withdrawMethod->currency ?? 'USD',
+                'rate' => $withdrawMethod->rate ?? 1,
                 'trx' => getTrx(),
                 'withdraw_type' => 'wallet',
                 'withdraw_information' => json_encode([
-                    'method' => $request->withdraw_method,
+                    'method' => $withdrawMethod->name,
                     'details' => $request->account_details,
                     'wallet_breakdown' => [
                         'deposit_wallet' => $depositWallet,
                         'interest_wallet' => $interestWallet,
                         'total_balance' => $totalWalletBalance
+                    ],
+                    'charges' => [
+                        'fixed_charge' => $fixedCharge,
+                        'percent_charge' => $withdrawMethod->percent_charge,
+                        'total_charge' => $totalCharge
                     ]
                 ]),
-                'status' => 0, // Pending
+                'status' => 2, // Pending (correct status code)
             ]);
             
             // Deduct from user wallets (temporarily, will be restored if withdrawal is rejected)
@@ -378,12 +441,12 @@ class WithdrawController extends Controller
             $transaction = new Transaction();
             $transaction->user_id = $user->id;
             $transaction->amount = $withdrawalAmount;
-            $transaction->charge = $withdrawalFee;
+            $transaction->charge = $totalCharge;
             $transaction->trx_type = '-';
             $transaction->trx = $withdrawal->trx;
             $transaction->wallet_type = 'wallet_withdrawal';
             $transaction->remark = 'wallet_withdrawal';
-            $transaction->details = 'Wallet withdrawal request: $' . number_format($withdrawalAmount, 2);
+            $transaction->details = 'Wallet withdrawal request: $' . number_format($withdrawalAmount, 2) . ' via ' . $withdrawMethod->name . ' (Charge: $' . number_format($totalCharge, 2) . ')';
             $transaction->post_balance = ($user->deposit_wallet ?? 0) + ($user->interest_wallet ?? 0);
             $transaction->save();
             
@@ -415,8 +478,8 @@ class WithdrawController extends Controller
         $stats = [
             'total_requests' => Withdrawal::where('user_id', $user->id)->where('withdraw_type', 'wallet')->count(),
             'approved_requests' => Withdrawal::where('user_id', $user->id)->where('withdraw_type', 'wallet')->where('status', 1)->count(),
-            'pending_requests' => Withdrawal::where('user_id', $user->id)->where('withdraw_type', 'wallet')->where('status', 0)->count(),
-            'rejected_requests' => Withdrawal::where('user_id', $user->id)->where('withdraw_type', 'wallet')->where('status', 2)->count(),
+            'pending_requests' => Withdrawal::where('user_id', $user->id)->where('withdraw_type', 'wallet')->where('status', 2)->count(),
+            'rejected_requests' => Withdrawal::where('user_id', $user->id)->where('withdraw_type', 'wallet')->where('status', 3)->count(),
             'total_withdrawn' => Withdrawal::where('user_id', $user->id)->where('withdraw_type', 'wallet')->where('status', 1)->sum('final_amount'),
             'total_fees_paid' => Withdrawal::where('user_id', $user->id)->where('withdraw_type', 'wallet')->where('status', 1)->sum('charge'),
         ];

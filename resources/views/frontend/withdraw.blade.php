@@ -17,7 +17,7 @@
         </div>
     </div>
     
-    <!-- Withdrawal Calculation -->
+    <!-- Withdrawal Calculation --> 
     <div class="row mb-4">
         <div class="col-12">
             <div class="card custom-card border-0 shadow">
@@ -258,7 +258,7 @@
                     @forelse($recentWithdrawals as $withdrawal)
                     <div class="d-flex align-items-center p-3 border-bottom">
                         <div class="flex-shrink-0 me-3">
-                            @if($withdrawal->status == 0)
+                            @if($withdrawal->status == 2)
                                 <div class="bg-warning bg-opacity-10 text-warning rounded-circle p-2">
                                     <i class="ri-time-line"></i>
                                 </div>
@@ -266,9 +266,13 @@
                                 <div class="bg-success bg-opacity-10 text-success rounded-circle p-2">
                                     <i class="ri-check-line"></i>
                                 </div>
-                            @else
+                            @elseif($withdrawal->status == 3)
                                 <div class="bg-danger bg-opacity-10 text-danger rounded-circle p-2">
                                     <i class="ri-close-line"></i>
+                                </div>
+                            @else
+                                <div class="bg-secondary bg-opacity-10 text-secondary rounded-circle p-2">
+                                    <i class="ri-question-line"></i>
                                 </div>
                             @endif
                         </div>
@@ -279,12 +283,14 @@
                             </div>
                             <div class="small text-muted">
                                 {{ $withdrawal->withdrawMethod->name ?? 'Unknown Method' }}
-                                @if($withdrawal->status == 0)
+                                @if($withdrawal->status == 2)
                                     <span class="badge bg-warning ms-2">Pending</span>
                                 @elseif($withdrawal->status == 1)
                                     <span class="badge bg-success ms-2">Approved</span>
-                                @else
+                                @elseif($withdrawal->status == 3)
                                     <span class="badge bg-danger ms-2">Rejected</span>
+                                @else
+                                    <span class="badge bg-secondary ms-2">Unknown</span>
                                 @endif
                             </div>
                         </div>

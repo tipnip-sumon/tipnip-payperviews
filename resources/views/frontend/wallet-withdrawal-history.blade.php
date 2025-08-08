@@ -169,12 +169,14 @@
                                                 </span>
                                             </td>
                                             <td>
-                                                @if($withdrawal->status == 0)
+                                                @if($withdrawal->status == 2)
                                                     <span class="badge bg-warning">Pending</span>
                                                 @elseif($withdrawal->status == 1)
                                                     <span class="badge bg-success">Approved</span>
-                                                @else
+                                                @elseif($withdrawal->status == 3)
                                                     <span class="badge bg-danger">Rejected</span>
+                                                @else
+                                                    <span class="badge bg-secondary">Unknown</span>
                                                 @endif
                                             </td>
                                             <td>
@@ -223,12 +225,14 @@
                                                                             <tr>
                                                                                 <td><strong>Status:</strong></td>
                                                                                 <td>
-                                                                                    @if($withdrawal->status == 0)
+                                                                                    @if($withdrawal->status == 2)
                                                                                         <span class="badge bg-warning">Pending</span>
                                                                                     @elseif($withdrawal->status == 1)
                                                                                         <span class="badge bg-success">Approved</span>
-                                                                                    @else
+                                                                                    @elseif($withdrawal->status == 3)
                                                                                         <span class="badge bg-danger">Rejected</span>
+                                                                                    @else
+                                                                                        <span class="badge bg-secondary">Unknown</span>
                                                                                     @endif
                                                                                 </td>
                                                                             </tr>
