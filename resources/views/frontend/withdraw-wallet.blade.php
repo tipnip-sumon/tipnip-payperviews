@@ -369,13 +369,10 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
         // Mark that we've handled the redirect
         sessionStorage.removeItem('withdrawalSubmitted');
-        console.log('Page reloaded after withdrawal submission - handling gracefully');
     }
     
     // Wait a bit more for SweetAlert to load from CDN
     setTimeout(function() {
-        console.log('SweetAlert2 loaded:', typeof Swal !== 'undefined');
-        
         // Initialize all functionality after SweetAlert is confirmed to be loaded
         initializeWithdrawalPage();
     }, 100);
@@ -420,7 +417,6 @@ function showKycAlert() {
 // Function to show SweetAlert messages
 function showSweetAlertMessage(type, title, message) {
     if (typeof Swal === 'undefined') {
-        console.log('SweetAlert not available, keeping HTML alert visible');
         return false; // SweetAlert not available, keep HTML alert
     }
     
@@ -456,15 +452,12 @@ function showSweetAlertMessage(type, title, message) {
         Swal.fire(config);
         return true; // SweetAlert shown successfully
     } catch (error) {
-        console.error('Error showing SweetAlert:', error);
         return false; // Failed to show SweetAlert, keep HTML alert
     }
 }
 
 // Main initialization function
 function initializeWithdrawalPage() {
-    console.log('Initializing withdrawal page...');
-    
     // Add flag to prevent multiple confirmations
     let isSubmitting = false;
     
@@ -476,7 +469,6 @@ function initializeWithdrawalPage() {
     
     if (shouldShowMessage) {
         @if(session('success'))
-            console.log('Success message found: {{ session('success') }}');
             if (showSweetAlertMessage('success', 'Success!', '{{ addslashes(session('success')) }}')) {
                 // Hide HTML alert if SweetAlert was shown successfully
                 const htmlAlert = document.getElementById('session-success');
@@ -486,7 +478,6 @@ function initializeWithdrawalPage() {
         @endif
 
         @if(session('error'))
-            console.log('Error message found: {{ session('error') }}');
             if (showSweetAlertMessage('error', 'Error!', '{{ addslashes(session('error')) }}')) {
                 // Hide HTML alert if SweetAlert was shown successfully
                 const htmlAlert = document.getElementById('session-error');
@@ -496,7 +487,6 @@ function initializeWithdrawalPage() {
         @endif
 
         @if(session('warning'))
-            console.log('Warning message found: {{ session('warning') }}');
             if (showSweetAlertMessage('warning', 'Warning!', '{{ addslashes(session('warning')) }}')) {
                 // Hide HTML alert if SweetAlert was shown successfully
                 const htmlAlert = document.getElementById('session-warning');
@@ -506,7 +496,6 @@ function initializeWithdrawalPage() {
         @endif
 
         @if(session('info'))
-            console.log('Info message found: {{ session('info') }}');
             if (showSweetAlertMessage('info', 'Information', '{{ addslashes(session('info')) }}')) {
                 // Hide HTML alert if SweetAlert was shown successfully
                 const htmlAlert = document.getElementById('session-info');
@@ -514,8 +503,6 @@ function initializeWithdrawalPage() {
             }
             sessionStorage.setItem('lastMessageTime', currentTime.toString());
         @endif
-    } else {
-        console.log('Skipping duplicate message display - too soon after last message');
     }
     
     // Get DOM elements
@@ -528,7 +515,6 @@ function initializeWithdrawalPage() {
     
     // Show insufficient balance alert
     @if($totalWalletBalance <= 0)
-        console.log('Insufficient balance detected');
         setTimeout(() => {
             showSweetAlertMessage('warning', 'Insufficient Balance', 'You don\'t have sufficient wallet balance to make a withdrawal.');
         }, 500);
@@ -670,16 +656,13 @@ function initializeWithdrawalPage() {
         withdrawForm.addEventListener('submit', function(e) {
             // Check if we're already in the middle of submitting
             const alreadySubmitting = sessionStorage.getItem('withdrawalSubmitting') === 'true' || isSubmitting;
-            console.log('Form submission started, alreadySubmitting:', alreadySubmitting);
             
             // If already submitting, allow the form to go through normally
             if (alreadySubmitting) {
-                console.log('Form already being submitted, allowing submission...');
                 return true;
             }
             
             if (!methodSelect || !amountInput) {
-                console.error('Form elements not found');
                 return;
             }
             
@@ -691,11 +674,8 @@ function initializeWithdrawalPage() {
                 const maxAmount = parseFloat(selectedOption.dataset.max);
                 const availableBalance = {{ $totalWalletBalance }};
                 
-                console.log('Validation:', {minAmount, maxAmount, amount, availableBalance});
-                
                 if (amount < minAmount) {
                     e.preventDefault();
-                    console.log('Amount below minimum');
                     if (typeof Swal !== 'undefined') {
                         Swal.fire({
                             title: 'Invalid Amount!',
@@ -715,7 +695,6 @@ function initializeWithdrawalPage() {
                 
                 if (amount > maxAmount) {
                     e.preventDefault();
-                    console.log('Amount above maximum');
                     if (typeof Swal !== 'undefined') {
                         Swal.fire({
                             title: 'Amount Exceeds Limit!',
@@ -735,7 +714,6 @@ function initializeWithdrawalPage() {
                 
                 if (amount > availableBalance) {
                     e.preventDefault();
-                    console.log('Insufficient balance');
                     if (typeof Swal !== 'undefined') {
                         Swal.fire({
                             title: 'Insufficient Balance!',
@@ -755,7 +733,6 @@ function initializeWithdrawalPage() {
                 
                 // Show confirmation dialog before submitting
                 e.preventDefault();
-                console.log('Showing confirmation dialog');
                 
                 const fixedCharge = parseFloat(selectedOption.dataset.fixedCharge || 0);
                 const percentCharge = parseFloat(selectedOption.dataset.percentCharge || 0);
@@ -785,8 +762,6 @@ function initializeWithdrawalPage() {
                         reverseButtons: true
                     }).then((result) => {
                         if (result.isConfirmed) {
-                            console.log('User confirmed withdrawal');
-                            
                             // Set flags to prevent multiple confirmations
                             isSubmitting = true;
                             sessionStorage.setItem('withdrawalSubmitting', 'true');
@@ -800,7 +775,6 @@ function initializeWithdrawalPage() {
                             }
                             
                             // Submit the original form directly instead of cloning
-                            console.log('Submitting form...');
                             withdrawForm.submit();
                         }
                     });
@@ -819,46 +793,12 @@ function initializeWithdrawalPage() {
                             submitButton.innerHTML = '<i class="fe fe-loader me-2 spin"></i>Processing...';
                         }
                         
-                        console.log('Submitting form via fallback...');
                         withdrawForm.submit();
                     }
                 }
             }
         });
     }
-    
-    // Test button for SweetAlert
-    if (typeof Swal !== 'undefined') {
-        console.log('Adding SweetAlert test button');
-        const testButton = document.createElement('button');
-        testButton.innerHTML = 'Test SweetAlert';
-        testButton.type = 'button';
-        testButton.className = 'btn btn-secondary btn-sm';
-        testButton.style.position = 'fixed';
-        testButton.style.top = '10px';
-        testButton.style.right = '10px';
-        testButton.style.zIndex = '9999';
-        testButton.onclick = function() {
-            console.log('Test button clicked');
-            Swal.fire({
-                title: 'SweetAlert Test',
-                text: 'SweetAlert is working properly!',
-                icon: 'success',
-                confirmButtonText: 'Great!'
-            });
-        };
-        
-        // Check if document.body exists before appending
-        if (document.body) {
-            document.body.appendChild(testButton);
-        } else {
-            console.error('document.body not found');
-        }
-    } else {
-        console.log('SweetAlert not available, test button not added');
-    }
-    
-    console.log('✅ Withdrawal page initialization complete');
 }
 </script>
 @endsection
