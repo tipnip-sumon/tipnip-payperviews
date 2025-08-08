@@ -169,7 +169,7 @@ Route::get('/home', function () {
 
 // User Dashboard Route
 Route::get('/user/dashboard', [App\Http\Controllers\User\UserController::class, 'home'])
-    ->name('user.dashboard')->middleware(['auth', 'fresh.login', 'single-session', 'no-cache']);
+    ->name('user.dashboard')->middleware(['auth', 'fresh.login', 'no-cache']);
 
 // Dashboard Performance Metrics API
 Route::get('/user/dashboard/performance', [App\Http\Controllers\User\UserController::class, 'getPerformanceMetrics'])
@@ -642,7 +642,7 @@ Route::resource('users', UserController::class);
 
 // Removed duplicate /home route - using the one defined above that redirects to user.dashboard
 
-Route::controller(UserController::class)->middleware('auth','prevent-back','single-session')->group(function () {
+Route::controller(UserController::class)->middleware('auth','prevent-back')->group(function () {
     Route::any('deposit/history', 'depositHistory')->name('deposit.history');
     Route::post('find-user','findUser')->name('findUser');
     Route::post('transfer-balance','transferBalanceSubmit')->name('transfer-balance');
@@ -675,7 +675,7 @@ Route::controller(UserController::class)->middleware('auth','prevent-back','sing
     Route::post('/user/dismiss-install-suggestion','dismissInstallSuggestion')->name('user.dismiss-install-suggestion');
 });
 
-Route::controller(HomeController::class)->middleware('auth','prevent-back','single-session')->group(function () {
+Route::controller(HomeController::class)->middleware('auth','prevent-back')->group(function () {
     Route::get('/user/profile/{userId?}','profile')->name('profile');
     Route::get('/edit/profile','editProfile')->name('editProfile');
 });
@@ -684,7 +684,7 @@ Route::controller(HomeController::class)->middleware('auth','prevent-back','sing
 // SUPPORT ROUTES
 // =============================================================================
 
-Route::controller(SupportController::class)->middleware('auth','prevent-back','single-session')->group(function () {
+Route::controller(SupportController::class)->middleware('auth','prevent-back')->group(function () {
     Route::get('/user/support', 'index')->name('user.support.index');
     Route::get('/user/support/tickets', 'tickets')->name('user.support.tickets');
     Route::get('/user/support/create', 'createTicket')->name('user.support.create');
@@ -705,12 +705,12 @@ Route::controller(SupportController::class)->middleware('auth','prevent-back','s
 // =============================================================================
 
 // User Requirements Dashboard
-Route::controller(RequirementsController::class)->middleware('auth','prevent-back','single-session')->group(function () {
+Route::controller(RequirementsController::class)->middleware('auth','prevent-back')->group(function () {
     Route::get('/user/requirements', 'index')->name('user.requirements');
 });
 
 // Notification Routes
-Route::controller(\App\Http\Controllers\User\NotificationController::class)->middleware('auth','prevent-back','single-session')->group(function () {
+Route::controller(\App\Http\Controllers\User\NotificationController::class)->middleware('auth','prevent-back')->group(function () {
     Route::get('/user/notifications', 'index')->name('user.notifications.index');
     Route::get('/user/notifications/dropdown', 'getDropdownNotifications')->name('user.notifications.dropdown');
     Route::get('/user/notifications/{id}', 'show')->name('user.notifications.show');
@@ -736,7 +736,7 @@ Route::controller(\App\Http\Controllers\User\PopupController::class)->group(func
 });
 
 // Sponsor Ticket Routes
-Route::controller(\App\Http\Controllers\User\SponsorTicketController::class)->middleware('auth','prevent-back','single-session')->group(function () {
+Route::controller(\App\Http\Controllers\User\SponsorTicketController::class)->middleware('auth','prevent-back')->group(function () {
     Route::get('/user/sponsor-tickets', 'index')->name('user.sponsor-tickets.index');
     Route::get('/user/sponsor-tickets/{ticket}/transfer', 'showTransfer')->name('user.sponsor-tickets.transfer');
     Route::post('/user/sponsor-tickets/{ticket}/transfer', 'transfer')->name('user.sponsor-tickets.transfer.submit');
@@ -760,7 +760,7 @@ Route::controller(InvestController::class)->middleware(['auth'])->group(function
 });
 
 // Ticket Validation Routes for Investment
-Route::controller(App\Http\Controllers\Api\TicketValidationController::class)->middleware('auth','prevent-back','single-session')->group(function () {
+Route::controller(App\Http\Controllers\Api\TicketValidationController::class)->middleware('auth','prevent-back')->group(function () {
     Route::post('/tickets/validate', 'validateTicket')->name('tickets.validate');
     Route::post('/tickets/mark-used', 'markTicketAsUsed')->name('tickets.mark-used');
     Route::get('/tickets/history', 'getTicketHistory')->name('tickets.history');
@@ -783,7 +783,7 @@ Route::controller(App\Http\Controllers\User\WithdrawController::class)->middlewa
 // PAYMENT & DEPOSIT ROUTES
 // =============================================================================
 
-Route::controller(DepositController::class)->middleware('auth','prevent-back','single-session')->group(function(){
+Route::controller(DepositController::class)->middleware('auth','prevent-back')->group(function(){
     Route::get('/deposit', 'index')->name('deposit.index');
     Route::post('insert', 'depositInsert')->name('deposit.insert');
     Route::get('confirm', 'depositConfirm')->name('deposit.confirm');
@@ -792,7 +792,7 @@ Route::controller(DepositController::class)->middleware('auth','prevent-back','s
 });
 
 // NOWPayments payment gateway routes
-Route::middleware(['auth','prevent-back','single-session'])->group(function () {
+Route::middleware(['auth','prevent-back'])->group(function () {
     Route::post('/pay', [PaymentController::class, 'createCryptoPayment'])->name('pay');
     Route::delete('/pay/delete/{user_id}', [PaymentController::class, 'cancelCryptoPayment']);
     Route::post('/payment/ipn', [PaymentController::class, 'handleIPN'])->name('payments');
@@ -807,7 +807,7 @@ Route::middleware(['auth','prevent-back','single-session'])->group(function () {
 // KYC ROUTES
 // =============================================================================
 
-Route::controller(App\Http\Controllers\User\KycController::class)->middleware('auth','single-session')->group(function () {
+Route::controller(App\Http\Controllers\User\KycController::class)->middleware('auth')->group(function () {
     Route::get('/user/kyc', 'index')->name('user.kyc.index');
     Route::get('/user/kyc/form', 'create')->name('user.kyc.create');
     Route::post('/user/kyc/submit', 'store')->name('user.kyc.store');
@@ -853,7 +853,7 @@ Route::get('/videos/public', function () {
     return redirect('/videos', 301);
 })->name('videos.public.redirect');
 
-Route::prefix('user')->middleware(['auth', 'verified','prevent-back','single-session'])->group(function () {
+Route::prefix('user')->middleware(['auth', 'verified','prevent-back'])->group(function () {
     // Dashboard API Routes for real-time updates
     Route::prefix('api/dashboard')->name('api.dashboard.')->group(function () {
         Route::get('/data', [App\Http\Controllers\User\DashboardApiController::class, 'getDashboardData'])->name('data');
