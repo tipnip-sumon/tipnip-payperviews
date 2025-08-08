@@ -56,57 +56,102 @@
                                         <i class="fe fe-gift text-warning me-2"></i>
                                         <span class="fw-bold text-success fs-5">
                                             @php
-                                                // Calculate actual prize pool based on draw completion status
+                                                // Initialize variables
                                                 $displayPrizePool = 0;
                                                 $calculationMethod = 'fallback';
+                                                $settingsFirstPrize = 0;
+                                                $settingsSecondPrize = 0;
+                                                $settingsThirdPrize = 0;
+                                                $prizeDistribution = [];
                                                 
-                                                if ($draw->status == 'completed') {
-                                                    // For completed draws: use actual total prize amounts awarded to winners
-                                                    $displayPrizePool = $draw->winners()->sum('prize_amount');
-                                                    $calculationMethod = 'actual_winners';
-                                                } else {
-                                                    // For pending draws: calculate estimated prize pool from settings
-                                                    $settings = \App\Models\LotterySetting::getSettings();
-                                                    $totalTickets = $draw->tickets ? $draw->tickets->count() : ($draw->total_tickets_sold ?? 0);
-                                                    $totalRevenue = $totalTickets * ($settings->ticket_price ?? 2);
-                                                    $adminCommission = $totalRevenue * (($settings->admin_commission_percentage ?? 10) / 100);
-                                                    $displayPrizePool = $totalRevenue - $adminCommission;
-                                                    $calculationMethod = 'percentage_settings';
+                                                // Load prize distribution from draw's prize_distribution column (priority)
+                                                if ($draw->prize_distribution) {
+                                                    $prizeDistribution = is_array($draw->prize_distribution) 
+                                                        ? $draw->prize_distribution 
+                                                        : json_decode($draw->prize_distribution, true);
                                                     
-                                                    // Try to use draw-specific prize data if available
-                                                    if (($draw->first_prize ?? 0) > 0 || ($draw->second_prize ?? 0) > 0 || ($draw->third_prize ?? 0) > 0) {
-                                                        $displayPrizePool = ($draw->first_prize ?? 0) + ($draw->second_prize ?? 0) + ($draw->third_prize ?? 0);
-                                                        $calculationMethod = 'draw_prizes';
-                                                    } elseif (($draw->total_prize_pool ?? 0) > 0) {
-                                                        $displayPrizePool = $draw->total_prize_pool;
-                                                        $calculationMethod = 'stored_total';
+                                                    if (is_array($prizeDistribution) && !empty($prizeDistribution)) {
+                                                        $calculationMethod = 'draw_distribution';
+                                                        
+                                                        // Calculate prize amounts per position from distribution
+                                                        $position1Prizes = array_filter($prizeDistribution, function($prize) {
+                                                            return isset($prize['position']) && $prize['position'] == 1;
+                                                        });
+                                                        $position2Prizes = array_filter($prizeDistribution, function($prize) {
+                                                            return isset($prize['position']) && $prize['position'] == 2;
+                                                        });
+                                                        $position3Prizes = array_filter($prizeDistribution, function($prize) {
+                                                            return isset($prize['position']) && $prize['position'] == 3;
+                                                        });
+                                                        
+                                                        // Sum up total amounts per position
+                                                        $settingsFirstPrize = array_sum(array_column($position1Prizes, 'amount'));
+                                                        $settingsSecondPrize = array_sum(array_column($position2Prizes, 'amount'));
+                                                        $settingsThirdPrize = array_sum(array_column($position3Prizes, 'amount'));
+                                                        
+                                                        // Calculate total prize pool
+                                                        $displayPrizePool = array_sum(array_column($prizeDistribution, 'amount'));
                                                     }
+                                                }
+                                                
+                                                // Fallback to lottery settings if no draw distribution
+                                                if (empty($prizeDistribution)) {
+                                                    $settings = \App\Models\LotterySetting::getSettings();
+                                                    if ($settings && $settings->prize_structure) {
+                                                        $prizeStructure = is_array($settings->prize_structure) 
+                                                            ? $settings->prize_structure 
+                                                            : json_decode($settings->prize_structure, true);
+                                                        
+                                                        if (is_array($prizeStructure)) {
+                                                            // Extract fixed prizes from settings
+                                                            if (isset($prizeStructure['1']['amount'])) {
+                                                                $settingsFirstPrize = (float)$prizeStructure['1']['amount'];
+                                                            }
+                                                            if (isset($prizeStructure['2']['amount'])) {
+                                                                $settingsSecondPrize = (float)$prizeStructure['2']['amount'];
+                                                            }
+                                                            if (isset($prizeStructure['3']['amount'])) {
+                                                                $settingsThirdPrize = (float)$prizeStructure['3']['amount'];
+                                                            }
+                                                            
+                                                            $displayPrizePool = $settingsFirstPrize + $settingsSecondPrize + $settingsThirdPrize;
+                                                            $calculationMethod = 'fallback_settings';
+                                                        }
+                                                    }
+                                                }
+                                                
+                                                // Final fallback with default values
+                                                if ($settingsFirstPrize == 0 && $settingsSecondPrize == 0 && $settingsThirdPrize == 0) {
+                                                    $settingsFirstPrize = 1000;
+                                                    $settingsSecondPrize = 300;
+                                                    $settingsThirdPrize = 100;
+                                                    $displayPrizePool = 1400;
+                                                    $calculationMethod = 'default_fixed';
                                                 }
                                                 
                                                 // Ensure minimum display value
                                                 $displayPrizePool = max($displayPrizePool, 0);
+                                                
+                                                // Calculate total revenue from ticket sales
+                                                $totalRevenue = $draw->tickets()->sum('ticket_price') ?? 0;
                                             @endphp
                                             ${{ number_format($displayPrizePool, 2) }}
                                         </span>
-                                        @if($calculationMethod === 'draw_prizes')
+                                        @if($calculationMethod === 'draw_distribution')
                                             <small class="text-muted ms-2">
-                                                (From individual prize amounts)
+                                                (Prize distribution from draw settings)
                                             </small>
-                                        @elseif($calculationMethod === 'stored_total')
+                                        @elseif($calculationMethod === 'fallback_settings')
                                             <small class="text-muted ms-2">
-                                                (From draw total)
+                                                (Fixed amounts from lottery settings)
                                             </small>
-                                        @elseif($calculationMethod === 'percentage_settings')
+                                        @elseif($calculationMethod === 'default_fixed')
                                             <small class="text-muted ms-2">
-                                                ({{ number_format(($displayPrizePool / max($totalRevenue, 1)) * 100, 1) }}% of ${{ number_format($totalRevenue, 2) }} revenue)
-                                            </small>
-                                        @elseif($calculationMethod === 'fixed_settings')
-                                            <small class="text-muted ms-2">
-                                                (Fixed amounts from settings)
+                                                (Default fixed amounts)
                                             </small>
                                         @else
                                             <small class="text-muted ms-2">
-                                                (Default: 80% of revenue)
+                                                (Fixed prize structure)
                                             </small>
                                         @endif
                                         
@@ -140,35 +185,14 @@
                         </h4>
                         <small class="text-white-50">
                             Total Prize Pool: ${{ number_format($displayPrizePool, 2) }}
-                            @if($calculationMethod === 'actual_winners')
-                                | From actual winner payouts
-                            @elseif($calculationMethod === 'draw_prizes')
-                                | From individual prize amounts
-                            @elseif($calculationMethod === 'stored_total')
-                                | From draw total
-                            @elseif($calculationMethod === 'percentage_settings')
-                                @php
-                                    $settings = \App\Models\LotterySetting::getSettings();
-                                    $totalTickets = $draw->tickets ? $draw->tickets->count() : ($draw->total_tickets_sold ?? 0);
-                                    $totalRevenue = $totalTickets * ($settings->ticket_price ?? 2);
-                                @endphp
-                                | {{ number_format(($displayPrizePool / max($totalRevenue, 1)) * 100, 1) }}% of ${{ number_format($totalRevenue, 2) }} revenue
-                            @elseif($calculationMethod === 'fixed_settings')
-                                @php
-                                    $prizeStructureForDisplay = null;
-                                    if (isset($workingSettings) && $workingSettings->prize_structure) {
-                                        $prizeStructureForDisplay = is_array($workingSettings->prize_structure) 
-                                            ? $workingSettings->prize_structure 
-                                            : json_decode($workingSettings->prize_structure, true);
-                                    }
-                                    $fixedTotal = 0;
-                                    if (is_array($prizeStructureForDisplay)) {
-                                        $fixedTotal = array_sum(array_column($prizeStructureForDisplay, 'amount'));
-                                    }
-                                @endphp
-                                | Fixed amounts: ${{ number_format($fixedTotal, 2) }}
+                            @if($calculationMethod === 'draw_distribution')
+                                | Prize distribution from draw settings
+                            @elseif($calculationMethod === 'fallback_settings')
+                                | Fixed amounts from lottery settings
+                            @elseif($calculationMethod === 'default_fixed')
+                                | Default fixed amounts
                             @else
-                                | Default calculation (80% of revenue)
+                                | Fixed prize structure
                             @endif
                         </small>
                     </div>
@@ -193,9 +217,59 @@
                                     </div>
                                     <div class="prize-percentage">
                                         @php
-                                            $firstPrizePercentage = $displayPrizePool > 0 ? ($settingsFirstPrize / $displayPrizePool) * 100 : 0;
+                                            // Get actual winners count and prize distribution
+                                            if ($draw->status == 'completed') {
+                                                $firstWinners = $draw->winners()->where('prize_position', 1)->get();
+                                                $firstWinnersCount = $firstWinners->count();
+                                            } else {
+                                                // Check prize distribution for expected winners
+                                                $firstWinnersCount = 0;
+                                                if (!empty($prizeDistribution)) {
+                                                    $position1Prizes = array_filter($prizeDistribution, function($prize) {
+                                                        return isset($prize['position']) && $prize['position'] == 1;
+                                                    });
+                                                    $firstWinnersCount = count($position1Prizes);
+                                                }
+                                                if ($firstWinnersCount == 0) {
+                                                    $firstWinnersCount = 1; // Default to 1 winner
+                                                }
+                                            }
+                                            
+                                            // Show prize distribution details
+                                            if ($draw->status == 'completed' && $firstWinnersCount > 1) {
+                                                // Show actual individual prize amounts from prize_distribution or winners table
+                                                if (!empty($prizeDistribution)) {
+                                                    // Use prize_distribution data
+                                                    $position1Prizes = array_filter($prizeDistribution, function($prize) {
+                                                        return isset($prize['position']) && $prize['position'] == 1;
+                                                    });
+                                                    $prizeAmounts = array_column($position1Prizes, 'amount');
+                                                    $prizeList = '$' . implode(' + $', array_map(function($amount) {
+                                                        return number_format($amount, 0);
+                                                    }, $prizeAmounts));
+                                                } else {
+                                                    // Use actual winner prize amounts from database
+                                                    $prizeAmounts = $firstWinners->pluck('prize_amount')->toArray();
+                                                    $prizeList = '$' . implode(' + $', array_map(function($amount) {
+                                                        return number_format($amount, 0);
+                                                    }, $prizeAmounts));
+                                                }
+                                            }
                                         @endphp
-                                        {{ number_format($firstPrizePercentage, 1) }}% of total pool
+                                        
+                                        <!-- Winner Count Display -->
+                                        <div class="winner-count mb-2">
+                                            <span class="badge bg-primary">
+                                                <i class="fas fa-users me-1"></i>
+                                                {{ $firstWinnersCount }} {{ $firstWinnersCount == 1 ? 'Winner' : 'Winners' }}
+                                            </span>
+                                        </div>
+                                        
+                                        @if($draw->status == 'completed' && $firstWinnersCount > 1)
+                                            <div class="prize-breakdown">{{ $prizeList }}</div>
+                                        @else
+                                            <div class="prize-info">Fixed Amount: ${{ number_format($settingsFirstPrize, 0) }}</div>
+                                        @endif
                                     </div>
                                     @if($draw->first_prize_winner_id && $draw->status == 'completed')
                                         <div class="winner-info">
@@ -232,9 +306,59 @@
                                     </div>
                                     <div class="prize-percentage">
                                         @php
-                                            $secondPrizePercentage = $displayPrizePool > 0 ? ($settingsSecondPrize / $displayPrizePool) * 100 : 0;
+                                            // Show actual prize distribution for completed draws
+                                            if ($draw->status == 'completed') {
+                                                $secondWinners = $draw->winners()->where('prize_position', 2)->get();
+                                                $secondWinnersCount = $secondWinners->count();
+                                            } else {
+                                                // Check prize distribution for expected winners
+                                                $secondWinnersCount = 0;
+                                                if (!empty($prizeDistribution)) {
+                                                    $position2Prizes = array_filter($prizeDistribution, function($prize) {
+                                                        return isset($prize['position']) && $prize['position'] == 2;
+                                                    });
+                                                    $secondWinnersCount = count($position2Prizes);
+                                                }
+                                                if ($secondWinnersCount == 0) {
+                                                    $secondWinnersCount = 1; // Default to 1 winner
+                                                }
+                                            }
+                                            
+                                            // Show prize distribution details for multiple winners
+                                            if ($draw->status == 'completed' && $secondWinnersCount > 1) {
+                                                // Show actual individual prize amounts from prize_distribution or winners table
+                                                if (!empty($prizeDistribution)) {
+                                                    // Use prize_distribution data
+                                                    $position2Prizes = array_filter($prizeDistribution, function($prize) {
+                                                        return isset($prize['position']) && $prize['position'] == 2;
+                                                    });
+                                                    $prizeAmounts = array_column($position2Prizes, 'amount');
+                                                    $prizeList = '$' . implode(' + $', array_map(function($amount) {
+                                                        return number_format($amount, 0);
+                                                    }, $prizeAmounts));
+                                                } else {
+                                                    // Use actual winner prize amounts from database
+                                                    $prizeAmounts = $secondWinners->pluck('prize_amount')->toArray();
+                                                    $prizeList = '$' . implode(' + $', array_map(function($amount) {
+                                                        return number_format($amount, 0);
+                                                    }, $prizeAmounts));
+                                                }
+                                            }
                                         @endphp
-                                        {{ number_format($secondPrizePercentage, 1) }}% of total pool
+                                        
+                                        <!-- Winner Count Display -->
+                                        <div class="winner-count mb-2">
+                                            <span class="badge bg-secondary">
+                                                <i class="fas fa-users me-1"></i>
+                                                {{ $secondWinnersCount }} {{ $secondWinnersCount == 1 ? 'Winner' : 'Winners' }}
+                                            </span>
+                                        </div>
+                                        
+                                        @if($draw->status == 'completed' && $secondWinnersCount > 1)
+                                            <div class="prize-breakdown">{{ $prizeList }}</div>
+                                        @else
+                                            <div class="prize-info">Fixed Amount: ${{ number_format($settingsSecondPrize, 0) }}</div>
+                                        @endif
                                     </div>
                                     @if($draw->second_prize_winner_id && $draw->status == 'completed')
                                         <div class="winner-info">
@@ -271,9 +395,59 @@
                                     </div>
                                     <div class="prize-percentage">
                                         @php
-                                            $thirdPrizePercentage = $displayPrizePool > 0 ? ($settingsThirdPrize / $displayPrizePool) * 100 : 0;
+                                            // Show actual prize distribution for completed draws
+                                            if ($draw->status == 'completed') {
+                                                $thirdWinners = $draw->winners()->where('prize_position', 3)->get();
+                                                $thirdWinnersCount = $thirdWinners->count();
+                                            } else {
+                                                // Check prize distribution for expected winners
+                                                $thirdWinnersCount = 0;
+                                                if (!empty($prizeDistribution)) {
+                                                    $position3Prizes = array_filter($prizeDistribution, function($prize) {
+                                                        return isset($prize['position']) && $prize['position'] == 3;
+                                                    });
+                                                    $thirdWinnersCount = count($position3Prizes);
+                                                }
+                                                if ($thirdWinnersCount == 0) {
+                                                    $thirdWinnersCount = 1; // Default to 1 winner
+                                                }
+                                            }
+                                            
+                                            // Show prize distribution details for multiple winners
+                                            if ($draw->status == 'completed' && $thirdWinnersCount > 1) {
+                                                // Show actual individual prize amounts from prize_distribution or winners table
+                                                if (!empty($prizeDistribution)) {
+                                                    // Use prize_distribution data
+                                                    $position3Prizes = array_filter($prizeDistribution, function($prize) {
+                                                        return isset($prize['position']) && $prize['position'] == 3;
+                                                    });
+                                                    $prizeAmounts = array_column($position3Prizes, 'amount');
+                                                    $prizeList = '$' . implode(' + $', array_map(function($amount) {
+                                                        return number_format($amount, 0);
+                                                    }, $prizeAmounts));
+                                                } else {
+                                                    // Use actual winner prize amounts from database
+                                                    $prizeAmounts = $thirdWinners->pluck('prize_amount')->toArray();
+                                                    $prizeList = '$' . implode(' + $', array_map(function($amount) {
+                                                        return number_format($amount, 0);
+                                                    }, $prizeAmounts));
+                                                }
+                                            }
                                         @endphp
-                                        {{ number_format($thirdPrizePercentage, 1) }}% of total pool
+                                        
+                                        <!-- Winner Count Display -->
+                                        <div class="winner-count mb-2">
+                                            <span class="badge bg-warning">
+                                                <i class="fas fa-users me-1"></i>
+                                                {{ $thirdWinnersCount }} {{ $thirdWinnersCount == 1 ? 'Winner' : 'Winners' }}
+                                            </span>
+                                        </div>
+                                        
+                                        @if($draw->status == 'completed' && $thirdWinnersCount > 1)
+                                            <div class="prize-breakdown">{{ $prizeList }}</div>
+                                        @else
+                                            <div class="prize-info">Fixed Amount: ${{ number_format($settingsThirdPrize, 0) }}</div>
+                                        @endif
                                     </div>
                                     @if($draw->third_prize_winner_id && $draw->status == 'completed')
                                         <div class="winner-info">
@@ -638,6 +812,131 @@ document.addEventListener('DOMContentLoaded', function() {
 }
 .prize-card.bronze .rank-number {
     color: #a0522d;
+}
+
+.prize-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.prize-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    color: white;
+    background: linear-gradient(135deg, #6c757d, #adb5bd);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.prize-rank {
+    text-align: right;
+}
+
+.rank-number {
+    display: block;
+    font-size: 24px;
+    font-weight: 800;
+    color: #495057;
+    line-height: 1;
+}
+
+.rank-label {
+    display: block;
+    font-size: 10px;
+    font-weight: 600;
+    color: #6c757d;
+    letter-spacing: 1px;
+}
+
+.prize-amount {
+    margin: 20px 0;
+}
+
+.prize-amount .currency {
+    font-size: 18px;
+    color: #28a745;
+    font-weight: 600;
+}
+
+.prize-amount .amount {
+    font-size: 32px;
+    font-weight: 800;
+    color: #28a745;
+    display: block;
+    line-height: 1;
+}
+
+.prize-percentage {
+    font-size: 12px;
+    color: #6c757d;
+    margin-bottom: 15px;
+    font-weight: 500;
+}
+
+.winner-count {
+    margin-bottom: 10px;
+}
+
+.winner-count .badge {
+    font-size: 11px;
+    padding: 6px 12px;
+    border-radius: 15px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.prize-breakdown {
+    font-size: 12px;
+    color: #28a745;
+    font-weight: 600;
+    background: rgba(40, 167, 69, 0.1);
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(40, 167, 69, 0.2);
+}
+
+.prize-info {
+    font-size: 12px;
+    color: #6c757d;
+    font-weight: 500;
+}
+
+.winner-info {
+    margin-top: 15px;
+}
+
+.winner-badge {
+    background: #28a745;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    display: inline-block;
+    margin-bottom: 8px;
+}
+
+.ticket-info {
+    font-size: 11px;
+    color: #6c757d;
+    font-family: monospace;
+    background: #f8f9fa;
+    padding: 4px 8px;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+.pending-status .status-badge {
+    background: #6c757d;
+    color: white;
 }
 
 .prize-header {

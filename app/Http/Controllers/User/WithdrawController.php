@@ -85,7 +85,32 @@ class WithdrawController extends Controller
         $conditionCheck = checkWithdrawalConditions($user);
         
         if (!$conditionCheck['allowed']) {
-            return back()->with('error', 'Withdrawal requirements not met: ' . implode(', ', $conditionCheck['failures']));
+            // Check if profile completion is the specific issue
+            $failures = $conditionCheck['failures'];
+            if (count($failures) === 1 && strpos($failures[0], 'Profile completion') !== false) {
+                return redirect()->back()->with('swal_error', [
+                    'title' => 'Profile Incomplete!',
+                    'text' => 'Please complete your profile information before making withdrawals. Update your profile with all required details including name, mobile, country, and address.',
+                    'icon' => 'warning'
+                ])->withInput();
+            }
+            
+            return redirect()->back()->with('swal_error', [
+                'title' => 'Requirements Not Met!',
+                'text' => 'Withdrawal requirements not met: ' . implode(', ', $conditionCheck['failures']),
+                'icon' => 'error'
+            ])->withInput();
+        }
+        
+        // Get the selected withdrawal method for validation
+        $withdrawMethod = WithdrawMethod::where('id', $request->method_id)->where('status', 1)->first();
+        
+        if (!$withdrawMethod) {
+            return back()->with('swal_error', [
+                'title' => 'Invalid Method!',
+                'text' => 'Selected withdrawal method is not available',
+                'icon' => 'error'
+            ]);
         }
         
         // Validate request
@@ -102,13 +127,21 @@ class WithdrawController extends Controller
         
         // Verify password
         if (!Auth::attempt(['username' => $user->username, 'password' => $request->password])) {
-            return back()->with(['error' => 'Invalid transaction password']);
+            return back()->with('swal_error', [
+                'title' => 'Authentication Failed!',
+                'text' => 'Invalid transaction password',
+                'icon' => 'error'
+            ]);
         }
         
         // Check if user has active deposit
         $activeDeposit = $user->invests()->where('status', 1)->first();
         if (!$activeDeposit) {
-            return back()->with(['error' => 'You don\'t have any active deposit to withdraw']);
+            return back()->with('swal_error', [
+                'title' => 'No Active Deposit!',
+                'text' => 'You don\'t have any active deposit to withdraw',
+                'icon' => 'warning'
+            ]);
         }
         
         // Check if there's already a pending withdrawal
@@ -117,24 +150,25 @@ class WithdrawController extends Controller
             ->exists();
             
         if ($pendingWithdrawal) {
-            return back()->with(['error' => 'You already have a pending withdrawal request']);
+            return back()->with('swal_error', [
+                'title' => 'Pending Request Exists!',
+                'text' => 'You already have a pending withdrawal request',
+                'icon' => 'warning'
+            ]);
         }
         
         try {
             DB::beginTransaction();
             
-            // Get the selected withdrawal method
-            $withdrawMethod = WithdrawMethod::findOrFail($request->method_id);
-            
             // Calculate withdrawal amounts (deposit withdrawals use 20% fee)
             $depositAmount = $activeDeposit->amount;
-            $withdrawalFee = $depositAmount * 0.20; // 20% fee for deposit withdrawals
+            $withdrawalFee = $depositAmount * 0.20; // Fixed 20% fee for deposit withdrawals
             $netAmount = $depositAmount - $withdrawalFee;
             
             // Create withdrawal request
             $withdrawal = Withdrawal::create([
                 'user_id' => $user->id,
-                'method_id' => $request->method_id, // Use selected method
+                'method_id' => $request->method_id,
                 'amount' => $netAmount,
                 'charge' => $withdrawalFee,
                 'final_amount' => $netAmount,
@@ -150,9 +184,15 @@ class WithdrawController extends Controller
                         'deposit_amount' => $depositAmount,
                         'withdrawal_fee' => $withdrawalFee,
                         'fee_percentage' => 20
+                    ],
+                    'method_info' => [
+                        'processing_time' => $withdrawMethod->processing_time,
+                        'instructions' => $withdrawMethod->instructions,
+                        'min_amount' => $withdrawMethod->min_amount,
+                        'max_amount' => $withdrawMethod->max_amount
                     ]
                 ]),
-                'status' => 2, // Pending (correct status code)
+                'status' => 2, // Pending
             ]);
             
             // Update deposit status to withdrawn (status = 2)
@@ -167,19 +207,27 @@ class WithdrawController extends Controller
             $transaction->trx = $withdrawal->trx;
             $transaction->wallet_type = 'deposit_withdrawal';
             $transaction->remark = 'deposit_withdrawal';
-            $transaction->details = 'Withdrawal request for deposit: ' . $activeDeposit->plan->name . ' (Fee: $' . number_format($withdrawalFee, 2) . ')';
+            $transaction->details = 'Withdrawal request for deposit: ' . ($activeDeposit->plan->name ?? 'Unknown Plan') . ' via ' . $withdrawMethod->name . ' (Fee: $' . number_format($withdrawalFee, 2) . ')';
             $transaction->post_balance = 0; // Will be updated when withdrawal is approved
             $transaction->save();
             
             DB::commit();
             
-            return back()->with(['success' => 'Withdrawal request submitted successfully! You will receive $' . number_format($netAmount, 2) . ' after admin approval.']);
+            return back()->with('swal_success', [
+                'title' => 'Withdrawal Requested!',
+                'text' => 'Withdrawal request submitted successfully! You will receive $' . number_format($netAmount, 2) . ' via ' . $withdrawMethod->name . ' after admin approval.',
+                'icon' => 'success'
+            ]);
             
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Withdrawal request error: ' . $e->getMessage());
             
-            return back()->with(['error' => 'An error occurred while processing your withdrawal request. Please try again.']);
+            return back()->with('swal_error', [
+                'title' => 'Processing Error!',
+                'text' => 'An error occurred while processing your withdrawal request. Please try again.',
+                'icon' => 'error'
+            ]);
         }
     }
     
