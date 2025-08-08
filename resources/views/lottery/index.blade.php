@@ -1376,7 +1376,6 @@ function shareAllTickets(platform) {
             console.error('Unknown sharing platform:', platform);
     }
 }
-}
 
 function copyToClipboard(textToCopy, successMessage) {
     // Create a temporary textarea element
