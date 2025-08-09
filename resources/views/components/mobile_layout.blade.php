@@ -68,18 +68,6 @@
     <link rel="stylesheet" href="{{asset('assets_custom/css/error-prevention.css?v=' . time())}}">
     <script src="{{asset('assets_custom/js/error-prevention-init.js?v=' . time())}}"></script>
     <script src="{{asset('assets_custom/js/bootstrap-modal-fix.js?v=' . time())}}"></script>
-    
-    <!-- Emergency Loop Breaker - CRITICAL FIX -->
-    <script src="{{asset('emergency-loop-breaker.js?v=' . time())}}"></script>
-    
-    <!-- Post-Login URL Cleaner & Footer Button Fix -->
-    <script src="{{asset('post-login-fix.js?v=' . time())}}"></script>
-    
-    <!-- Dashboard URL Cleaner -->
-    <script src="{{asset('dashboard-url-cleaner.js?v=' . time())}}"></script>
-    
-    <!-- Emergency Cache Fix for Live Server Issues -->
-    <script src="{{asset('emergency-cache-fix.js?v=' . time())}}"></script>
 
     @stack('styles')
 </head>
