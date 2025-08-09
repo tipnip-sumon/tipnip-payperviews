@@ -3335,9 +3335,19 @@
         @endauth
     });
 
-    // Mobile Modal Functions (with enhanced error handling)
+    // Mobile Modal Functions (with enhanced error handling and debouncing)
+    let modalOpeningInProgress = false;
+    let lastModalOpened = null;
+    
     function openMobileModal(modalName) {
         try {
+            // Prevent multiple rapid clicks
+            if (modalOpeningInProgress) {
+                console.log('🚫 Modal opening already in progress, ignoring...');
+                return;
+            }
+            
+            modalOpeningInProgress = true;
             console.log('📱 Opening mobile modal:', modalName);
             
             const modalId = `mobile${modalName.charAt(0).toUpperCase() + modalName.slice(1)}Modal`;
@@ -3345,6 +3355,14 @@
             
             if (!modalElement) {
                 console.warn(`Modal element not found: ${modalId}`);
+                modalOpeningInProgress = false;
+                return;
+            }
+            
+            // If same modal is already open, don't reopen
+            if (lastModalOpened === modalId && modalElement.classList.contains('show')) {
+                console.log('📱 Modal already open:', modalId);
+                modalOpeningInProgress = false;
                 return;
             }
             
@@ -3355,6 +3373,7 @@
                 modalElement.style.display = 'block';
                 modalElement.classList.add('show');
                 document.body.classList.add('modal-open');
+                modalOpeningInProgress = false;
                 return;
             }
             
@@ -3380,12 +3399,35 @@
                         focus: true
                     });
                     
-                    // Add event listener for when modal is shown
-                    modalElement.addEventListener('shown.bs.modal', function(e) {
+                    // Remove any existing event listeners to prevent duplicates
+                    const existingHandler = modalElement._shownHandler;
+                    if (existingHandler) {
+                        modalElement.removeEventListener('shown.bs.modal', existingHandler);
+                    }
+                    
+                    // Create new event handler
+                    const shownHandler = function(e) {
                         console.log('✅ Modal opened:', modalId);
+                        lastModalOpened = modalId;
                         
-                        // Ensure all buttons in the modal are clickable
-                        reinitializeModalButtons(modalElement);
+                        // Ensure all buttons in the modal are clickable (only once)
+                        if (!modalElement._buttonsInitialized) {
+                            reinitializeModalButtons(modalElement);
+                            modalElement._buttonsInitialized = true;
+                        }
+                        
+                        modalOpeningInProgress = false;
+                    };
+                    
+                    // Store handler reference and add listener
+                    modalElement._shownHandler = shownHandler;
+                    modalElement.addEventListener('shown.bs.modal', shownHandler);
+                    
+                    // Add hidden event listener to reset state
+                    modalElement.addEventListener('hidden.bs.modal', function() {
+                        modalElement._buttonsInitialized = false;
+                        lastModalOpened = null;
+                        modalOpeningInProgress = false;
                     });
                     
                     bsModal.show();
@@ -3396,16 +3438,21 @@
                     modalElement.style.display = 'block';
                     modalElement.classList.add('show');
                     document.body.classList.add('modal-open');
-                    reinitializeModalButtons(modalElement);
+                    if (!modalElement._buttonsInitialized) {
+                        reinitializeModalButtons(modalElement);
+                        modalElement._buttonsInitialized = true;
+                    }
+                    modalOpeningInProgress = false;
                 }
             }, 100);
             
         } catch (error) {
             console.warn('openMobileModal error:', error.message);
+            modalOpeningInProgress = false;
         }
     }
     
-    // Function to reinitialize modal button event handlers
+    // Function to reinitialize modal button event handlers (prevent duplicates)
     function reinitializeModalButtons(modalElement) {
         try {
             console.log('🔄 Reinitializing modal buttons for:', modalElement.id);
@@ -3414,36 +3461,52 @@
             const clickableElements = modalElement.querySelectorAll('a, button, [onclick]');
             
             clickableElements.forEach((element, index) => {
+                // Skip if already initialized to prevent duplicates
+                if (element._modalInitialized) {
+                    return;
+                }
+                
                 // Check if element has href or onclick
                 const href = element.getAttribute('href');
                 const onclick = element.getAttribute('onclick');
                 
                 if (href && href !== 'javascript:void(0);' && href !== '#') {
                     // For links with real URLs, ensure they work
-                    element.addEventListener('click', function(e) {
+                    const linkHandler = function(e) {
                         // Allow default behavior for real links
                         console.log('✅ Link clicked:', href);
-                    });
+                    };
+                    element.addEventListener('click', linkHandler);
+                    element._linkHandler = linkHandler;
                 }
                 
                 if (onclick) {
                     // For elements with onclick, ensure they work
-                    element.addEventListener('click', function(e) {
+                    const onclickHandler = function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
                         try {
                             eval(onclick);
                         } catch (err) {
                             console.warn('Onclick execution failed:', err);
                         }
-                    });
+                    };
+                    element.addEventListener('click', onclickHandler);
+                    element._onclickHandler = onclickHandler;
                 }
                 
-                // Add visual feedback for better UX
-                element.addEventListener('click', function(e) {
+                // Add visual feedback for better UX (only once)
+                const feedbackHandler = function(e) {
                     this.style.transform = 'scale(0.95)';
                     setTimeout(() => {
                         this.style.transform = '';
                     }, 150);
-                });
+                };
+                element.addEventListener('click', feedbackHandler);
+                element._feedbackHandler = feedbackHandler;
+                
+                // Mark as initialized
+                element._modalInitialized = true;
             });
             
             console.log(`✅ Reinitializated ${clickableElements.length} clickable elements`);
