@@ -176,16 +176,26 @@ Route::get('/user/dashboard/performance', [App\Http\Controllers\User\UserControl
     ->name('dashboard.performance')->middleware(['auth']);
 
 // =============================================================================
-// AUTHENTICATION ROUTES
+// AUTHENTICATION ROUTES  
 // =============================================================================
 
-// Custom authentication routes with middleware
+// Using Laravel's built-in auth routes for login
+Auth::routes(['verify' => true]);
+
+// Override login routes with custom middleware
 Route::get('/login', [App\Http\Controllers\Auth\LoginController::class, 'showLoginForm'])
     ->name('login')
     ->middleware('clear.login.cache');
 
-Route::post('/login', [App\Http\Controllers\Auth\LoginController::class, 'login'])
-    ->name('login.submit');
+// CSRF token refresh endpoint to prevent 419 errors after logout
+Route::get('/refresh-csrf', function () {
+    return response()->json([
+        'token' => csrf_token(),
+        'success' => true
+    ]);
+})->name('refresh.csrf');
+
+
 
 Route::get('/register', [App\Http\Controllers\Auth\RegisterController::class, 'showRegistrationForm'])
     ->name('register');

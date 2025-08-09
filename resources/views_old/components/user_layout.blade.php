@@ -6993,7 +6993,7 @@
     </script>
     
     <!-- Global Real-time Updates System -->
-    <script src="{{ asset('assets/js/global-realtime-updates.js') }}"></script>
+    <script src="{{ asset('assets_custom/js/global-realtime-updates.js') }}"></script>
     
     <!-- Browser Cache Service -->
     <script src="{{ asset('js/browser-cache-service.js') }}?v={{ config('app.cache_version', time()) }}"></script>

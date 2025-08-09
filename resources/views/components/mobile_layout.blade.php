@@ -64,6 +64,10 @@
         }
     </style>
 
+    <!-- Error Prevention System -->
+    <link rel="stylesheet" href="{{asset('assets_custom/css/error-prevention.css')}}">
+    <script src="{{asset('assets_custom/js/error-prevention-init.js')}}"></script>
+
     @stack('styles')
 </head>
 

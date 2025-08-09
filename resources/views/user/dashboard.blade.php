@@ -1257,18 +1257,21 @@
 
     @push('script')
     
-    <script src="{{ asset('assets/js/jquery-3.7.1.min.js') }}"></script>
+    <script src="{{ asset('assets_custom/js/jquery-3.7.1.min.js') }}"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <!-- Balance Toggle Function - Defined in separate script tag to ensure immediate availability -->
     <script>
         // Balance Visibility Toggle Function - Updated for individual card control
-        let balanceVisibility = {
-            'current-balance': true,
-            'team-bonus': true,
-            'total-earnings': true,
-            'video-access-vault': true
-        };
+        // Check if balanceVisibility is already defined to prevent redeclaration
+        if (typeof balanceVisibility === 'undefined') {
+            var balanceVisibility = {
+                'current-balance': true,
+                'team-bonus': true,
+                'total-earnings': true,
+                'video-access-vault': true
+            };
+        }
 
         // Define function with card-specific parameter
         function toggleBalanceVisibility(cardType) {
@@ -1357,10 +1360,19 @@
     
     <script>
         // High-Traffic Performance Metrics System
-        let performanceRefreshInterval;
-        let isHighTrafficMode = false;
-        let concurrentUsers = 0;
-        let lastRefreshTime = Date.now();
+        // Prevent redeclaration errors
+        if (typeof performanceRefreshInterval === 'undefined') {
+            var performanceRefreshInterval;
+        }
+        if (typeof isHighTrafficMode === 'undefined') {
+            var isHighTrafficMode = false;
+        }
+        if (typeof concurrentUsers === 'undefined') {
+            var concurrentUsers = 0;
+        }
+        if (typeof lastRefreshTime === 'undefined') {
+            var lastRefreshTime = Date.now();
+        }
         
         // Detect high traffic and adjust refresh intervals
         function detectTrafficLoad() {
@@ -1404,7 +1416,14 @@
             })
             .then(response => {
                 clearTimeout(timeoutId);
-                if (!response.ok) throw new Error('Network response was not ok');
+                if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                
+                // Check if response is actually JSON
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    throw new Error('Performance metrics response is not JSON');
+                }
+                
                 return response.json();
             })
             .then(data => {
@@ -1551,10 +1570,19 @@
     
         <script>
             // Dashboard Real-time Update System
-            let dashboardUpdateInterval;
-            let isPageActive = true;
-            let lastUpdateTime = null;
-            let performanceChart = null;
+            // Prevent redeclaration errors
+            if (typeof dashboardUpdateInterval === 'undefined') {
+                var dashboardUpdateInterval;
+            }
+            if (typeof isPageActive === 'undefined') {
+                var isPageActive = true;
+            }
+            if (typeof lastUpdateTime === 'undefined') {
+                var lastUpdateTime = null;
+            }
+            if (typeof performanceChart === 'undefined') {
+                var performanceChart = null;
+            }
 
             // Prevent external systems from interfering
             window.dashboardInitialized = false;
@@ -1633,6 +1661,13 @@
                     if (!response.ok) {
                         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                     }
+                    
+                    // Check if response is actually JSON
+                    const contentType = response.headers.get('content-type');
+                    if (!contentType || !contentType.includes('application/json')) {
+                        throw new Error('Quick stats response is not JSON');
+                    }
+                    
                     return response.json();
                 })
                 .then(data => {
@@ -1948,7 +1983,19 @@
                     },
                     credentials: 'same-origin'
                 })
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    // Check if response is actually JSON
+                    const contentType = response.headers.get('content-type');
+                    if (!contentType || !contentType.includes('application/json')) {
+                        throw new Error('Performance metrics response is not JSON');
+                    }
+                    
+                    return response.json();
+                })
                 .then(data => {
                     if (performanceChart && data.data.daily_earnings) {
                         performanceChart.data.labels = data.data.daily_earnings.map(item => item.date);
@@ -1970,7 +2017,9 @@
             }
 
             // Auto-refresh session notifications every 10 seconds
-            let sessionCheckInterval;
+            if (typeof sessionCheckInterval === 'undefined') {
+                var sessionCheckInterval;
+            }
 
             // Page visibility API to pause updates when tab is not active
             document.addEventListener('visibilitychange', function() {
@@ -2018,15 +2067,24 @@
                 })
                 .then(response => {
                     if (!response.ok) {
-                        throw new Error('Network response was not ok');
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                     }
+                    
+                    // Check if response is actually JSON
+                    const contentType = response.headers.get('content-type');
+                    if (!contentType || !contentType.includes('application/json')) {
+                        throw new Error('Response is not JSON');
+                    }
+                    
                     return response.json();
                 })
                 .then(data => {
                     updateSessionNotificationsArea(data);
                 })
                 .catch(error => {
-                    if (error.status === 401 || error.status === 403) {
+                    console.warn('Notification update error:', error);
+                    
+                    if (error.message && error.message.includes('401') || error.message.includes('403')) {
                         const timestamp = Math.floor(Date.now() / 1000);
                         Swal.fire({
                             icon: 'warning',
@@ -2039,7 +2097,14 @@
                         }).then(() => {
                             window.location.href = `/login?from_logout=1&t=${timestamp}`;
                         });
+                    } else if (error.message && error.message.includes('Response is not JSON')) {
+                        // Server returned HTML/text instead of JSON (possibly error page)
+                        console.warn('Server returned non-JSON response for notifications - retrying in 30 seconds');
+                        setTimeout(() => {
+                            checkSessionNotifications();
+                        }, 30000);
                     }
+                    // For other errors, fail silently to avoid spam
                 });
             }
 
@@ -2141,7 +2206,19 @@
                     },
                     credentials: 'same-origin'
                 })
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    // Check if response is actually JSON
+                    const contentType = response.headers.get('content-type');
+                    if (!contentType || !contentType.includes('application/json')) {
+                        throw new Error('Session notifications response is not JSON');
+                    }
+                    
+                    return response.json();
+                })
                 .then(data => {
                     displayNotificationsModal(data.notifications);
                 })
@@ -2255,7 +2332,19 @@
                             },
                             credentials: 'same-origin'
                         })
-                        .then(response => response.json())
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                            }
+                            
+                            // Check if response is actually JSON
+                            const contentType = response.headers.get('content-type');
+                            if (!contentType || !contentType.includes('application/json')) {
+                                throw new Error('Mark read response is not JSON');
+                            }
+                            
+                            return response.json();
+                        })
                         .then(data => {
                             if (data.success) {
                                 // Update the notifications area to remove the badge

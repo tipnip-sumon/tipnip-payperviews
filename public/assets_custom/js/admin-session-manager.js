@@ -148,7 +148,19 @@ class AdminSessionManager {
             },
             body: JSON.stringify({})
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            // Check if response is actually JSON
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                throw new Error('Session extend response is not JSON');
+            }
+            
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
                 // Close warning modal
@@ -270,7 +282,19 @@ class AdminSessionManager {
                 'X-Requested-With': 'XMLHttpRequest'
             }
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            // Check if response is actually JSON
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                throw new Error('CSRF token response is not JSON');
+            }
+            
+            return response.json();
+        })
         .then(data => {
             if (data.token) {
                 // Update all CSRF tokens on the page
@@ -327,6 +351,13 @@ class AdminSessionManager {
             } else if (!response.ok) {
                 throw new Error(`Session check failed: ${response.status}`);
             }
+            
+            // Check if response is actually JSON
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                throw new Error('Session status response is not JSON');
+            }
+            
             return response.json();
         })
         .then(data => {

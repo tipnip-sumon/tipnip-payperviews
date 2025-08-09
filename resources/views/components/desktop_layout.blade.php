@@ -42,6 +42,10 @@
     <!-- Choices Css -->
     <link rel="stylesheet" href="{{asset('assets/libs/choices.js/public/assets/styles/choices.min.css')}}">
 
+    <!-- Error Prevention System -->
+    <link rel="stylesheet" href="{{asset('assets_custom/css/error-prevention.css')}}">
+    <script src="{{asset('assets_custom/js/error-prevention-init.js')}}"></script>
+
     @stack('styles')
     
     <!-- Desktop Layout Custom Styles -->

@@ -85,6 +85,7 @@
                         
                         <form method="POST" action="{{ route('login') }}" class="stunning-form" id="login-form">
                             @csrf
+                            <input type="hidden" name="_token" value="{{ csrf_token() }}" id="csrf-token-field">
                             
                             <!-- Email Verification Alert (Enhanced) -->
                             @if(session('show_resend_verification') || session('user_email'))
@@ -1612,23 +1613,14 @@
     }
     
     // ENHANCED FORM SUBMISSION WITH COMPREHENSIVE VALIDATION AND SWEETALERT
-    const loginForm = document.querySelector('.stunning-form');
-    if (loginForm) {
-        loginForm.addEventListener('submit', function(e) {
-            e.preventDefault(); // Prevent default submission for validation
-            
-            const form = this;
-            const button = this.querySelector('.stunning-submit');
-            const btnText = button.querySelector('.btn-text');
-            const btnLoader = button.querySelector('.btn-loader');
-            const btnIcon = button.querySelector('.btn-icon');
-            
-            // Safety checks
-            if (!button || !btnText || !btnLoader || !btnIcon) {
-                console.warn('Login form elements not found, submitting normally');
-                form.submit();
-                return;
-            }
+    document.querySelector('.stunning-form').addEventListener('submit', function(e) {
+        e.preventDefault(); // Prevent default submission for validation
+        
+        const form = this;
+        const button = this.querySelector('.stunning-submit');
+        const btnText = button.querySelector('.btn-text');
+        const btnLoader = button.querySelector('.btn-loader');
+        const btnIcon = button.querySelector('.btn-icon');
         
         // Get form values
         const username = document.getElementById('username').value.trim();
@@ -1690,25 +1682,142 @@
         btnLoader.style.display = 'block';
         button.disabled = true;
         
-        // Simple form submission - let Laravel handle CSRF properly
-        // Use setTimeout to allow UI to update before submission
-        setTimeout(() => {
-            try {
-                console.log('Submitting login form normally (no AJAX)');
-                // Submit the form normally - no AJAX to avoid 419 issues
-                form.submit();
-            } catch (error) {
-                console.error('Form submission error:', error);
-                resetSubmitButton();
+        // Refresh CSRF token before submission
+        refreshCSRFToken().then(() => {
+            // Submit form via AJAX for better error handling
+            const formData = new FormData(form);
+            
+            fetch(form.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(async response => {
+                if (response.status === 419) {
+                    // CSRF token expired - refresh and retry
+                    const newToken = await refreshCSRFToken();
+                    if (newToken) {
+                        formData.set('_token', newToken);
+                        return fetch(form.action, {
+                            method: 'POST',
+                            body: formData,
+                            headers: {
+                                'X-CSRF-TOKEN': newToken,
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
+                        });
+                    }
+                }
+                return response;
+            })
+            .then(response => {
+                if (response.ok || response.redirected) {
+                    // Success - show SweetAlert and redirect
+                    Swal.fire({
+                        title: 'Login Successful!',
+                        text: 'Welcome back! Redirecting to your dashboard...',
+                        icon: 'success',
+                        timer: 2000,
+                        timerProgressBar: true,
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        showConfirmButton: false
+                    }).then(() => {
+                        if (response.redirected) {
+                            window.location.href = response.url;
+                        } else {
+                            window.location.href = '/user/dashboard';
+                        }
+                    });
+                } else if (response.status === 422) {
+                    // Validation errors
+                    return response.json().then(data => {
+                        displayLoginErrors(data.errors || data.message, 'validation_failed', data);
+                        resetSubmitButton();
+                    });
+                } else if (response.status === 429) {
+                    // Too many attempts
+                    Swal.fire({
+                        title: 'Too Many Attempts!',
+                        text: 'You have made too many login attempts. Please wait a few minutes before trying again.',
+                        icon: 'warning',
+                        confirmButtonText: 'OK'
+                    });
+                    resetSubmitButton();
+                } else {
+                    // Other errors - handle specific error types
+                    return response.json().then(data => {
+                        // Extract error type and additional data from response
+                        const errorType = data.error_type || null;
+                        const errorMessage = data.message || 'Login failed. Please check your credentials and try again.';
+                        const extraData = {
+                            input_type: data.input_type,
+                            remaining_attempts: data.remaining_attempts,
+                            unlock_time_human: data.unlock_time_human,
+                            user_status: data.user_status,
+                            needs_verification: data.needs_verification,
+                            user_email: data.user_email
+                        };
+                        
+                        // Check if it's an email verification error
+                        if (data.needs_verification || errorType === 'email_not_verified') {
+                            showEmailVerificationError(data.user_email || getEmailFromForm());
+                        } else {
+                            displayLoginErrors(errorMessage, errorType, extraData);
+                        }
+                        resetSubmitButton();
+                    }).catch(() => {
+                        // Fallback if JSON parsing fails
+                        return response.text().then(text => {
+                            let errorMessage = 'Login failed. Please check your credentials and try again.';
+                            let errorType = null;
+                            
+                            // Try to extract specific error information from HTML response
+                            if (text.includes('password') && (text.includes('invalid') || text.includes('incorrect'))) {
+                                errorMessage = 'Incorrect password. Please check your password and try again.';
+                                errorType = 'invalid_password';
+                            } else if (text.includes('username') && text.includes('not found')) {
+                                errorMessage = 'Username not found. Please check your username or register for a new account.';
+                                errorType = 'user_not_found';
+                            } else if (text.includes('email') && text.includes('not found')) {
+                                errorMessage = 'Email address not found. Please check your email or register for a new account.';
+                                errorType = 'user_not_found';
+                            } else if (text.includes('account') && (text.includes('suspended') || text.includes('deactivated'))) {
+                                errorMessage = 'Your account has been suspended. Please contact support.';
+                                errorType = 'account_inactive';
+                            } else if (text.includes('locked')) {
+                                errorMessage = 'Your account is temporarily locked. Please try again later.';
+                                errorType = 'account_locked';
+                            } else if (text.includes('email') && text.includes('verification')) {
+                                showEmailVerificationError(getEmailFromForm());
+                                resetSubmitButton();
+                                return;
+                            }
+                            
+                            displayLoginErrors(errorMessage, errorType);
+                            resetSubmitButton();
+                        });
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Login error:', error);
                 
                 Swal.fire({
-                    title: 'Submission Error!',
-                    text: 'There was an error submitting the form. Please try again.',
+                    title: 'Connection Error!',
+                    text: 'Unable to connect to the server. Please check your internet connection and try again.',
                     icon: 'error',
-                    confirmButtonText: 'Try Again'
+                    confirmButtonText: 'Retry'
                 });
-            }
-        }, 100);
+                resetSubmitButton();
+            });
+        }).catch(() => {
+            // CSRF refresh failed, fall back to normal form submission
+            form.submit();
+        });
         
         function resetSubmitButton() {
             btnText.style.opacity = '1';
@@ -1718,8 +1827,7 @@
         }
         
         return false; // Prevent default form submission
-        });
-    }
+    });
     
     // Function to show field-specific errors
     function showFieldError(fieldId, message) {
@@ -2451,6 +2559,19 @@ document.addEventListener('DOMContentLoaded', function() {
             window.location.reload();
         }
     });
+    
+    // Add timestamp to form submission for fresh login
+    const loginForm = document.querySelector('#loginForm, form[method="POST"]');
+    if (loginForm) {
+        loginForm.addEventListener('submit', function(e) {
+            // Only add timestamp, no aggressive cache clearing
+            const timestampInput = document.createElement('input');
+            timestampInput.type = 'hidden';
+            timestampInput.name = 'login_timestamp';
+            timestampInput.value = Date.now();
+            this.appendChild(timestampInput);
+        });
+    }
 });
 </script>
 @endsection

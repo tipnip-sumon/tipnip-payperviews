@@ -191,6 +191,13 @@
                         if (!response.ok) {
                             throw new Error(response.statusText)
                         }
+                        
+                        // Check if response is actually JSON
+                        const contentType = response.headers.get('content-type');
+                        if (!contentType || !contentType.includes('application/json')) {
+                            throw new Error('External API response is not JSON');
+                        }
+                        
                         return response.json()
                     })
                     .catch(error => {

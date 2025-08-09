@@ -13,7 +13,7 @@
   }
 })();
 
-window.addEventListener('unload', () => {
+window.addEventListener('beforeunload', () => {
   // removing the scroll function
   window.removeEventListener('scroll', stickyFn);
-})
+});

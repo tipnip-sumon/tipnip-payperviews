@@ -75,7 +75,10 @@
 
     button.addEventListener("click", () => {
       const el = document.createElement("p");
-      pickrContainerPrimary.appendChild(el);
+      // Safety check before appendChild
+      if (pickrContainerPrimary) {
+        pickrContainerPrimary.appendChild(el);
+      }
 
       /* Delete previous instance */
       if (nanoPickr) {
@@ -88,16 +91,22 @@
       }
 
       /* Create fresh instance */
-      nanoPickr = new Pickr(
-        Object.assign(
-          {
-            el,
-            theme,
-            default: "#3366ff",
-          },
-          config
-        )
-      );
+      // Safety check for element before creating Pickr
+      if (el && pickrContainerPrimary && pickrContainerPrimary.contains(el)) {
+        nanoPickr = new Pickr(
+          Object.assign(
+            {
+              el,
+              theme,
+              default: "#3366ff",
+            },
+            config
+          )
+        );
+      } else {
+        console.warn('Pickr element not properly initialized, skipping');
+        return;
+      }
 
       /* Set events */
       nanoPickr.on("changestop", (source, instance) => {
@@ -164,7 +173,10 @@
 
     button.addEventListener("click", () => {
       const el = document.createElement("p");
-      pickrContainerBackground.appendChild(el);
+      // Safety check before appendChild
+      if (pickrContainerBackground) {
+        pickrContainerBackground.appendChild(el);
+      }
 
       /* Delete previous instance */
       if (nanoPickr1) {
@@ -230,7 +242,10 @@
         );
       });
     });
-    themeContainerBackground.appendChild(button);
+    // Safety check before appendChild
+    if (themeContainerBackground) {
+      themeContainerBackground.appendChild(button);
+    }
   }
   nanoButtons1[0].click();
   /* for theme background */

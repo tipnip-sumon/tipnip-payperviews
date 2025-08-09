@@ -40,7 +40,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'single-session' => EnforceSingleSession::class,
             'admin.permission' => AdminPermissionMiddleware::class,
             'permission' => PermissionMiddleware::class,
-            'csrf.refresh' => RefreshCsrfToken::class,
+            // 'csrf.refresh' => RefreshCsrfToken::class, // TEMPORARILY DISABLED
             'cache.control' => CacheControlMiddleware::class,
             'clear.login.cache' => ClearLoginCache::class,
             'no-cache' => NoCache::class,

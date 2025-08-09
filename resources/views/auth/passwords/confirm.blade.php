@@ -1,4 +1,5 @@
-@extends('layouts.app')
+@extends('layouts.form_layout')
+@section('top_title','Confirm Password')
 
 @section('content')
 <div class="container">
