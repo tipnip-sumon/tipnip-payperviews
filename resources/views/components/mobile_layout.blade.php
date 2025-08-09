@@ -21,13 +21,13 @@
     <script src="{{asset('assets/js/main.js')}}"></script> 
 
     <!-- Bootstrap Css -->
-    <link id="style" href="{{asset('assets/libs/bootstrap/css/bootstrap.min.css?v=' . time())}}" rel="stylesheet" >
+    <link id="style" href="{{asset('assets/libs/bootstrap/css/bootstrap.min.css')}}" rel="stylesheet" >
 
     <!-- Style Css -->
-    <link href="{{asset('assets/css/styles.min.css?v=' . time())}}" rel="stylesheet" >
+    <link href="{{asset('assets/css/styles.min.css')}}?v={{config('app.version', '1.0.0')}}" rel="stylesheet" >
 
     <!-- Icons Css -->
-    <link href="{{asset('assets/css/icons.css?v=' . time())}}" rel="stylesheet" >
+    <link href="{{asset('assets/css/icons.css')}}?v={{config('app.version', '1.0.0')}}" rel="stylesheet" >
 
     <!-- Node Waves Css -->
     <link href="{{asset('assets/libs/node-waves/waves.min.css')}}" rel="stylesheet" >
@@ -65,9 +65,9 @@
     </style>
 
     <!-- Error Prevention System -->
-    <link rel="stylesheet" href="{{asset('assets_custom/css/error-prevention.css?v=' . time())}}">
-    <script src="{{asset('assets_custom/js/error-prevention-init.js?v=' . time())}}"></script>
-    <script src="{{asset('assets_custom/js/bootstrap-modal-fix.js?v=' . time())}}"></script>
+    <link rel="stylesheet" href="{{asset('assets_custom/css/error-prevention.css')}}?v={{config('app.version', '1.0.0')}}">
+    <script src="{{asset('assets_custom/js/error-prevention-init.js')}}?v={{config('app.version', '1.0.0')}}"></script>
+    <script src="{{asset('assets_custom/js/bootstrap-modal-fix.js')}}?v={{config('app.version', '1.0.0')}}"></script>
 
     @stack('styles')
 </head>
@@ -3056,22 +3056,22 @@
     <script src="{{asset('assets/libs/@popperjs/core/umd/popper.min.js')}}"></script>
 
     <!-- Bootstrap JS -->
-    <script src="{{asset('assets/libs/bootstrap/js/bootstrap.bundle.min.js?v=' . time())}}"></script>
+    <script src="{{asset('assets/libs/bootstrap/js/bootstrap.bundle.min.js')}}"></script>
 
     <!-- Node Waves JS-->
-    <script src="{{asset('assets/libs/node-waves/waves.min.js?v=' . time())}}"></script>
+    <script src="{{asset('assets/libs/node-waves/waves.min.js')}}"></script>
 
     <!-- Simplebar JS -->
-    <script src="{{asset('assets/libs/simplebar/simplebar.min.js?v=' . time())}}"></script>
+    <script src="{{asset('assets/libs/simplebar/simplebar.min.js')}}"></script>
 
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <!-- Custom JS -->
-    <script src="{{asset('assets/js/custom.js?v=' . time())}}"></script>
+    <script src="{{asset('assets/js/custom.js')}}?v={{config('app.version', '1.0.0')}}"></script>
 
     <!-- Mobile Functions - Clean & Organized -->
-    <script src="{{asset('assets_custom/js/mobile-functions.js?v=' . time())}}"></script> 
+    <script src="{{asset('assets_custom/js/mobile-functions.js')}}?v={{config('app.version', '1.0.0')}}"></script> 
 
     @stack('script')
     <script>
@@ -3381,7 +3381,12 @@
             // If same modal is already open, close it instead
             if (lastModalOpened === modalId && modalElement.classList.contains('show')) {
                 console.log('📱 Modal already open, closing:', modalId);
-                closeModal(modalElement);
+                
+                // Add a small delay to ensure UI is stable before closing
+                setTimeout(() => {
+                    closeModal(modalElement);
+                }, 50);
+                
                 modalOpeningInProgress = false;
                 return;
             }
@@ -3401,6 +3406,23 @@
             // Small delay to ensure previous modal is closed
             setTimeout(() => {
                 try {
+                    // Double-check that the modal element still exists and is ready
+                    if (!modalElement || !modalElement.parentNode) {
+                        console.warn('Modal element no longer available');
+                        modalOpeningInProgress = false;
+                        return;
+                    }
+                    
+                    // Clean up any existing Bootstrap modal instances first
+                    const existingInstance = window.bootstrap.Modal.getInstance(modalElement);
+                    if (existingInstance) {
+                        try {
+                            existingInstance.dispose();
+                        } catch (disposeError) {
+                            console.warn('Error disposing existing modal:', disposeError);
+                        }
+                    }
+                    
                     const bsModal = new window.bootstrap.Modal(modalElement, {
                         backdrop: true,
                         keyboard: true,
@@ -3447,6 +3469,7 @@
                     modalElement.addEventListener('shown.bs.modal', shownHandler);
                     modalElement.addEventListener('hidden.bs.modal', hiddenHandler);
                     
+                    // Show the modal
                     bsModal.show();
                     
                 } catch (error) {
@@ -3455,7 +3478,7 @@
                     showModalFallback(modalElement, modalId);
                     modalOpeningInProgress = false;
                 }
-            }, 150);
+            }, 200); // Increased delay to 200ms for better stability
             
         } catch (error) {
             console.warn('performModalOpen error:', error.message);
@@ -3472,27 +3495,72 @@
     
     function closeModal(modalElement) {
         try {
+            console.log('🔄 Attempting to close modal:', modalElement.id);
+            
+            // First try to get existing Bootstrap modal instance
             const bsModal = window.bootstrap.Modal.getInstance(modalElement);
+            
             if (bsModal) {
-                bsModal.hide();
-            } else {
-                // Fallback close
-                modalElement.style.display = 'none';
-                modalElement.classList.remove('show');
-                document.body.classList.remove('modal-open');
+                console.log('📱 Using Bootstrap modal instance to close');
                 
-                // Remove backdrop manually if exists
-                const backdrop = document.querySelector('.modal-backdrop');
-                if (backdrop) {
-                    backdrop.remove();
-                }
+                // Add a one-time event listener for when modal is fully hidden
+                const onceHiddenHandler = function(e) {
+                    console.log('📱 Modal fully hidden:', modalElement.id);
+                    modalElement.removeEventListener('hidden.bs.modal', onceHiddenHandler);
+                };
+                modalElement.addEventListener('hidden.bs.modal', onceHiddenHandler);
+                
+                // Use Bootstrap's hide method
+                bsModal.hide();
+                
+            } else {
+                console.log('📱 No Bootstrap instance found, using fallback close');
+                // Fallback close method
+                fallbackCloseModal(modalElement);
             }
+            
         } catch (e) {
-            console.warn('Error closing modal:', e);
-            // Force close
+            console.warn('Error closing modal with Bootstrap:', e);
+            // Force fallback close
+            fallbackCloseModal(modalElement);
+        }
+    }
+    
+    function fallbackCloseModal(modalElement) {
+        try {
+            console.log('📱 Using fallback modal close for:', modalElement.id);
+            
+            // Manually hide the modal
             modalElement.style.display = 'none';
             modalElement.classList.remove('show');
+            modalElement.setAttribute('aria-hidden', 'true');
+            modalElement.removeAttribute('aria-modal');
+            
+            // Remove modal-open class from body
             document.body.classList.remove('modal-open');
+            
+            // Remove any backdrop manually
+            const backdrops = document.querySelectorAll('.modal-backdrop');
+            backdrops.forEach(backdrop => {
+                backdrop.remove();
+            });
+            
+            // Reset modal state
+            modalElement._buttonsInitialized = false;
+            lastModalOpened = null;
+            modalOpeningInProgress = false;
+            
+            // Trigger hidden event manually
+            const hiddenEvent = new Event('hidden.bs.modal');
+            modalElement.dispatchEvent(hiddenEvent);
+            
+            console.log('📱 Modal closed with fallback method');
+            
+        } catch (fallbackError) {
+            console.warn('Fallback modal close also failed:', fallbackError);
+            // Ultimate fallback - just reset states
+            modalOpeningInProgress = false;
+            lastModalOpened = null;
         }
     }
     
