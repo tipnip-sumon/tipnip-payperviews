@@ -69,6 +69,9 @@
     <script src="{{asset('assets_custom/js/error-prevention-init.js?v=' . time())}}"></script>
     <script src="{{asset('assets_custom/js/bootstrap-modal-fix.js?v=' . time())}}"></script>
     
+    <!-- Emergency Loop Breaker - CRITICAL FIX -->
+    <script src="{{asset('emergency-loop-breaker.js?v=' . time())}}"></script>
+    
     <!-- Emergency Cache Fix for Live Server Issues -->
     <script src="{{asset('emergency-cache-fix.js?v=' . time())}}"></script>
 
@@ -3189,13 +3192,41 @@
                 console.error('❌ Bootstrap is NOT available');
             }
             
-            // Test if all modal elements exist
+            // Test if all modal elements exist and have clickable content
             const modalTypes = ['videos', 'wallet', 'grid', 'notifications', 'more', 'lottery', 'profile'];
             modalTypes.forEach(type => {
                 const modalId = `mobile${type.charAt(0).toUpperCase() + type.slice(1)}Modal`;
                 const modalElement = document.querySelector(`#${modalId}`);
-                console.log(`Modal ${modalId}:`, modalElement ? '✅ EXISTS' : '❌ MISSING');
+                const hasButtons = modalElement ? modalElement.querySelectorAll('a, button').length : 0;
+                console.log(`Modal ${modalId}:`, modalElement ? `✅ EXISTS (${hasButtons} buttons)` : '❌ MISSING');
+                
+                // If modal exists, ensure buttons work after cache clearing
+                if (modalElement && hasButtons > 0) {
+                    enhanceModalButtons(modalElement);
+                }
             });
+            
+            // Function to enhance modal buttons after cache clearing
+            function enhanceModalButtons(modal) {
+                const buttons = modal.querySelectorAll('a, button');
+                buttons.forEach(button => {
+                    // Add click event listener to ensure buttons work
+                    button.addEventListener('click', function(e) {
+                        const href = this.getAttribute('href');
+                        
+                        // Add visual feedback
+                        this.style.transform = 'scale(0.95)';
+                        setTimeout(() => {
+                            this.style.transform = '';
+                        }, 150);
+                        
+                        // Log for debugging
+                        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                            console.log('🔗 Modal button clicked:', href || this.textContent.trim());
+                        }
+                    });
+                });
+            }
             
             // Test navigation links
             const navLinks = document.querySelectorAll('.mobile-nav-link');
@@ -3329,6 +3360,7 @@
                 // Fallback: show modal with CSS
                 modalElement.style.display = 'block';
                 modalElement.classList.add('show');
+                document.body.classList.add('modal-open');
                 return;
             }
             
@@ -3353,19 +3385,77 @@
                         keyboard: true,
                         focus: true
                     });
+                    
+                    // Add event listener for when modal is shown
+                    modalElement.addEventListener('shown.bs.modal', function(e) {
+                        console.log('✅ Modal opened:', modalId);
+                        
+                        // Ensure all buttons in the modal are clickable
+                        reinitializeModalButtons(modalElement);
+                    });
+                    
                     bsModal.show();
                     
-                    console.log('✅ Modal opened successfully:', modalId);
                 } catch (error) {
                     console.warn('Error opening modal:', error.message);
                     // Fallback
                     modalElement.style.display = 'block';
                     modalElement.classList.add('show');
+                    document.body.classList.add('modal-open');
+                    reinitializeModalButtons(modalElement);
                 }
             }, 100);
             
         } catch (error) {
             console.warn('openMobileModal error:', error.message);
+        }
+    }
+    
+    // Function to reinitialize modal button event handlers
+    function reinitializeModalButtons(modalElement) {
+        try {
+            console.log('🔄 Reinitializing modal buttons for:', modalElement.id);
+            
+            // Find all clickable elements in the modal
+            const clickableElements = modalElement.querySelectorAll('a, button, [onclick]');
+            
+            clickableElements.forEach((element, index) => {
+                // Check if element has href or onclick
+                const href = element.getAttribute('href');
+                const onclick = element.getAttribute('onclick');
+                
+                if (href && href !== 'javascript:void(0);' && href !== '#') {
+                    // For links with real URLs, ensure they work
+                    element.addEventListener('click', function(e) {
+                        // Allow default behavior for real links
+                        console.log('✅ Link clicked:', href);
+                    });
+                }
+                
+                if (onclick) {
+                    // For elements with onclick, ensure they work
+                    element.addEventListener('click', function(e) {
+                        try {
+                            eval(onclick);
+                        } catch (err) {
+                            console.warn('Onclick execution failed:', err);
+                        }
+                    });
+                }
+                
+                // Add visual feedback for better UX
+                element.addEventListener('click', function(e) {
+                    this.style.transform = 'scale(0.95)';
+                    setTimeout(() => {
+                        this.style.transform = '';
+                    }, 150);
+                });
+            });
+            
+            console.log(`✅ Reinitializated ${clickableElements.length} clickable elements`);
+            
+        } catch (error) {
+            console.warn('Modal button reinitializtion failed:', error);
         }
     }
 

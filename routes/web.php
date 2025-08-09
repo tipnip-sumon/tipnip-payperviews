@@ -81,6 +81,14 @@ use App\Http\Controllers\EmergencyController;
 Route::get('/emergency/cache-clear', [EmergencyController::class, 'emergencyCacheClear'])
     ->name('emergency.cache.clear');
 
+// Emergency loop breaker for infinite Bootstrap loops
+Route::get('/emergency/loop-breaker', function() {
+    return response()->file(public_path('emergency-loop-breaker.js'), [
+        'Content-Type' => 'application/javascript',
+        'Cache-Control' => 'no-cache, no-store, must-revalidate'
+    ]);
+})->name('emergency.loop.breaker');
+
 // System status check
 Route::get('/emergency/status', [EmergencyController::class, 'systemStatus'])
     ->name('emergency.status');

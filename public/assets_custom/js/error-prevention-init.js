@@ -67,21 +67,50 @@
 
         // Override addEventListener to handle null elements gracefully
         const originalAddEventListener = EventTarget.prototype.addEventListener;
+        // Safe addEventListener override with loop prevention
+        let errorEventDepth = 0;
+        const MAX_ERROR_DEPTH = 3;
+        
         EventTarget.prototype.addEventListener = function(type, listener, options) {
             try {
                 if (!this) {
                     console.warn('addEventListener called on null element');
                     return;
                 }
+                
+                // Skip our wrapper for Bootstrap modal focus events to prevent infinite loops
+                if (type === 'focusin' || type === 'focusout' || 
+                    (this.classList && (this.classList.contains('modal') || this.classList.contains('modal-backdrop')))) {
+                    return originalAddEventListener.call(this, type, listener, options);
+                }
+                
                 return originalAddEventListener.call(this, type, function(event) {
+                    if (errorEventDepth >= MAX_ERROR_DEPTH) {
+                        return; // Prevent infinite loops
+                    }
+                    
+                    errorEventDepth++;
                     try {
                         return typeof listener === 'function' ? listener.call(this, event) : null;
                     } catch (error) {
-                        console.warn(`Event listener error (${type}):`, error.message);
+                        // Only log in development
+                        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                            console.warn(`Event listener error (${type}):`, error.message);
+                        }
+                        // Silently handle Bootstrap errors
+                        if (error.message && error.message.includes('_handleFocusin')) {
+                            return false;
+                        }
+                    } finally {
+                        errorEventDepth--;
                     }
                 }, options);
             } catch (error) {
-                console.warn('addEventListener override error:', error.message);
+                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                    console.warn('addEventListener override error:', error.message);
+                }
+                // Fallback to original
+                return originalAddEventListener.call(this, type, listener, options);
             }
         };
 

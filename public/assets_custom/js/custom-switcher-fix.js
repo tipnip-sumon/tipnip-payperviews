@@ -61,32 +61,56 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Safe addEventListener wrapper for switcher elements
+// Safe addEventListener wrapper for switcher elements with loop prevention
 const originalAddEventListener = EventTarget.prototype.addEventListener;
+let eventCallDepth = 0;
+const MAX_CALL_DEPTH = 5;
+
 EventTarget.prototype.addEventListener = function(type, listener, options) {
     try {
-        if (this && typeof originalAddEventListener === 'function') {
-            return originalAddEventListener.call(this, type, function(event) {
-                try {
-                    if (typeof listener === 'function') {
-                        return listener.call(this, event);
-                    }
-                } catch (error) {
-                    // Only log in development to avoid console spam
-                    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-                        console.warn('Event listener error caught:', error.message);
-                    }
-                    // Don't re-throw Bootstrap modal errors
-                    if (error.message && error.message.includes('Cannot read properties of null')) {
-                        return; // Silently handle these errors
-                    }
-                }
-            }, options);
+        if (!this || typeof originalAddEventListener !== 'function') {
+            return;
         }
+        
+        // Bypass our wrapper for Bootstrap focus events to prevent loops
+        if (type === 'focusin' || type === 'focusout' || (this.classList && this.classList.contains('modal'))) {
+            return originalAddEventListener.call(this, type, listener, options);
+        }
+        
+        return originalAddEventListener.call(this, type, function(event) {
+            // Prevent infinite recursion
+            if (eventCallDepth >= MAX_CALL_DEPTH) {
+                return;
+            }
+            
+            eventCallDepth++;
+            try {
+                if (typeof listener === 'function') {
+                    return listener.call(this, event);
+                }
+            } catch (error) {
+                // Only log in development to avoid console spam
+                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                    console.warn('Event listener error caught:', error.message);
+                }
+                // Silently handle Bootstrap modal errors
+                if (error.message && (
+                    error.message.includes('Cannot read properties of null') ||
+                    error.message.includes('_handleFocusin') ||
+                    error.message.includes('bootstrap')
+                )) {
+                    return; // Silently handle these errors
+                }
+            } finally {
+                eventCallDepth--;
+            }
+        }, options);
     } catch (error) {
         if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
             console.warn('addEventListener wrapper error:', error.message);
         }
+        // Fallback to original
+        return originalAddEventListener.call(this, type, listener, options);
     }
 };
 
