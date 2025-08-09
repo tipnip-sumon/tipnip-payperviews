@@ -67,6 +67,7 @@
     <!-- Error Prevention System -->
     <link rel="stylesheet" href="{{asset('assets_custom/css/error-prevention.css')}}">
     <script src="{{asset('assets_custom/js/error-prevention-init.js')}}"></script>
+    <script src="{{asset('assets_custom/js/bootstrap-modal-fix.js')}}"></script>
 
     @stack('styles')
 </head>
@@ -3107,7 +3108,8 @@
                 performLogout();
             }
         }
-    };
+    }
+    
     function performLogout() {
         console.log('performLogout called - attempting simple logout first');
         
@@ -3174,9 +3176,6 @@
             } else {
                 console.error('❌ openMobileModal function is NOT available - this will cause errors!');
             }
-        }
-                }
-            }, 1000);
         }
         
         // Test Bootstrap Modal availability (dev only)
@@ -3307,6 +3306,70 @@
         setTimeout(updateMobileNotificationBadge, 500); // Wait 0.5 seconds after page load
         @endauth
     });
+
+    // Mobile Modal Functions (with enhanced error handling)
+    function openMobileModal(modalName) {
+        try {
+            console.log('📱 Opening mobile modal:', modalName);
+            
+            const modalId = `mobile${modalName.charAt(0).toUpperCase() + modalName.slice(1)}Modal`;
+            const modalElement = document.getElementById(modalId);
+            
+            if (!modalElement) {
+                console.warn(`Modal element not found: ${modalId}`);
+                return;
+            }
+            
+            // Check if Bootstrap is loaded
+            if (!window.bootstrap || !window.bootstrap.Modal) {
+                console.warn('Bootstrap Modal not available');
+                // Fallback: show modal with CSS
+                modalElement.style.display = 'block';
+                modalElement.classList.add('show');
+                return;
+            }
+            
+            // Close any existing modals first
+            const existingModals = document.querySelectorAll('.modal.show');
+            existingModals.forEach(modal => {
+                try {
+                    const bsModal = window.bootstrap.Modal.getInstance(modal);
+                    if (bsModal) {
+                        bsModal.hide();
+                    }
+                } catch (e) {
+                    // Silent fail
+                }
+            });
+            
+            // Small delay to ensure previous modal is closed
+            setTimeout(() => {
+                try {
+                    const bsModal = new window.bootstrap.Modal(modalElement, {
+                        backdrop: true,
+                        keyboard: true,
+                        focus: true
+                    });
+                    bsModal.show();
+                    
+                    console.log('✅ Modal opened successfully:', modalId);
+                } catch (error) {
+                    console.warn('Error opening modal:', error.message);
+                    // Fallback
+                    modalElement.style.display = 'block';
+                    modalElement.classList.add('show');
+                }
+            }, 100);
+            
+        } catch (error) {
+            console.warn('openMobileModal error:', error.message);
+        }
+    }
+
+    // Make functions globally available
+    window.openMobileModal = openMobileModal;
+    window.confirmLogout = confirmLogout;
+    
     </script>
     <!-- Loader Element for custom.js compatibility -->
     <div id="loader" class="d-none"></div>
