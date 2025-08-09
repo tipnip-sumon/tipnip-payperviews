@@ -72,6 +72,12 @@
     <!-- Emergency Loop Breaker - CRITICAL FIX -->
     <script src="{{asset('emergency-loop-breaker.js?v=' . time())}}"></script>
     
+    <!-- Post-Login URL Cleaner & Footer Button Fix -->
+    <script src="{{asset('post-login-fix.js?v=' . time())}}"></script>
+    
+    <!-- Dashboard URL Cleaner -->
+    <script src="{{asset('dashboard-url-cleaner.js?v=' . time())}}"></script>
+    
     <!-- Emergency Cache Fix for Live Server Issues -->
     <script src="{{asset('emergency-cache-fix.js?v=' . time())}}"></script>
 

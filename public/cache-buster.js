@@ -77,11 +77,30 @@
         }
     }
     
-    // Force reload with cache busting
+    // Force reload with cache busting (smarter version)
     function forceReloadWithCacheBust() {
         const currentUrl = new URL(window.location.href);
         
-        // Add cache busting parameters
+        // Avoid adding parameters if we're already on a dashboard or authenticated page
+        const isAuthenticatedPage = currentUrl.pathname.includes('/user/') || 
+                                   currentUrl.pathname.includes('/dashboard') ||
+                                   currentUrl.pathname.includes('/admin/');
+        
+        if (isAuthenticatedPage) {
+            // For authenticated pages, just do a simple cache-busted reload
+            if (CACHE_BUSTER.debug) {
+                console.log('🔄 Simple cache reload for authenticated page');
+            }
+            
+            // Clear cache before reload
+            clearBrowserCache();
+            
+            // Simple reload without URL parameters
+            window.location.reload(true);
+            return;
+        }
+        
+        // For non-authenticated pages, use the full cache busting
         currentUrl.searchParams.set('cache_bust', Date.now());
         currentUrl.searchParams.set('device_switch', '1');
         currentUrl.searchParams.set('v', CACHE_BUSTER.version);
