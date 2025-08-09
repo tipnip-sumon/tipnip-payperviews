@@ -3407,7 +3407,7 @@
             setTimeout(() => {
                 try {
                     // Double-check that the modal element still exists and is ready
-                    if (!modalElement || !modalElement.parentNode) {
+                    if (!modalElement || !modalElement.parentNode || !document.contains(modalElement)) {
                         console.warn('Modal element no longer available');
                         modalOpeningInProgress = false;
                         return;
@@ -3423,6 +3423,7 @@
                         }
                     }
                     
+                    // Create new Bootstrap modal instance with enhanced options
                     const bsModal = new window.bootstrap.Modal(modalElement, {
                         backdrop: true,
                         keyboard: true,
@@ -3432,34 +3433,54 @@
                     // Remove any existing event listeners to prevent duplicates
                     cleanupModalEventListeners(modalElement);
                     
-                    // Create new event handlers
+                    // Create new event handlers with DOM validation
                     const shownHandler = function(e) {
-                        console.log('✅ Modal opened:', modalId);
-                        lastModalOpened = modalId;
-                        
-                        // Ensure all buttons in the modal are clickable (only once)
-                        if (!modalElement._buttonsInitialized) {
-                            reinitializeModalButtons(modalElement);
-                            modalElement._buttonsInitialized = true;
+                        try {
+                            if (modalElement && document.contains(modalElement)) {
+                                console.log('✅ Modal opened:', modalId);
+                                lastModalOpened = modalId;
+                                
+                                // Ensure all buttons in the modal are clickable (only once)
+                                if (!modalElement._buttonsInitialized) {
+                                    reinitializeModalButtons(modalElement);
+                                    modalElement._buttonsInitialized = true;
+                                }
+                                
+                                modalOpeningInProgress = false;
+                            }
+                        } catch (shownError) {
+                            console.warn('Error in modal shown handler:', shownError);
+                            modalOpeningInProgress = false;
                         }
-                        
-                        modalOpeningInProgress = false;
                     };
                     
                     const hiddenHandler = function(e) {
-                        console.log('📱 Modal closed:', modalId);
-                        modalElement._buttonsInitialized = false;
-                        lastModalOpened = null;
-                        modalOpeningInProgress = false;
-                        
-                        // Clean up the modal instance
                         try {
-                            const instance = window.bootstrap.Modal.getInstance(modalElement);
-                            if (instance) {
-                                instance.dispose();
+                            if (modalElement && modalElement.id) {
+                                console.log('📱 Modal closed:', modalId);
+                                
+                                // Safely reset modal state
+                                if (modalElement._buttonsInitialized !== undefined) {
+                                    modalElement._buttonsInitialized = false;
+                                }
+                                lastModalOpened = null;
+                                modalOpeningInProgress = false;
+                                
+                                // Clean up the modal instance safely
+                                try {
+                                    const instance = window.bootstrap.Modal.getInstance(modalElement);
+                                    if (instance) {
+                                        instance.dispose();
+                                    }
+                                } catch (e) {
+                                    // Silent fail for cleanup
+                                }
                             }
-                        } catch (e) {
-                            // Silent fail
+                        } catch (hiddenError) {
+                            console.warn('Error in modal hidden handler:', hiddenError);
+                            // Ensure state is reset even on error
+                            modalOpeningInProgress = false;
+                            lastModalOpened = null;
                         }
                     };
                     
@@ -3497,21 +3518,54 @@
         try {
             console.log('🔄 Attempting to close modal:', modalElement.id);
             
+            // Validate DOM element exists and is accessible
+            if (!modalElement || !modalElement.id || !document.contains(modalElement)) {
+                console.warn('Modal element is invalid or not in DOM');
+                modalOpeningInProgress = false;
+                return;
+            }
+            
             // First try to get existing Bootstrap modal instance
             const bsModal = window.bootstrap.Modal.getInstance(modalElement);
             
             if (bsModal) {
                 console.log('📱 Using Bootstrap modal instance to close');
                 
-                // Add a one-time event listener for when modal is fully hidden
-                const onceHiddenHandler = function(e) {
-                    console.log('📱 Modal fully hidden:', modalElement.id);
-                    modalElement.removeEventListener('hidden.bs.modal', onceHiddenHandler);
-                };
-                modalElement.addEventListener('hidden.bs.modal', onceHiddenHandler);
+                // Pre-validate all elements that Bootstrap might access
+                const backdrop = document.querySelector('.modal-backdrop');
+                const focusElements = modalElement.querySelectorAll('[tabindex], button, [href], input, select, textarea');
                 
-                // Use Bootstrap's hide method
-                bsModal.hide();
+                // Add safe wrapper for Bootstrap hide with DOM validation
+                const safeHide = () => {
+                    try {
+                        // Validate modal state before hiding
+                        if (modalElement.style && modalElement.classList) {
+                            // Add a one-time event listener for when modal is fully hidden
+                            const onceHiddenHandler = function(e) {
+                                console.log('📱 Modal fully hidden:', modalElement.id);
+                                modalElement.removeEventListener('hidden.bs.modal', onceHiddenHandler);
+                                
+                                // Clean up modal state
+                                lastModalOpened = null;
+                                modalOpeningInProgress = false;
+                                modalElement._buttonsInitialized = false;
+                            };
+                            
+                            modalElement.addEventListener('hidden.bs.modal', onceHiddenHandler);
+                            
+                            // Use Bootstrap's hide method with DOM validation
+                            bsModal.hide();
+                        } else {
+                            throw new Error('Modal element DOM properties are invalid');
+                        }
+                    } catch (hideError) {
+                        console.warn('Bootstrap hide failed, using fallback:', hideError.message);
+                        fallbackCloseModal(modalElement);
+                    }
+                };
+                
+                // Execute safe hide with a small delay to ensure DOM stability
+                setTimeout(safeHide, 10);
                 
             } else {
                 console.log('📱 No Bootstrap instance found, using fallback close');
@@ -3530,29 +3584,60 @@
         try {
             console.log('📱 Using fallback modal close for:', modalElement.id);
             
-            // Manually hide the modal
-            modalElement.style.display = 'none';
-            modalElement.classList.remove('show');
-            modalElement.setAttribute('aria-hidden', 'true');
-            modalElement.removeAttribute('aria-modal');
+            // Validate DOM element before proceeding
+            if (!modalElement || !document.contains(modalElement)) {
+                console.warn('Modal element invalid for fallback close');
+                modalOpeningInProgress = false;
+                return;
+            }
+            
+            // Safely hide the modal with DOM validation
+            if (modalElement.style) {
+                modalElement.style.display = 'none';
+            }
+            
+            if (modalElement.classList) {
+                modalElement.classList.remove('show');
+            }
+            
+            if (modalElement.setAttribute) {
+                modalElement.setAttribute('aria-hidden', 'true');
+                modalElement.removeAttribute('aria-modal');
+            }
             
             // Remove modal-open class from body
-            document.body.classList.remove('modal-open');
+            if (document.body.classList) {
+                document.body.classList.remove('modal-open');
+            }
             
-            // Remove any backdrop manually
+            // Remove any backdrop manually with validation
             const backdrops = document.querySelectorAll('.modal-backdrop');
             backdrops.forEach(backdrop => {
-                backdrop.remove();
+                try {
+                    if (backdrop && backdrop.parentNode) {
+                        backdrop.remove();
+                    }
+                } catch (backdropError) {
+                    console.warn('Error removing backdrop:', backdropError.message);
+                }
             });
             
-            // Reset modal state
-            modalElement._buttonsInitialized = false;
+            // Reset modal state safely
+            if (modalElement) {
+                modalElement._buttonsInitialized = false;
+            }
             lastModalOpened = null;
             modalOpeningInProgress = false;
             
-            // Trigger hidden event manually
-            const hiddenEvent = new Event('hidden.bs.modal');
-            modalElement.dispatchEvent(hiddenEvent);
+            // Trigger hidden event manually with validation
+            try {
+                if (modalElement.dispatchEvent) {
+                    const hiddenEvent = new Event('hidden.bs.modal');
+                    modalElement.dispatchEvent(hiddenEvent);
+                }
+            } catch (eventError) {
+                console.warn('Error dispatching hidden event:', eventError.message);
+            }
             
             console.log('📱 Modal closed with fallback method');
             
@@ -3561,6 +3646,13 @@
             // Ultimate fallback - just reset states
             modalOpeningInProgress = false;
             lastModalOpened = null;
+            
+            // Force remove modal-open from body as last resort
+            try {
+                document.body.className = document.body.className.replace(/\bmodal-open\b/g, '');
+            } catch (e) {
+                // Silent fail
+            }
         }
     }
     
