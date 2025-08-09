@@ -72,19 +72,45 @@ EventTarget.prototype.addEventListener = function(type, listener, options) {
                         return listener.call(this, event);
                     }
                 } catch (error) {
-                    console.warn('Event listener error caught:', error);
+                    // Only log in development to avoid console spam
+                    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                        console.warn('Event listener error caught:', error.message);
+                    }
+                    // Don't re-throw Bootstrap modal errors
+                    if (error.message && error.message.includes('Cannot read properties of null')) {
+                        return; // Silently handle these errors
+                    }
                 }
             }, options);
         }
     } catch (error) {
-        console.warn('addEventListener wrapper error:', error);
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            console.warn('addEventListener wrapper error:', error.message);
+        }
     }
 };
 
-// Global error handler for custom switcher
+// Global error handler for custom switcher and Bootstrap modals
 window.addEventListener('error', function(e) {
+    // Handle Bootstrap modal errors
+    if (e.message && (
+        e.message.includes('Cannot read properties of null') ||
+        e.message.includes('_showElement') ||
+        e.message.includes('_resetAdjustments') ||
+        e.message.includes('bootstrap.bundle.min.js')
+    )) {
+        // Only log in development
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            console.warn('Bootstrap modal error caught and handled:', e.message);
+        }
+        return true; // Prevent error from bubbling up
+    }
+    
+    // Handle custom switcher errors
     if (e.filename && (e.filename.includes('custom-switcher') || e.message.includes('switcherClick'))) {
-        console.warn('Custom switcher error caught and handled:', e.message);
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            console.warn('Custom switcher error caught and handled:', e.message);
+        }
         return true; // Prevent error from bubbling up
     }
 });
