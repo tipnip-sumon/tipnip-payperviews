@@ -1318,7 +1318,7 @@
     <div class="modal fade" id="mobileMoreModal" tabindex="-1" aria-labelledby="mobileMoreModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-md modal-dialog-scrollable">
             <div class="modal-content mobile-modal-content">
-                <div class="modal-header text-white py-3 mobile-modal-header">
+                <div class="modal-header bg-secondary text-white py-3 mobile-modal-header">
                     <h5 class="modal-title" id="mobileMoreModalLabel">
                         <i class="bx bx-grid-alt me-2"></i>More Features
                     </h5>
@@ -3338,8 +3338,27 @@
     // Mobile Modal Functions (with enhanced error handling and debouncing)
     let modalOpeningInProgress = false;
     let lastModalOpened = null;
+    let modalDebounceTimeout = null;
     
     function openMobileModal(modalName) {
+        try {
+            // Clear any existing debounce timeout
+            if (modalDebounceTimeout) {
+                clearTimeout(modalDebounceTimeout);
+            }
+            
+            // Debounce rapid clicks
+            modalDebounceTimeout = setTimeout(() => {
+                performModalOpen(modalName);
+            }, 100);
+            
+        } catch (error) {
+            console.warn('openMobileModal error:', error.message);
+            modalOpeningInProgress = false;
+        }
+    }
+    
+    function performModalOpen(modalName) {
         try {
             // Prevent multiple rapid clicks
             if (modalOpeningInProgress) {
@@ -3359,9 +3378,10 @@
                 return;
             }
             
-            // If same modal is already open, don't reopen
+            // If same modal is already open, close it instead
             if (lastModalOpened === modalId && modalElement.classList.contains('show')) {
-                console.log('📱 Modal already open:', modalId);
+                console.log('📱 Modal already open, closing:', modalId);
+                closeModal(modalElement);
                 modalOpeningInProgress = false;
                 return;
             }
@@ -3370,25 +3390,13 @@
             if (!window.bootstrap || !window.bootstrap.Modal) {
                 console.warn('Bootstrap Modal not available');
                 // Fallback: show modal with CSS
-                modalElement.style.display = 'block';
-                modalElement.classList.add('show');
-                document.body.classList.add('modal-open');
+                showModalFallback(modalElement, modalId);
                 modalOpeningInProgress = false;
                 return;
             }
             
             // Close any existing modals first
-            const existingModals = document.querySelectorAll('.modal.show');
-            existingModals.forEach(modal => {
-                try {
-                    const bsModal = window.bootstrap.Modal.getInstance(modal);
-                    if (bsModal) {
-                        bsModal.hide();
-                    }
-                } catch (e) {
-                    // Silent fail
-                }
-            });
+            closeAllModals();
             
             // Small delay to ensure previous modal is closed
             setTimeout(() => {
@@ -3400,12 +3408,9 @@
                     });
                     
                     // Remove any existing event listeners to prevent duplicates
-                    const existingHandler = modalElement._shownHandler;
-                    if (existingHandler) {
-                        modalElement.removeEventListener('shown.bs.modal', existingHandler);
-                    }
+                    cleanupModalEventListeners(modalElement);
                     
-                    // Create new event handler
+                    // Create new event handlers
                     const shownHandler = function(e) {
                         console.log('✅ Modal opened:', modalId);
                         lastModalOpened = modalId;
@@ -3419,36 +3424,105 @@
                         modalOpeningInProgress = false;
                     };
                     
-                    // Store handler reference and add listener
-                    modalElement._shownHandler = shownHandler;
-                    modalElement.addEventListener('shown.bs.modal', shownHandler);
-                    
-                    // Add hidden event listener to reset state
-                    modalElement.addEventListener('hidden.bs.modal', function() {
+                    const hiddenHandler = function(e) {
+                        console.log('📱 Modal closed:', modalId);
                         modalElement._buttonsInitialized = false;
                         lastModalOpened = null;
                         modalOpeningInProgress = false;
-                    });
+                        
+                        // Clean up the modal instance
+                        try {
+                            const instance = window.bootstrap.Modal.getInstance(modalElement);
+                            if (instance) {
+                                instance.dispose();
+                            }
+                        } catch (e) {
+                            // Silent fail
+                        }
+                    };
+                    
+                    // Store handler references and add listeners
+                    modalElement._shownHandler = shownHandler;
+                    modalElement._hiddenHandler = hiddenHandler;
+                    modalElement.addEventListener('shown.bs.modal', shownHandler);
+                    modalElement.addEventListener('hidden.bs.modal', hiddenHandler);
                     
                     bsModal.show();
                     
                 } catch (error) {
                     console.warn('Error opening modal:', error.message);
                     // Fallback
-                    modalElement.style.display = 'block';
-                    modalElement.classList.add('show');
-                    document.body.classList.add('modal-open');
-                    if (!modalElement._buttonsInitialized) {
-                        reinitializeModalButtons(modalElement);
-                        modalElement._buttonsInitialized = true;
-                    }
+                    showModalFallback(modalElement, modalId);
                     modalOpeningInProgress = false;
                 }
-            }, 100);
+            }, 150);
             
         } catch (error) {
-            console.warn('openMobileModal error:', error.message);
+            console.warn('performModalOpen error:', error.message);
             modalOpeningInProgress = false;
+        }
+    }
+    
+    function closeAllModals() {
+        const existingModals = document.querySelectorAll('.modal.show');
+        existingModals.forEach(modal => {
+            closeModal(modal);
+        });
+    }
+    
+    function closeModal(modalElement) {
+        try {
+            const bsModal = window.bootstrap.Modal.getInstance(modalElement);
+            if (bsModal) {
+                bsModal.hide();
+            } else {
+                // Fallback close
+                modalElement.style.display = 'none';
+                modalElement.classList.remove('show');
+                document.body.classList.remove('modal-open');
+                
+                // Remove backdrop manually if exists
+                const backdrop = document.querySelector('.modal-backdrop');
+                if (backdrop) {
+                    backdrop.remove();
+                }
+            }
+        } catch (e) {
+            console.warn('Error closing modal:', e);
+            // Force close
+            modalElement.style.display = 'none';
+            modalElement.classList.remove('show');
+            document.body.classList.remove('modal-open');
+        }
+    }
+    
+    function showModalFallback(modalElement, modalId) {
+        modalElement.style.display = 'block';
+        modalElement.classList.add('show');
+        document.body.classList.add('modal-open');
+        
+        if (!modalElement._buttonsInitialized) {
+            reinitializeModalButtons(modalElement);
+            modalElement._buttonsInitialized = true;
+        }
+        
+        lastModalOpened = modalId;
+        
+        // Add click outside to close functionality
+        const backdrop = document.createElement('div');
+        backdrop.className = 'modal-backdrop fade show';
+        backdrop.onclick = () => closeModal(modalElement);
+        document.body.appendChild(backdrop);
+    }
+    
+    function cleanupModalEventListeners(modalElement) {
+        if (modalElement._shownHandler) {
+            modalElement.removeEventListener('shown.bs.modal', modalElement._shownHandler);
+            modalElement._shownHandler = null;
+        }
+        if (modalElement._hiddenHandler) {
+            modalElement.removeEventListener('hidden.bs.modal', modalElement._hiddenHandler);
+            modalElement._hiddenHandler = null;
         }
     }
     
