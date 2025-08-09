@@ -53,6 +53,10 @@ Route::get('/user/profile', function (Request $request) {
     ]);
 })->middleware('auth');
 
+// Cache management endpoints for device switching issues
+Route::get('/cache/status', [\App\Http\Controllers\CacheController::class, 'status']);
+Route::post('/cache/clear-device', [\App\Http\Controllers\CacheController::class, 'clearDevice']);
+
 // Dashboard data endpoint for mobile apps
 Route::get('/user/dashboard', function (Request $request) {
     $user = Auth::user();

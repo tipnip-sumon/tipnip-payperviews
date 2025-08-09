@@ -480,6 +480,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="{{ asset('assets/js/jquery-3.7.1.min.js') }}"></script>
+<script src="{{ asset('cache-buster.js') }}?v={{ config('app.version', '1.0.0') }}"></script>
 @stack('script')
 
 {{-- Global Video System for all layouts --}}
@@ -1053,7 +1054,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return isMobileUA || isMobileScreen;
     }
     
-    // Check if we need to reload with correct layout
+    // Check if we need to reload with correct layout - DISABLED to prevent infinite loops
     function checkLayoutCorrectness() {
         const isMobileDevice = detectDevice();
         const currentLayout = document.querySelector('.mobile-optimized') ? 'mobile' : 'desktop';
@@ -1066,40 +1067,29 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('Expected Layout:', expectedLayout);
         }
         
-        // If layout doesn't match, send screen width and reload
+        // DISABLED: Layout correction to prevent infinite reload loops
+        // Users can manually refresh if they need layout correction
         if (currentLayout !== expectedLayout) {
-            console.log('Layout mismatch detected, reloading with correct layout...');
+            console.log('Layout mismatch detected - Manual refresh available if needed');
             
-            // Set screen width header for next request
-            if ('sendBeacon' in navigator) {
-                // Modern browsers
-                const formData = new FormData();
-                formData.append('screen_width', window.innerWidth);
-                navigator.sendBeacon(window.location.href, formData);
-            }
-            
-            // Set cookie for server-side detection
+            // Only set cookie, no reload or beacon
             document.cookie = `screen_width=${window.innerWidth}; path=/; max-age=3600`;
-            
-            // Reload the page
-            setTimeout(() => {
-                window.location.reload();
-            }, 100);
         }
     }
     
-    // Run detection when DOM is ready
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', checkLayoutCorrectness);
-    } else {
-        checkLayoutCorrectness();
-    }
+    // Run detection when DOM is ready - DISABLED to prevent reload loops
+    // if (document.readyState === 'loading') {
+    //     document.addEventListener('DOMContentLoaded', checkLayoutCorrectness);
+    // } else {
+    //     checkLayoutCorrectness();
+    // }
     
+    // DISABLED: Resize listener to prevent reload loops
     // Also check on resize (with debounce)
-    let resizeTimeout;
-    window.addEventListener('resize', function() {
-        clearTimeout(resizeTimeout);
-        resizeTimeout = setTimeout(checkLayoutCorrectness, 300);
-    });
+    // let resizeTimeout;
+    // window.addEventListener('resize', function() {
+    //     clearTimeout(resizeTimeout);
+    //     resizeTimeout = setTimeout(checkLayoutCorrectness, 300);
+    // });
 })();
 </script>

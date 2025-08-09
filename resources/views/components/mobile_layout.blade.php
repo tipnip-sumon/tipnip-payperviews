@@ -2828,7 +2828,7 @@
         
         /* Compact stats cards */
         .modal-body .stat-card {
-            padding: 0.75rem !important;
+            padding: 0.75rem !important; 
         }
     }
 
@@ -3304,7 +3304,7 @@
         });
 
         // Initial update after page load
-        setTimeout(updateMobileNotificationBadge, 2000); // Wait 2 seconds after page load
+        setTimeout(updateMobileNotificationBadge, 500); // Wait 0.5 seconds after page load
         @endauth
     });
     </script>
