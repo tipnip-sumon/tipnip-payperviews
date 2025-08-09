@@ -375,7 +375,7 @@
     <script src="{{ asset('assets_custom/js/login-cache-clear.js') }}"></script>
     
     <!-- Session Manager for CSRF Token Handling -->
-    <script src="{{ asset('assets_custom/js/session-manager.js') }}"></script>
+    <!-- Removed session-manager.js for simplified CSRF handling -->
     <script>
         // Debug CSRF token
         console.log('CSRF Token:', document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'));

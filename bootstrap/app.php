@@ -3,10 +3,8 @@
 use App\Http\Middleware\AdminAuth;
 use App\Http\Middleware\ValidUser;
 use App\Http\Middleware\PreventBack;
-use App\Http\Middleware\EnforceSingleSession;
 use App\Http\Middleware\AdminPermissionMiddleware;
 use App\Http\Middleware\PermissionMiddleware;
-use App\Http\Middleware\RefreshCsrfToken;
 use App\Http\Middleware\CacheControlMiddleware;
 use App\Http\Middleware\ClearLoginCache;
 use App\Http\Middleware\Authenticate;
@@ -37,10 +35,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'auth' => Authenticate::class,
             'prevent-back' => PreventBack::class,
-            'single-session' => EnforceSingleSession::class,
             'admin.permission' => AdminPermissionMiddleware::class,
             'permission' => PermissionMiddleware::class,
-            // 'csrf.refresh' => RefreshCsrfToken::class, // TEMPORARILY DISABLED
             'cache.control' => CacheControlMiddleware::class,
             'clear.login.cache' => ClearLoginCache::class,
             'no-cache' => NoCache::class,

@@ -85,7 +85,6 @@
                         
                         <form method="POST" action="{{ route('login') }}" class="stunning-form" id="login-form">
                             @csrf
-                            <input type="hidden" name="_token" value="{{ csrf_token() }}" id="csrf-token-field">
                             
                             <!-- Email Verification Alert (Enhanced) -->
                             @if(session('show_resend_verification') || session('user_email'))
@@ -1682,13 +1681,11 @@
         btnLoader.style.display = 'block';
         button.disabled = true;
         
-        // Refresh CSRF token before submission
-        refreshCSRFToken().then(() => {
-            // Submit form via AJAX for better error handling
-            const formData = new FormData(form);
-            
-            fetch(form.action, {
-                method: 'POST',
+        // Submit form via AJAX for better error handling
+        const formData = new FormData(form);
+        
+        fetch(form.action, {
+            method: 'POST',
                 body: formData,
                 headers: {
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
@@ -1697,19 +1694,8 @@
             })
             .then(async response => {
                 if (response.status === 419) {
-                    // CSRF token expired - refresh and retry
-                    const newToken = await refreshCSRFToken();
-                    if (newToken) {
-                        formData.set('_token', newToken);
-                        return fetch(form.action, {
-                            method: 'POST',
-                            body: formData,
-                            headers: {
-                                'X-CSRF-TOKEN': newToken,
-                                'X-Requested-With': 'XMLHttpRequest'
-                            }
-                        });
-                    }
+                    // CSRF token expired - show error and reload page
+                    throw new Error('Session expired. Please refresh the page and try again.');
                 }
                 return response;
             })
@@ -1994,29 +1980,6 @@
                 width: '600px'
             });
         }
-    }
-    
-    // CSRF Token refresh function
-    function refreshCSRFToken() {
-        return fetch('/csrf-refresh')
-            .then(response => response.json())
-            .then(data => {
-                const csrfMeta = document.querySelector('meta[name="csrf-token"]');
-                const csrfInput = document.querySelector('input[name="_token"]');
-                
-                if (csrfMeta && data.csrf_token) {
-                    csrfMeta.setAttribute('content', data.csrf_token);
-                }
-                if (csrfInput && data.csrf_token) {
-                    csrfInput.value = data.csrf_token;
-                }
-                
-                return data.csrf_token;
-            })
-            .catch(error => {
-                console.error('Failed to refresh CSRF token:', error);
-                return null;
-            });
     }
 
     // Helper function to get email from form

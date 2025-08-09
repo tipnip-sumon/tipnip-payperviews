@@ -96,7 +96,45 @@ class LoginController extends Controller
         // Get remembered login value from cookie (7-day cookie)
         $rememberedLogin = $request->cookie('remembered_login', '');
         
-        return view('auth.login', compact('sessionNotifications', 'rememberedLogin'));
+        // Check if there's a user input from previous attempt to show remaining attempts
+        $userLoginAttempts = null;
+        $remainingAttempts = null;
+        $accountLocked = false;
+        $lockExpiry = null;
+        
+        if ($request->has('check_attempts') && $request->input('username')) {
+            $loginField = $request->input('username');
+            
+            // Find user by username or email
+            $user = \App\Models\User::where(function($query) use ($loginField) {
+                $isEmail = filter_var($loginField, FILTER_VALIDATE_EMAIL);
+                if ($isEmail) {
+                    $query->where('email', $loginField)->orWhere('username', $loginField);
+                } else {
+                    $query->where('username', $loginField)->orWhere('email', $loginField);
+                }
+            })->first();
+            
+            if ($user) {
+                $userLoginAttempts = $user->login_attempts;
+                if ($user->isLocked()) {
+                    $accountLocked = true;
+                    $lockExpiry = $user->locked_until->diffForHumans();
+                    $remainingAttempts = 0;
+                } else {
+                    $remainingAttempts = max(0, 5 - $user->login_attempts);
+                }
+            }
+        }
+        
+        return view('auth.login_fresh', compact(
+            'sessionNotifications', 
+            'rememberedLogin',
+            'userLoginAttempts',
+            'remainingAttempts',
+            'accountLocked',
+            'lockExpiry'
+        ));
     } 
 
     /**
@@ -177,26 +215,65 @@ class LoginController extends Controller
 
         // Check if account is locked
         if ($user->isLocked()) {
-            $lockExpiry = $user->locked_until->diffForHumans();
-            $lockMessage = "Your account is temporarily locked due to multiple failed login attempts. Please try again {$lockExpiry} or contact support for immediate assistance.";
+            $lockExpiry = $user->locked_until ? $user->locked_until->diffForHumans() : 'later';
+            $lockExpiryMinutes = $user->locked_until ? $user->locked_until->diffInMinutes(now()) : 10;
             
-            if ($request->expectsJson() || $request->wantsJson()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => $lockMessage,
-                    'error_type' => 'account_locked',
-                    'locked_until' => $user->locked_until->toISOString(),
-                    'unlock_time_human' => $lockExpiry
-                ], 401);
+            // Handle expired locks (negative minutes) - should unlock automatically
+            if ($lockExpiryMinutes <= 0) {
+                // Lock has expired, unlock the user
+                $user->update([
+                    'locked_until' => null,
+                    'login_attempts' => 0
+                ]);
+                
+                // Continue with login attempt since lock has expired
+            } else {
+                // Account is still locked
+                $durationText = $lockExpiryMinutes < 60 
+                    ? round($lockExpiryMinutes) . ' minute' . ($lockExpiryMinutes != 1 ? 's' : '')
+                    : round($lockExpiryMinutes / 60, 1) . ' hour' . ($lockExpiryMinutes >= 120 ? 's' : '');
+                
+                $lockMessage = "Your account is temporarily locked due to multiple failed login attempts. Please try again {$lockExpiry} or contact support for immediate assistance.";
+                
+                if ($request->expectsJson() || $request->wantsJson()) {
+                    \Illuminate\Support\Facades\Log::info('Returning JSON response for locked account', [
+                        'error_type' => 'account_locked',
+                        'locked_until' => $user->locked_until ? $user->locked_until->toISOString() : null,
+                        'unlock_time_human' => $lockExpiry,
+                        'unlock_time_minutes' => $lockExpiryMinutes,
+                        'duration_text' => $durationText
+                    ]);
+                    
+                    return response()->json([
+                        'success' => false,
+                        'message' => $lockMessage,
+                        'error_type' => 'account_locked',
+                        'locked_until' => $user->locked_until ? $user->locked_until->toISOString() : null,
+                        'unlock_time_human' => $lockExpiry,
+                        'unlock_time_minutes' => $lockExpiryMinutes,
+                        'duration_text' => $durationText,
+                        'remaining_attempts' => 0
+                    ], 401);
+                }
+                
+                return redirect()->back()
+                    ->withInput($request->only($this->username(), 'remember'))
+                    ->withErrors([
+                        $this->username() => $lockMessage,
+                    ])
+                    ->with('error_type', 'account_locked')
+                    ->with('unlock_time', $lockExpiry)
+                    ->with('unlock_time_minutes', $lockExpiryMinutes)
+                    ->with('duration_text', $durationText)
+                    ->with('remaining_attempts', 0);
             }
-            
-            return redirect()->back()
-                ->withInput($request->only($this->username(), 'remember'))
-                ->withErrors([
-                    $this->username() => $lockMessage,
-                ])
-                ->with('error_type', 'account_locked')
-                ->with('unlock_time', $lockExpiry);
+        }
+
+        // If user is not locked but has failed attempts, let them know remaining attempts  
+        if ($user->login_attempts > 0 && $user->login_attempts < 5) {
+            $remainingAttempts = 5 - $user->login_attempts;
+            session()->flash('warning_attempts', "You have {$remainingAttempts} login attempt" . ($remainingAttempts > 1 ? 's' : '') . " remaining before your account will be temporarily locked.");
+            session()->flash('remaining_attempts', $remainingAttempts);
         }
 
         // Check if email is verified (only if user implements MustVerifyEmail)
@@ -253,25 +330,38 @@ class LoginController extends Controller
         // Record failed login attempt
         $user->incrementLoginAttempts();
         
-        $remainingAttempts = 5 - $user->login_attempts;
+        // Refresh the user to get updated login_attempts count
+        $user->refresh();
+        
+        $remainingAttempts = max(0, 5 - $user->login_attempts);
         
         // Create more specific error messages
         if ($remainingAttempts > 0) {
             $errorMessage = "Invalid password. Please check your password and try again. You have {$remainingAttempts} attempt" . ($remainingAttempts > 1 ? 's' : '') . " remaining before your account is temporarily locked.";
             $errorType = 'invalid_password';
         } else {
-            $errorMessage = 'Account temporarily locked due to multiple failed login attempts. Please try again later or contact support for immediate assistance.';
+            $lockMinutes = 10; // Lock for 10 minutes
+            $errorMessage = "Account temporarily locked for {$lockMinutes} minutes due to multiple failed login attempts. Please try again later or contact support for immediate assistance.";
             $errorType = 'account_locked_now';
         }
 
         if ($request->expectsJson() || $request->wantsJson()) {
+            \Illuminate\Support\Facades\Log::info('Returning JSON response for failed login', [
+                'error_type' => $errorType,
+                'remaining_attempts' => $remainingAttempts,
+                'user_locked' => $user->isLocked(),
+                'lock_duration_minutes' => $remainingAttempts <= 0 ? 10 : null
+            ]);
+            
             return response()->json([
                 'success' => false,
                 'message' => $errorMessage,
                 'error_type' => $errorType,
-                'remaining_attempts' => max(0, $remainingAttempts),
+                'remaining_attempts' => $remainingAttempts,
                 'user_found' => true,
-                'password_issue' => true
+                'password_issue' => true,
+                'locked_until' => $user->locked_until ? $user->locked_until->toISOString() : null,
+                'lock_duration_minutes' => $remainingAttempts <= 0 ? 10 : null
             ], 401);
         }
 

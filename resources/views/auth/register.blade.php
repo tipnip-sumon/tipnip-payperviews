@@ -10,7 +10,7 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <!-- Session Manager -->
-<script src="{{ asset('assets_custom/js/session-manager.js') }}"></script>
+
 
 @section('content') 
 <style>
@@ -842,22 +842,8 @@ document.addEventListener('DOMContentLoaded', function() {
                timeSinceLastSubmission >= formState.minSubmissionInterval;
     };
     
-    // Wait for SessionManager to be available
-    if (typeof window.sessionManager === 'undefined') {
-        console.warn('SessionManager not available, initializing fallback CSRF management');
-        // Fallback CSRF management if SessionManager fails to load
-        window.sessionManager = {
-            refreshCSRFToken: function() {
-                return fetch('/csrf-refresh', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
-                    }
-                })
-                .then(response => response.json())
-                .then(data => {
+    // Simplified registration - using default Laravel CSRF handling only
+    console.log('Register page loaded with default Laravel CSRF handling');
                     if (data.csrf_token) {
                         const csrfMeta = document.querySelector('meta[name="csrf-token"]');
                         const csrfInput = document.querySelector('input[name="_token"]');
@@ -875,42 +861,36 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             },
             validateSponsor: function(sponsor) {
-                return this.refreshCSRFToken().then(() => {
-                    return fetch('/validate-sponsor', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
-                            'X-Requested-With': 'XMLHttpRequest'
-                        },
-                        body: JSON.stringify({ sponsor: sponsor })
-                    });
+                return fetch('/validate-sponsor', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({ sponsor: sponsor })
                 });
             },
             validateUsername: function(username) {
-                return this.refreshCSRFToken().then(() => {
-                    return fetch('/validate-username', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
-                            'X-Requested-With': 'XMLHttpRequest'
-                        },
-                        body: JSON.stringify({ username: username })
-                    });
+                return fetch('/validate-username', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({ username: username })
                 });
             },
             validateEmail: function(email) {
-                return this.refreshCSRFToken().then(() => {
-                    return fetch('/validate-email', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
-                            'X-Requested-With': 'XMLHttpRequest'
-                        },
-                        body: JSON.stringify({ email: email })
-                    });
+                return fetch('/validate-email', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({ email: email })
                 });
             }
         };
@@ -1631,31 +1611,6 @@ document.addEventListener('DOMContentLoaded', function() {
             
         } catch (error) {
             console.error('Direct submission error:', error);
-            
-            // Fallback: Try basic CSRF refresh and submit
-            try {
-                const response = await fetch('/csrf-refresh', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
-                });
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.csrf_token) {
-                        const csrfInput = form.querySelector('input[name="_token"]');
-                        if (csrfInput) {
-                            csrfInput.value = data.csrf_token;
-                        }
-                        console.log('CSRF token updated for fallback submission');
-                    }
-                }
-            } catch (refreshError) {
-                console.error('CSRF refresh failed:', refreshError);
-            }
-            
             // Final attempt: Submit original form
             console.log('Final fallback: submitting original form');
             

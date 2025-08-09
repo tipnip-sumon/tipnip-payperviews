@@ -47,3 +47,6 @@ auto-git-fix.bat
 git-sync-fix.bat
 git-sync-protection.bat
 *.log
+
+# Bootstrap cache temporary files
+bootstrap/cache/*.tmp

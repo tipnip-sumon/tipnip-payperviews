@@ -89,6 +89,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'two_fa_forced_at' => 'datetime',
         'two_fa_force_expires_at' => 'datetime',
         'last_login_at' => 'datetime',
+        'locked_until' => 'datetime',
         'session_created_at' => 'datetime',
         'last_activity_at' => 'datetime',
         'password' => 'hashed',
@@ -724,7 +725,22 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public function isLocked()
     {
-        return $this->locked_until && $this->locked_until->isFuture();
+        // If there's no lock time set, account is not locked
+        if (!$this->locked_until) {
+            return false;
+        }
+        
+        // If lock time has passed, automatically unlock and return false
+        if ($this->locked_until->isPast()) {
+            $this->update([
+                'locked_until' => null,
+                'login_attempts' => 0
+            ]);
+            return false;
+        }
+        
+        // Lock is still active
+        return true;
     }
 
     public function updateLoginAttempts()

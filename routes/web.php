@@ -53,31 +53,6 @@ Route::get('/storage/{path}', function ($path) {
 
 Route::get('/',[LandController::class, 'index']);
 
-// CSRF Token refresh routes
-Route::get('/csrf-refresh', function () {
-    return response()->json([
-        'csrf_token' => csrf_token()
-    ]);
-})->name('csrf.refresh');
-
-Route::post('/csrf-refresh', function () {
-    return response()->json([
-        'csrf_token' => csrf_token(),
-        'success' => true
-    ]);
-})->name('csrf.refresh.post');
-
-Route::get('/session-check', function () {
-    return response()->json([
-        'csrf_token' => csrf_token(),
-        'authenticated' => \Illuminate\Support\Facades\Auth::check()
-    ]);
-})->name('session.check');
-
-Route::post('/csrf-validate', function () {
-    return response()->json(['valid' => true]);
-})->name('csrf.validate');
-
 // =============================================================================
 // BROWSER CACHE CLEARING ROUTES
 // =============================================================================
@@ -179,26 +154,32 @@ Route::get('/user/dashboard/performance', [App\Http\Controllers\User\UserControl
 // AUTHENTICATION ROUTES  
 // =============================================================================
 
-// Using Laravel's built-in auth routes for login
-Auth::routes(['verify' => true]);
+// Custom authentication routes (excluding register to avoid conflicts)
+Auth::routes(['register' => false, 'verify' => true]);
 
 // Override login routes with custom middleware
-Route::get('/login', [App\Http\Controllers\Auth\LoginController::class, 'showLoginForm'])
-    ->name('login')
+Route::get('/login_old', [App\Http\Controllers\Auth\LoginController::class, 'showLoginForm'])
+    ->name('login.old')
     ->middleware('clear.login.cache');
 
-// CSRF token refresh endpoint to prevent 419 errors after logout
-Route::get('/refresh-csrf', function () {
-    return response()->json([
-        'token' => csrf_token(),
-        'success' => true
-    ]);
-})->name('refresh.csrf');
+// Fresh login page (main login)
+Route::get('/login', [App\Http\Controllers\Auth\LoginController::class, 'showLoginForm'])
+    ->name('login')->middleware('clear.login.cache');
 
+Route::post('/login', [App\Http\Controllers\Auth\LoginController::class, 'login'])
+    ->name('login.submit');
 
+// Old registration routes (renamed for backup)
+Route::get('/register_old', [App\Http\Controllers\Auth\RegisterController::class, 'showRegistrationForm'])
+    ->name('register.old');
 
-Route::get('/register', [App\Http\Controllers\Auth\RegisterController::class, 'showRegistrationForm'])
-    ->name('register');
+Route::post('/register_old', [App\Http\Controllers\Auth\RegisterController::class, 'register'])
+    ->name('register.old.submit');
+
+// Main registration page (fresh implementation without Vite dependencies)
+Route::get('/register', function () {
+    return view('auth.register_fresh');
+})->name('register');
 
 Route::post('/register', [App\Http\Controllers\Auth\RegisterController::class, 'register'])
     ->name('register.submit');
