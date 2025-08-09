@@ -21,13 +21,13 @@
     <script src="{{asset('assets/js/main.js')}}"></script> 
 
     <!-- Bootstrap Css -->
-    <link id="style" href="{{asset('assets/libs/bootstrap/css/bootstrap.min.css')}}" rel="stylesheet" >
+    <link id="style" href="{{asset('assets/libs/bootstrap/css/bootstrap.min.css?v=' . time())}}" rel="stylesheet" >
 
     <!-- Style Css -->
-    <link href="{{asset('assets/css/styles.min.css')}}" rel="stylesheet" >
+    <link href="{{asset('assets/css/styles.min.css?v=' . time())}}" rel="stylesheet" >
 
     <!-- Icons Css -->
-    <link href="{{asset('assets/css/icons.css')}}" rel="stylesheet" >
+    <link href="{{asset('assets/css/icons.css?v=' . time())}}" rel="stylesheet" >
 
     <!-- Node Waves Css -->
     <link href="{{asset('assets/libs/node-waves/waves.min.css')}}" rel="stylesheet" >
@@ -65,9 +65,12 @@
     </style>
 
     <!-- Error Prevention System -->
-    <link rel="stylesheet" href="{{asset('assets_custom/css/error-prevention.css')}}">
-    <script src="{{asset('assets_custom/js/error-prevention-init.js')}}"></script>
-    <script src="{{asset('assets_custom/js/bootstrap-modal-fix.js')}}"></script>
+    <link rel="stylesheet" href="{{asset('assets_custom/css/error-prevention.css?v=' . time())}}">
+    <script src="{{asset('assets_custom/js/error-prevention-init.js?v=' . time())}}"></script>
+    <script src="{{asset('assets_custom/js/bootstrap-modal-fix.js?v=' . time())}}"></script>
+    
+    <!-- Emergency Cache Fix for Live Server Issues -->
+    <script src="{{asset('emergency-cache-fix.js?v=' . time())}}"></script>
 
     @stack('styles')
 </head>
@@ -3056,22 +3059,22 @@
     <script src="{{asset('assets/libs/@popperjs/core/umd/popper.min.js')}}"></script>
 
     <!-- Bootstrap JS -->
-    <script src="{{asset('assets/libs/bootstrap/js/bootstrap.bundle.min.js')}}"></script>
+    <script src="{{asset('assets/libs/bootstrap/js/bootstrap.bundle.min.js?v=' . time())}}"></script>
 
     <!-- Node Waves JS-->
-    <script src="{{asset('assets/libs/node-waves/waves.min.js')}}"></script>
+    <script src="{{asset('assets/libs/node-waves/waves.min.js?v=' . time())}}"></script>
 
     <!-- Simplebar JS -->
-    <script src="{{asset('assets/libs/simplebar/simplebar.min.js')}}"></script>
+    <script src="{{asset('assets/libs/simplebar/simplebar.min.js?v=' . time())}}"></script>
 
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <!-- Custom JS -->
-    <script src="{{asset('assets/js/custom.js')}}"></script>
+    <script src="{{asset('assets/js/custom.js?v=' . time())}}"></script>
 
     <!-- Mobile Functions - Clean & Organized -->
-    <script src="{{asset('assets_custom/js/mobile-functions.js')}}"></script> 
+    <script src="{{asset('assets_custom/js/mobile-functions.js?v=' . time())}}"></script> 
 
     @stack('script')
     <script>

@@ -74,6 +74,25 @@ Route::get('/clear-cache/{type?}', [BrowserCacheController::class, 'clearDomainC
     ->where('type', 'all|cache|cookies|storage|execution')
     ->name('browser.cache.clear.type');
 
+// EMERGENCY ROUTES FOR LIVE SERVER ISSUES
+use App\Http\Controllers\EmergencyController;
+
+// Emergency cache clear for critical issues
+Route::get('/emergency/cache-clear', [EmergencyController::class, 'emergencyCacheClear'])
+    ->name('emergency.cache.clear');
+
+// System status check
+Route::get('/emergency/status', [EmergencyController::class, 'systemStatus'])
+    ->name('emergency.status');
+
+// Force asset refresh
+Route::get('/emergency/refresh-assets', [EmergencyController::class, 'forceAssetRefresh'])
+    ->name('emergency.refresh.assets');
+
+// Health check
+Route::get('/health', [EmergencyController::class, 'healthCheck'])
+    ->name('health.check');
+
 // Country data endpoint
 Route::get('get-countries', function () {
     $c        = json_decode(file_get_contents(resource_path('views/country/country.json')));

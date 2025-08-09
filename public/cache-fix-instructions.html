@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Update - Please Refresh</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            max-width: 500px;
+            width: 100%;
+        }
+        .icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 16px;
+            font-size: 28px;
+        }
+        p {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 24px;
+        }
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 8px;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+        }
+        .steps {
+            text-align: left;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .step {
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+        }
+        .step-number {
+            background: #007bff;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 12px;
+            font-size: 12px;
+        }
+        .auto-fix {
+            background: #e7f3ff;
+            border: 1px solid #b8daff;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 20px 0;
+        }
+        .status {
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-weight: bold;
+            margin: 8px;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon">🔄</div>
+        <h1>System Update Complete</h1>
+        <p>We've updated our system for better performance. If you're experiencing any issues with the interface, please follow these steps:</p>
+        
+        <div class="auto-fix">
+            <strong>🤖 Automatic Fix</strong><br>
+            <small>Our system will attempt to fix cache issues automatically. Please wait a moment...</small>
+            <div id="auto-status" class="status warning">Checking system...</div>
+        </div>
+        
+        <div class="steps">
+            <div class="step">
+                <div class="step-number">1</div>
+                <div>Press <strong>Ctrl+F5</strong> (Windows) or <strong>Cmd+Shift+R</strong> (Mac) to hard refresh</div>
+            </div>
+            <div class="step">
+                <div class="step-number">2</div>
+                <div>Clear your browser cache in Settings</div>
+            </div>
+            <div class="step">
+                <div class="step-number">3</div>
+                <div>If issues persist, try browsing in incognito/private mode</div>
+            </div>
+        </div>
+        
+        <a href="javascript:window.location.reload(true)" class="btn">🔄 Hard Refresh Now</a>
+        <a href="/emergency/cache-clear" class="btn">🚀 Emergency Fix</a>
+        <a href="/" class="btn">🏠 Go to Homepage</a>
+    </div>
+
+    <script>
+        // Auto-fix script
+        function attemptAutoFix() {
+            const statusEl = document.getElementById('auto-status');
+            statusEl.textContent = 'Attempting automatic fix...';
+            statusEl.className = 'status warning';
+            
+            // Clear localStorage
+            try {
+                localStorage.clear();
+                sessionStorage.clear();
+                console.log('✅ Cleared browser storage');
+            } catch (e) {
+                console.warn('Storage clear failed:', e);
+            }
+            
+            // Check emergency cache fix
+            fetch('/emergency/cache-clear')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        statusEl.textContent = '✅ Auto-fix completed! Redirecting...';
+                        statusEl.className = 'status success';
+                        
+                        setTimeout(() => {
+                            window.location.href = '/?cache_cleared=' + Date.now();
+                        }, 2000);
+                    } else {
+                        throw new Error(data.message || 'Auto-fix failed');
+                    }
+                })
+                .catch(error => {
+                    console.error('Auto-fix error:', error);
+                    statusEl.textContent = '⚠️ Auto-fix failed. Please try manual steps.';
+                    statusEl.className = 'status warning';
+                });
+        }
+        
+        // Start auto-fix after 2 seconds
+        setTimeout(attemptAutoFix, 2000);
+        
+        // Add keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            // Ctrl+F5 or Cmd+Shift+R
+            if ((e.ctrlKey && e.key === 'F5') || (e.metaKey && e.shiftKey && e.key === 'R')) {
+                e.preventDefault();
+                window.location.reload(true);
+            }
+        });
+    </script>
+</body>
+</html>

@@ -12,12 +12,12 @@ class ClearDeviceCache extends Command
     /**
      * The name and signature of the console command.
      */
-    protected $signature = 'cache:clear-device {--force : Force clear all caches}';
+    protected $signature = 'cache:clear-device {--force : Force clear all caches} {--emergency : Emergency cache fix for live server issues}';
 
     /**
      * The console command description.
      */
-    protected $description = 'Clear device-specific caches to fix desktop/mobile layout issues';
+    protected $description = 'Clear device-specific caches to fix desktop/mobile layout issues and live server problems';
 
     /**
      * Execute the console command.
