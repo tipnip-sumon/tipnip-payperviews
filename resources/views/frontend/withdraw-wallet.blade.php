@@ -663,9 +663,26 @@ $(document).ready(function() {
             }).then((result) => {
                 if (result.isConfirmed) {
                     $('#walletWithdrawBtn').html('<i class="ri-loader-4-line me-2 spin"></i>Verifying OTP...').prop('disabled', true);
-                    // Allow form submission and submit
-                    window.allowWithdrawalFormSubmission();
-                    $form[0].submit();
+                    
+                    // Get fresh CSRF token from dedicated endpoint
+                    $.get('{{ route("user.withdraw.wallet.csrf-token") }}', function(response) {
+                        if (response.csrf_token) {
+                            // Update both meta tag and form token
+                            $('meta[name="csrf-token"]').attr('content', response.csrf_token);
+                            $('#withdrawForm').find('input[name="_token"]').val(response.csrf_token);
+                            console.log('Fresh CSRF token obtained:', response.csrf_token.substr(0, 10) + '...');
+                        }
+                        
+                        // Allow form submission and submit
+                        window.allowWithdrawalFormSubmission();
+                        $('#withdrawForm')[0].submit();
+                        
+                    }).fail(function() {
+                        console.log('Failed to get fresh CSRF token, proceeding with existing token');
+                        // Fallback: try with existing token
+                        window.allowWithdrawalFormSubmission();
+                        $('#withdrawForm')[0].submit();
+                    });
                 }
             });
         } else {

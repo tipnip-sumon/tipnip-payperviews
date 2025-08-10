@@ -762,6 +762,9 @@ Route::controller(App\Http\Controllers\User\WithdrawController::class)->middlewa
         \Illuminate\Support\Facades\Log::info('Simple test route hit', ['data' => $request->all()]);
         return response()->json(['success' => true, 'message' => 'Simple test route working', 'received_data' => $request->all()]);
     })->name('user.withdraw.wallet.test-simple');
+    Route::get('/user/withdraw/wallet/csrf-token', function() {
+        return response()->json(['csrf_token' => csrf_token()]);
+    })->name('user.withdraw.wallet.csrf-token');
     Route::get('/user/withdraw/wallet/history','walletHistory')->name('user.withdraw.wallet.history');
 });
 
