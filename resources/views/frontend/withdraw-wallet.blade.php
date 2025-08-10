@@ -12,6 +12,7 @@
     $withdrawMethods = $withdrawMethods ?? collect([]);
     $isWalletOtpSession = $isWalletOtpSession ?? false;
     $walletStoredData = $walletStoredData ?? null;
+    $kycVerified = $kycVerified ?? false;
     $withdrawalStats = $withdrawalStats ?? [
         'total_wallet_withdrawals' => 0,
         'total_wallet_withdrawn' => 0,

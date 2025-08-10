@@ -3,6 +3,21 @@
     @section('title','Withdraw Your Deposit')
     @section('content')
     
+    @php
+        // Safety check for required variables
+        $activeDeposit = $activeDeposit ?? null;
+        $withdrawalDetails = $withdrawalDetails ?? null;
+        $withdrawMethods = $withdrawMethods ?? collect([]);
+        $withdrawalStats = $withdrawalStats ?? [
+            'total_withdrawals' => 0,
+            'total_withdrawn' => 0,
+            'pending_withdrawals' => 0,
+            'pending_amount' => 0
+        ];
+        $recentWithdrawals = $recentWithdrawals ?? collect([]);
+        $kycVerified = $kycVerified ?? false;
+    @endphp
+    
     <!-- Withdrawal Status -->
     @if($activeDeposit && $withdrawalDetails)
     <div class="row mb-4">
@@ -17,7 +32,7 @@
         </div>
     </div>
     
-    <!-- Withdrawal Calculation --> 
+    <!-- Withdrawal Calculation -->  
     <div class="row mb-4">
         <div class="col-12">
             <div class="card custom-card border-0 shadow">
