@@ -385,7 +385,20 @@ class WithdrawController extends Controller
             ]);
 
             if (!$sessionOtp || !$otpExpiry || now() > $otpExpiry) {
-                return redirect()->back()->with('error', 'Verification code has expired. Please request a new one.')->withInput();
+                // Add more detailed error message for debugging
+                $errorDetails = [];
+                if (!$sessionOtp) $errorDetails[] = 'No OTP found in session';
+                if (!$otpExpiry) $errorDetails[] = 'No expiry time found in session';
+                if ($otpExpiry && now() > $otpExpiry) $errorDetails[] = 'OTP expired (' . now()->diffForHumans($otpExpiry) . ')';
+                
+                Log::error('OTP Verification Failed', [
+                    'session_otp' => $sessionOtp,
+                    'expiry' => $otpExpiry,
+                    'current_time' => now(),
+                    'details' => $errorDetails
+                ]);
+                
+                return redirect()->back()->with('error', 'Verification code issue: ' . implode(', ', $errorDetails))->withInput();
             }
 
             if ($request->otp !== $sessionOtp) {

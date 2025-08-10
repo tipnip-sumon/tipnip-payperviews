@@ -434,6 +434,8 @@
 @endsection
 
 @push('script')
+<script src="{{ asset('assets_custom/js/jquery-3.7.1.min.js') }}"></script>
+
 <script>
 $(document).ready(function() {
     console.log('jQuery loaded and ready!'); // Debug log
