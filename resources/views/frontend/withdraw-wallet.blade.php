@@ -20,6 +20,14 @@
         'pending_wallet_amount' => 0
     ];
     $recentWithdrawals = $recentWithdrawals ?? collect([]);
+    
+    // Debug information
+    $debugInfo = [
+        'isWalletOtpSession' => $isWalletOtpSession,
+        'session_show_wallet_otp_form' => session('show_wallet_otp_form'),
+        'session_wallet_withdrawal_data' => session('wallet_withdrawal_data'),
+        'walletStoredData' => $walletStoredData
+    ];
 @endphp
 <div class="container-fluid">
     <!-- Page Header -->
@@ -49,6 +57,14 @@
             {{ session('error') }}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
+    @endif
+
+    <!-- Debug Information (remove in production) -->
+    @if(config('app.debug'))
+    <div class="alert alert-info">
+        <strong>Debug Info:</strong>
+        <pre>{{ json_encode($debugInfo, JSON_PRETTY_PRINT) }}</pre>
+    </div>
     @endif
 
     <div class="row">
@@ -159,8 +175,11 @@
                             You don't have sufficient wallet balance to make a withdrawal.
                         </div>
                     @else
-                        @if(!isset($isWalletOtpSession) || !$isWalletOtpSession)
+                        @if(!$isWalletOtpSession)
                             <!-- Step 1: Initial Withdrawal Form (NO PASSWORD) -->
+                            <div class="alert alert-info mb-3">
+                                <strong>Current Status:</strong> Showing initial withdrawal form (isWalletOtpSession = {{ $isWalletOtpSession ? 'true' : 'false' }})
+                            </div>
                             <form action="{{ route('user.withdraw.wallet.submit') }}" method="POST" 
                                   style="{{ (!isset($kycVerified) || !$kycVerified) ? 'pointer-events: none;' : '' }}">
                                 @csrf
@@ -259,6 +278,10 @@
                             </form>
                         @else
                             <!-- Step 2: OTP Verification Form -->
+                            <div class="alert alert-warning mb-3">
+                                <strong>Current Status:</strong> Showing OTP form (isWalletOtpSession = {{ $isWalletOtpSession ? 'true' : 'false' }})
+                            </div>
+                            
                             <div class="alert alert-success">
                                 <i class="fe fe-check-circle me-2"></i>
                                 <strong>Step 2:</strong> We've sent a verification code to your email. Enter the code below along with your transaction password to complete the withdrawal.
