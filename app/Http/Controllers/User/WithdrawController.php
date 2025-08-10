@@ -145,6 +145,76 @@ class WithdrawController extends Controller
             ]);
         }
         
+        // CHECK ALL WITHDRAWAL CONDITIONS BEFORE SENDING OTP
+        if (!function_exists('checkWithdrawalConditions')) {
+            require_once app_path('helpers/ConditionHelper.php');
+        }
+        
+        $conditionCheck = checkWithdrawalConditions($user);
+        
+        if (!$conditionCheck['allowed']) {
+            $failures = $conditionCheck['failures'];
+            
+            // Check for specific conditions and provide targeted error messages
+            if (count($failures) === 1) {
+                $failure = $failures[0];
+                
+                // KYC Verification Required
+                if (strpos($failure, 'KYC verification') !== false) {
+                    return redirect()->back()->with('swal_error', [
+                        'title' => 'KYC Verification Required!',
+                        'text' => 'Please complete your KYC (Know Your Customer) verification before making withdrawals. This includes uploading government-issued ID and completing identity verification.',
+                        'icon' => 'warning'
+                    ])->withInput();
+                }
+                
+                // Email Verification Required
+                if (strpos($failure, 'Email verification') !== false) {
+                    return redirect()->back()->with('swal_error', [
+                        'title' => 'Email Verification Required!',
+                        'text' => 'Please verify your email address before making withdrawals. Check your inbox for the verification link or request a new verification email.',
+                        'icon' => 'warning'
+                    ])->withInput();
+                }
+                
+                // Profile Completion Required
+                if (strpos($failure, 'Profile completion') !== false) {
+                    return redirect()->back()->with('swal_error', [
+                        'title' => 'Profile Incomplete!',
+                        'text' => 'Please complete your profile information before making withdrawals. Update your profile with all required details including name, mobile, country, and address.',
+                        'icon' => 'warning'
+                    ])->withInput();
+                }
+                
+                // Minimum Investment Duration
+                if (strpos($failure, 'Minimum investment duration') !== false) {
+                    preg_match('/(\d+)\s+days/', $failure, $matches);
+                    $days = $matches[1] ?? 'required';
+                    return redirect()->back()->with('swal_error', [
+                        'title' => 'Investment Duration Requirement!',
+                        'text' => 'Your investment must be active for at least ' . $days . ' days before you can make a withdrawal. Please wait until this requirement is met.',
+                        'icon' => 'warning'
+                    ])->withInput();
+                }
+                
+                // Referral Requirement
+                if (strpos($failure, 'referral') !== false) {
+                    return redirect()->back()->with('swal_error', [
+                        'title' => 'Referral Requirement!',
+                        'text' => $failure . '. Please invite friends to join and ensure they meet the investment requirements.',
+                        'icon' => 'warning'
+                    ])->withInput();
+                }
+            }
+            
+            // Multiple failures - show them all
+            return redirect()->back()->with('swal_error', [
+                'title' => 'Multiple Requirements Not Met!',
+                'text' => 'Please complete the following requirements: ' . implode(', ', $failures),
+                'icon' => 'error'
+            ])->withInput();
+        }
+        
         // Store withdrawal data in session for OTP verification (NO PASSWORD YET)
         session([
             'deposit_withdrawal_data' => [
@@ -280,37 +350,7 @@ class WithdrawController extends Controller
             ]);
         }
         
-        // NOW check withdrawal conditions after OTP verification
-        if (!function_exists('checkWithdrawalConditions')) {
-            require_once app_path('helpers/ConditionHelper.php');
-        }
-        
-        $conditionCheck = checkWithdrawalConditions($user);
-        
-        if (!$conditionCheck['allowed']) {
-            // Clear OTP and session data
-            $user->ver_code = null;
-            $user->ver_code_send_at = null;
-            $user->save();
-            session()->forget(['deposit_withdrawal_data', 'show_deposit_otp_form']);
-            
-            // Check if profile completion is the specific issue
-            $failures = $conditionCheck['failures'];
-            if (count($failures) === 1 && strpos($failures[0], 'Profile completion') !== false) {
-                return redirect()->back()->with('swal_error', [
-                    'title' => 'Profile Incomplete!',
-                    'text' => 'Please complete your profile information before making withdrawals. Update your profile with all required details including name, mobile, country, and address.',
-                    'icon' => 'warning'
-                ]);
-            }
-            
-            return redirect()->back()->with('swal_error', [
-                'title' => 'Requirements Not Met!',
-                'text' => 'Withdrawal requirements not met: ' . implode(', ', $conditionCheck['failures']),
-                'icon' => 'error'
-            ]);
-        }
-        
+        // Conditions already checked before OTP was sent, no need to check again
         // Clear OTP and session data after successful verification
         $user->ver_code = null;
         $user->ver_code_send_at = null;

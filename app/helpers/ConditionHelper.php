@@ -178,7 +178,26 @@ if (!function_exists('checkWithdrawalConditions')) {
             }
         }
 
-        // 4. Referral Condition Check
+        // 4. Minimum Investment Duration Check (User's own investment)
+        if (($conditions['minimum_investment_duration_days'] ?? 0) > 0) {
+            $minDuration = $conditions['minimum_investment_duration_days'];
+            $hasValidInvestmentDuration = checkUserInvestmentDuration($user, $minDuration);
+            
+            $requirements[] = [
+                'name' => 'Minimum Investment Duration',
+                'icon' => 'fas fa-clock',
+                'description' => 'Investment must be at least ' . $minDuration . ' days old',
+                'status' => $hasValidInvestmentDuration,
+                'action_url' => route('user.invest-history'),
+                'action_text' => 'View Investments'
+            ];
+            
+            if (!$hasValidInvestmentDuration) {
+                $failures[] = 'Minimum investment duration of ' . $minDuration . ' days is required';
+            }
+        }
+
+        // 5. Referral Condition Check
         if ($conditions['referral_required']) {
             $hasActiveReferral = checkReferralCondition($user);
             $referralConditions = $conditions['referral_conditions'] ?? [];
@@ -268,6 +287,7 @@ if (!function_exists('getWithdrawalConditions')) {
             'kyc_required' => true,
             'email_verification_required' => true,
             'profile_complete_required' => true,
+            'minimum_investment_duration_days' => 0, // User's own investment minimum duration
             'referral_required' => true,
             'referral_conditions' => [
                 'enabled' => true,
@@ -275,7 +295,7 @@ if (!function_exists('getWithdrawalConditions')) {
                 'minimum_investment_amount' => 50,
                 'require_active_investment' => true,
                 'allow_multiple_small_investments' => false, // If true, allows multiple smaller investments to sum up to minimum
-                'minimum_investment_duration_days' => 0, // 0 means no minimum duration
+                'minimum_investment_duration_days' => 0, // 0 means no minimum duration for referral investments
             ]
         ], $conditions);
     }
@@ -409,5 +429,31 @@ if (!function_exists('getRequirementsSummary')) {
                 }))
             ]
         ];
+    }
+}
+
+if (!function_exists('checkUserInvestmentDuration')) {
+    /**
+     * Check if user has an investment that meets minimum duration requirement
+     *
+     * @param User $user
+     * @param int $minDurationDays
+     * @return bool
+     */
+    function checkUserInvestmentDuration($user, $minDurationDays)
+    {
+        if ($minDurationDays <= 0) {
+            return true; // No duration requirement
+        }
+        
+        $minDate = now()->subDays($minDurationDays);
+        
+        // Check if user has any active investment that is older than the minimum duration
+        $validInvestment = Invest::where('user_id', $user->id)
+            ->where('status', 1) // Active investment
+            ->where('created_at', '<=', $minDate)
+            ->exists();
+            
+        return $validInvestment;
     }
 }
