@@ -657,15 +657,39 @@ class WithdrawController extends Controller
 
         // Send OTP email
         try {
-            $emailContent = $this->createOtpEmailContent($user, $otpCode, 'Wallet Withdrawal Verification');
+            // Simple email approach using basic HTML (same as deposit withdrawal)
+            $subject = 'Wallet Withdrawal OTP Verification - ' . config('app.name');
+            $emailBody = $this->createOtpEmailContent($user, $otpCode, 'Wallet Withdrawal Verification');
             
-            $emailSent = Mail::raw($emailContent, function ($message) use ($user) {
-                $message->to($user->email)
-                        ->subject('Wallet Withdrawal Verification Code - ' . config('app.name'))
-                        ->html($this->createOtpEmailContent($user, $user->ver_code, 'Wallet Withdrawal Verification'));
-            });
-
-            if ($emailSent !== false) {
+            // Try to send email
+            $emailSent = false;
+            try {
+                Mail::html($emailBody, function($message) use ($user, $subject) {
+                    $message->to($user->email)
+                            ->subject($subject);
+                });
+                $emailSent = true;
+            } catch (\Exception $e) {
+                Log::error('Mail::html failed, trying with send method: ' . $e->getMessage());
+                
+                // Fallback to view-based email
+                try {
+                    Mail::send('emails.verification-code', [
+                        'user' => $user,
+                        'code' => $otpCode,
+                        'type' => 'Wallet Withdrawal Verification'
+                    ], function($message) use ($user, $subject) {
+                        $message->to($user->email)
+                                ->subject($subject);
+                    });
+                    $emailSent = true;
+                } catch (\Exception $e2) {
+                    Log::error('Mail::send also failed: ' . $e2->getMessage());
+                    $emailSent = false;
+                }
+            }
+            
+            if ($emailSent) {
                 return redirect()->route('user.withdraw.wallet')->with('swal_success', [
                     'title' => 'OTP Sent!',
                     'text' => 'Verification code has been sent to your email address. Please check your email and enter the 6-digit code below.',

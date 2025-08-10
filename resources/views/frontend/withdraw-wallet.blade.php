@@ -20,14 +20,6 @@
         'pending_wallet_amount' => 0
     ];
     $recentWithdrawals = $recentWithdrawals ?? collect([]);
-    
-    // Debug information
-    $debugInfo = [
-        'isWalletOtpSession' => $isWalletOtpSession,
-        'session_show_wallet_otp_form' => session('show_wallet_otp_form'),
-        'session_wallet_withdrawal_data' => session('wallet_withdrawal_data'),
-        'walletStoredData' => $walletStoredData
-    ];
 @endphp
 <div class="container-fluid">
     <!-- Page Header -->
@@ -57,14 +49,6 @@
             {{ session('error') }}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
-    @endif
-
-    <!-- Debug Information (remove in production) -->
-    @if(config('app.debug'))
-    <div class="alert alert-info">
-        <strong>Debug Info:</strong>
-        <pre>{{ json_encode($debugInfo, JSON_PRETTY_PRINT) }}</pre>
-    </div>
     @endif
 
     <div class="row">
