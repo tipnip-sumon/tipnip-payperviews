@@ -361,6 +361,21 @@
         }
         
         @media (max-width: 991.98px) {
+            /* Hide sidebar logo on tablet and mobile */
+            .main-sidebar-header {
+                display: none !important;
+            }
+            
+            /* Hide entire horizontal logo area on mobile */
+            .horizontal-logo {
+                display: none !important;
+            }
+            
+            /* Hide specific header logo on mobile */
+            .toggle-dark {
+                display: none !important;
+            }
+            
             .logo-text {
                 font-size: 1.2rem !important;
             }
@@ -371,6 +386,21 @@
         }
         
         @media (max-width: 767.98px) {
+            /* Hide sidebar logo on mobile */
+            .main-sidebar-header {
+                display: none !important;
+            }
+            
+            /* Hide entire horizontal logo area on mobile */
+            .horizontal-logo {
+                display: none !important;
+            }
+            
+            /* Hide specific header logo on mobile */
+            .toggle-dark {
+                display: none !important;
+            }
+            
             .logo-text {
                 font-size: 1.1rem !important;
             }
@@ -381,6 +411,21 @@
         }
         
         @media (max-width: 575.98px) {
+            /* Hide sidebar logo on small mobile */
+            .main-sidebar-header {
+                display: none !important;
+            }
+            
+            /* Hide entire horizontal logo area on mobile */
+            .horizontal-logo {
+                display: none !important;
+            }
+            
+            /* Hide specific header logo on mobile */
+            .toggle-dark {
+                display: none !important;
+            }
+            
             .logo-text {
                 font-size: 1rem !important;
             }
@@ -884,9 +929,19 @@
             .action-btn span {
                 font-size: 0.5rem;
             }
+            
+            /* Hide sidebar logo on mobile/tablet */
+            .main-sidebar-header {
+                display: none !important;
+            }
         }
         
         @media (max-width: 767.98px) {
+            /* Hide sidebar logo on mobile */
+            .main-sidebar-header {
+                display: none !important;
+            }
+            
             .app-sidebar__user {
                 padding: 0.5rem;
             }
@@ -960,6 +1015,11 @@
         }
         
         @media (max-width: 575.98px) {
+            /* Hide sidebar logo on small mobile */
+            .horizontal-logo {
+                display: none !important;
+            }
+            
             .user-profile-card {
                 padding: 0.6rem;
             }

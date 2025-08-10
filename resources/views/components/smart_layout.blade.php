@@ -50,12 +50,15 @@
 
 @if($isMobile)
     {{-- Load Mobile Layout with all content --}}
-    <x-mobile_layout>
+    {{-- <x-mobile_layout>
         {{ $slot }}
-    </x-mobile_layout>
+    </x-mobile_layout> --}}
 @else
     {{-- Load Desktop Layout with all content --}}
-    <x-desktop_layout>
+    {{-- <x-desktop_layout>
         {{ $slot }}
-    </x-desktop_layout>
+    </x-desktop_layout> --}}
 @endif
+<x-desktop_layout>
+    {{ $slot }}
+</x-desktop_layout>
