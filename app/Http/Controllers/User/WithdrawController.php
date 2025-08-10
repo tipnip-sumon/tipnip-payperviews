@@ -101,26 +101,15 @@ class WithdrawController extends Controller
             return $this->verifyDepositWithdrawOtp($request);
         }
         
-        // First step: Basic validation and send OTP
+        // First step: Basic validation (NO PASSWORD YET) and send OTP
         $request->validate([
-            'password' => 'required',
             'method_id' => 'required|exists:withdraw_methods,id',
             'account_details' => 'required|string|max:500'
         ], [
-            'password.required' => 'Transaction password is required',
             'method_id.required' => 'Please select a withdrawal method',
             'method_id.exists' => 'Invalid withdrawal method selected',
             'account_details.required' => 'Account details are required'
         ]);
-        
-        // Verify password first
-        if (!Auth::attempt(['username' => $user->username, 'password' => $request->password])) {
-            return back()->with('swal_error', [
-                'title' => 'Authentication Failed!',
-                'text' => 'Invalid transaction password',
-                'icon' => 'error'
-            ]);
-        }
         
         // Get the selected withdrawal method for validation
         $withdrawMethod = WithdrawMethod::where('id', $request->method_id)->where('status', 1)->first();
@@ -156,12 +145,11 @@ class WithdrawController extends Controller
             ]);
         }
         
-        // Store withdrawal data in session for OTP verification
+        // Store withdrawal data in session for OTP verification (NO PASSWORD YET)
         session([
             'deposit_withdrawal_data' => [
                 'method_id' => $request->method_id,
-                'account_details' => $request->account_details,
-                'password' => $request->password
+                'account_details' => $request->account_details
             ],
             'show_deposit_otp_form' => true
         ]);
@@ -245,12 +233,17 @@ class WithdrawController extends Controller
     {
         $user = Auth::user();
         
-        // Validate OTP
+        // Validate OTP and password
         $request->validate([
-            'otp_code' => 'required|digits:6'
+            'otp_code' => 'required|digits:6',
+            'password' => 'required|string'
+        ], [
+            'otp_code.required' => 'Verification code is required',
+            'otp_code.digits' => 'Verification code must be 6 digits',
+            'password.required' => 'Transaction password is required'
         ]);
         
-        // Check OTP
+        // Check OTP first
         if (!$user->ver_code || $user->ver_code != $request->otp_code) {
             return back()->with('swal_error', [
                 'title' => 'Invalid OTP!',
@@ -266,6 +259,15 @@ class WithdrawController extends Controller
                 'text' => 'The verification code has expired. Please request a new one.',
                 'icon' => 'error'
             ]);
+        }
+        
+        // NOW verify password after OTP is confirmed
+        if (!Auth::attempt(['username' => $user->username, 'password' => $request->password])) {
+            return back()->with('swal_error', [
+                'title' => 'Authentication Failed!',
+                'text' => 'Invalid transaction password',
+                'icon' => 'error'
+            ])->withInput();
         }
         
         // Get withdrawal data from session
