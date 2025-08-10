@@ -12,7 +12,7 @@ use Illuminate\Http\Request;
 // use Illuminate\Auth\Events\Registered;    
 // use Illuminate\Http\Request;
 
-class RegisterController extends Controller
+class RegisterController extends Controller 
 {
     /*
     |--------------------------------------------------------------------------
@@ -359,24 +359,31 @@ class RegisterController extends Controller
         }
     }
 
-    // /**
-    //  * Show the registration form with sponsor reference.
-    //  *
-    //  * @param  \Illuminate\Http\Request  $request
-    //  * @return \Illuminate\Http\Response
-    //  */
-    // public function showRegistrationForm(Request $request)
-    // {
-    //     $reference = $request->get('ref');
-    //     $referralBy = null;
+    /**
+     * Show the registration form with sponsor reference.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function showRegistrationForm(Request $request)
+    {
+        $reference = $request->get('ref');
+        $referralBy = null;
         
-    //     if ($reference) {
-    //         $referralUser = User::where('username', $reference)->first();
-    //         if ($referralUser) {
-    //             $referralBy = $reference;
-    //         }
-    //     }
+        if ($reference) {
+            // Try to find user by referral hash first
+            $referralUser = User::findByReferralHash($reference);
+            
+            // If not found by hash, try by username (for backward compatibility)
+            if (!$referralUser) {
+                $referralUser = User::where('username', $reference)->first();
+            }
+            
+            if ($referralUser && $referralUser->status == 1) {
+                $referralBy = $reference;
+            }
+        }
 
-    //     return view('auth.register', compact('reference', 'referralBy'));
-    // }
+        return view('auth.register_fresh', compact('reference', 'referralBy'));
+    }
 }
