@@ -133,12 +133,6 @@ class GlobalRealtimeUpdates {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
 
-            // Check if response is actually JSON
-            const contentType = response.headers.get('content-type');
-            if (!contentType || !contentType.includes('application/json')) {
-                throw new Error('Response is not JSON');
-            }
-
             return await response.json();
         } catch (error) {
             // Handle network errors silently in production
@@ -539,12 +533,6 @@ class GlobalRealtimeUpdates {
             });
 
             if (response.ok) {
-                // Check if response is actually JSON
-                const contentType = response.headers.get('content-type');
-                if (!contentType || !contentType.includes('application/json')) {
-                    return false;
-                }
-                
                 const result = await response.json();
                 if (result.success) {
                     this.showErrorNotification('Connection restored! Updates resuming...', 'success', 3000);

@@ -130,9 +130,6 @@ class RegisterController extends Controller
             }
             
             $sponsorId = $sponsor ? $sponsor->id : null;
-        } else {
-            // If no sponsor provided, automatically set to user ID 1 (default sponsor)
-            $sponsorId = 1;
         }
         
         $user = User::create([
@@ -368,18 +365,18 @@ class RegisterController extends Controller
     //  * @param  \Illuminate\Http\Request  $request
     //  * @return \Illuminate\Http\Response
     //  */
-    public function showRegistrationForm(Request $request)
-    {
-        $reference = $request->get('ref');
-        $referralBy = null;
+    // public function showRegistrationForm(Request $request)
+    // {
+    //     $reference = $request->get('ref');
+    //     $referralBy = null;
         
-        if ($reference) {
-            $referralUser = User::where('username', $reference)->first();
-            if ($referralUser) {
-                $referralBy = $reference;
-            }
-        }
+    //     if ($reference) {
+    //         $referralUser = User::where('username', $reference)->first();
+    //         if ($referralUser) {
+    //             $referralBy = $reference;
+    //         }
+    //     }
 
-        return view('auth.register_fresh', compact('reference', 'referralBy'));
-    }
+    //     return view('auth.register', compact('reference', 'referralBy'));
+    // }
 }

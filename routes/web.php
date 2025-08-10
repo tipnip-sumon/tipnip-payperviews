@@ -754,9 +754,6 @@ Route::controller(App\Http\Controllers\User\WithdrawController::class)->middlewa
     Route::get('/user/withdraw/wallet','walletIndex')->name('user.withdraw.wallet');
     Route::post('/user/withdraw/wallet','walletWithdraw')->name('user.withdraw.wallet.submit');
     Route::get('/user/withdraw/wallet/history','walletHistory')->name('user.withdraw.wallet.history');
-    // AJAX OTP Routes
-    Route::post('/user/withdraw/send-otp','sendDepositWithdrawOtp')->name('user.withdraw.send-otp');
-    Route::post('/user/withdraw/wallet/send-otp','sendWalletWithdrawOtp')->name('user.withdraw.wallet.send-otp');
 });
 
 // =============================================================================

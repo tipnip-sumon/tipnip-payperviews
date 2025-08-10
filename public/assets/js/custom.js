@@ -5,9 +5,7 @@
   
   function hideLoader() {
     const loader = document.getElementById("loader");
-    if (loader) {
-      loader.classList.add("d-none");
-    }
+    loader.classList.add("d-none")
   }
 
   window.addEventListener("load", hideLoader);
@@ -75,10 +73,7 @@
 
     button.addEventListener("click", () => {
       const el = document.createElement("p");
-      // Safety check before appendChild
-      if (pickrContainerPrimary) {
-        pickrContainerPrimary.appendChild(el);
-      }
+      pickrContainerPrimary.appendChild(el);
 
       /* Delete previous instance */
       if (nanoPickr) {
@@ -91,22 +86,16 @@
       }
 
       /* Create fresh instance */
-      // Safety check for element before creating Pickr
-      if (el && pickrContainerPrimary && pickrContainerPrimary.contains(el)) {
-        nanoPickr = new Pickr(
-          Object.assign(
-            {
-              el,
-              theme,
-              default: "#3366ff",
-            },
-            config
-          )
-        );
-      } else {
-        console.warn('Pickr element not properly initialized, skipping');
-        return;
-      }
+      nanoPickr = new Pickr(
+        Object.assign(
+          {
+            el,
+            theme,
+            default: "#3366ff",
+          },
+          config
+        )
+      );
 
       /* Set events */
       nanoPickr.on("changestop", (source, instance) => {
@@ -129,16 +118,9 @@
       });
     });
 
-    // Check if themeContainerPrimary exists before appendChild
-    if (themeContainerPrimary) {
-      themeContainerPrimary.appendChild(button);
-    }
+    themeContainerPrimary.appendChild(button);
   }
-  
-  // Check if nanoButtons exists and has elements before clicking
-  if (nanoButtons && nanoButtons.length > 0) {
-    nanoButtons[0].click();
-  }
+  nanoButtons[0].click();
   /* for theme primary */
 
   /* for theme background */
@@ -173,10 +155,7 @@
 
     button.addEventListener("click", () => {
       const el = document.createElement("p");
-      // Safety check before appendChild
-      if (pickrContainerBackground) {
-        pickrContainerBackground.appendChild(el);
-      }
+      pickrContainerBackground.appendChild(el);
 
       /* Delete previous instance */
       if (nanoPickr1) {
@@ -242,10 +221,7 @@
         );
       });
     });
-    // Safety check before appendChild
-    if (themeContainerBackground) {
-      themeContainerBackground.appendChild(button);
-    }
+    themeContainerBackground.appendChild(button);
   }
   nanoButtons1[0].click();
   /* for theme background */

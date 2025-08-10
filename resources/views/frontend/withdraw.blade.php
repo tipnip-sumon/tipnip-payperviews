@@ -385,6 +385,7 @@
     @endpush
 
     @push('script')
+    <script src="{{ asset('assets_custom/js/jquery-3.7.1.min.js') }}"></script>
     <script>
         $(document).ready(function() {
             // Handle withdrawal method change
