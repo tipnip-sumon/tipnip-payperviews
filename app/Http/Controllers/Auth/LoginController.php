@@ -938,4 +938,134 @@ class LoginController extends Controller
             ]);
         }
     }
+
+    /**
+     * Simple login method that handles CSRF issues gracefully
+     */
+    public function simpleLogin(Request $request)
+    {
+        try {
+            // Validate input
+            $credentials = $request->validate([
+                'email' => 'required|string',
+                'password' => 'required|string',
+            ]);
+
+            // Allow login with email or username
+            $loginField = filter_var($credentials['email'], FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
+            $loginCredentials = [
+                $loginField => $credentials['email'],
+                'password' => $credentials['password']
+            ];
+
+            // Find user first to check status
+            $user = User::where($loginField, $credentials['email'])->first();
+
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid email/username or password.',
+                    'error_type' => 'invalid_credentials'
+                ], 401);
+            }
+
+            // Check if user is active
+            if (!$user->is_active) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Your account has been deactivated. Please contact support.',
+                    'error_type' => 'account_deactivated'
+                ], 401);
+            }
+
+            // Check for account locks
+            if ($user->isLocked()) {
+                $lockExpiry = $user->locked_until->diffForHumans();
+                return response()->json([
+                    'success' => false,
+                    'message' => "Account is temporarily locked. Try again {$lockExpiry}.",
+                    'error_type' => 'account_locked',
+                    'lock_expiry' => $user->locked_until
+                ], 401);
+            }
+
+            // Attempt authentication
+            if (\Illuminate\Support\Facades\Auth::attempt($loginCredentials, $request->filled('remember'))) {
+                $user = \Illuminate\Support\Facades\Auth::user();
+                
+                // Reset login attempts on successful login
+                $user->login_attempts = 0;
+                $user->save();
+                
+                // Check email verification
+                if (!$user->email_verified_at) {
+                    \Illuminate\Support\Facades\Auth::logout();
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Please verify your email address before logging in.',
+                        'error_type' => 'email_not_verified',
+                        'email' => $user->email
+                    ], 401);
+                }
+
+                // Regenerate session for security
+                $request->session()->regenerate();
+                
+                // Set success session data
+                session([
+                    'login_success' => true,
+                    'fresh_login' => true,
+                    'user_id' => $user->id,
+                    'login_timestamp' => time()
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Login successful! Redirecting to dashboard...',
+                    'redirect' => route('user.dashboard'),
+                    'user' => [
+                        'id' => $user->id,
+                        'username' => $user->username,
+                        'email' => $user->email
+                    ]
+                ]);
+
+            } else {
+                // Invalid credentials - increment attempts
+                $user->incrementLoginAttempts();
+                
+                $remainingAttempts = 5 - $user->login_attempts;
+                $isLastAttempt = $remainingAttempts <= 1;
+                
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid email/username or password.',
+                    'error_type' => 'invalid_password',
+                    'remaining_attempts' => max(0, $remainingAttempts),
+                    'is_last_attempt' => $isLastAttempt
+                ], 401);
+            }
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Please fill in all required fields.',
+                'errors' => $e->errors(),
+                'error_type' => 'validation_error'
+            ], 422);
+            
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Simple login error', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'input' => $request->only(['email'])
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'An error occurred during login. Please try again.',
+                'error_type' => 'server_error'
+            ], 500);
+        }
+    }
 }

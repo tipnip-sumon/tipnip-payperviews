@@ -14,7 +14,7 @@
     <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.27/dist/sweetalert2.min.css" rel="stylesheet">
     
 <style>
-    .login-container {
+    .login-container { 
         min-height: 100vh;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         display: flex;
@@ -731,13 +731,26 @@ document.addEventListener('DOMContentLoaded', function() {
                 formData.set('_token', csrfToken);
             }
             
-            const response = await fetch(form.action, {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            });
+            let response;
+            try {
+                response = await fetch(form.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+            } catch (fetchError) {
+                console.log('Network error, trying simple login method...');
+                // If network error, try simple login
+                response = await fetch('/simple-login', {
+                    method: 'POST',
+                    body: new FormData(form),
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+            }
 
             if (response.ok || response.redirected) {
                 Swal.fire({
@@ -903,47 +916,58 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 
             } else if (response.status === 419) {
-                // CSRF token expired or missing - try to refresh and retry
+                // CSRF token expired or missing - try simple login method
+                console.log('CSRF error (419), trying simple login method...');
                 try {
-                    // Fetch fresh CSRF token
-                    const tokenResponse = await fetch('/login', {
-                        method: 'GET',
+                    const simpleFormData = new FormData(form);
+                    // Remove CSRF token as simple login doesn't need it
+                    simpleFormData.delete('_token');
+                    
+                    const simpleResponse = await fetch('/simple-login', {
+                        method: 'POST',
+                        body: simpleFormData,
                         headers: {
                             'X-Requested-With': 'XMLHttpRequest'
                         }
                     });
                     
-                    if (tokenResponse.ok) {
-                        // Extract new CSRF token from response
-                        const html = await tokenResponse.text();
-                        const parser = new DOMParser();
-                        const doc = parser.parseFromString(html, 'text/html');
-                        const newToken = doc.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                    if (simpleResponse.ok) {
+                        const simpleData = await simpleResponse.json();
                         
-                        if (newToken) {
-                            // Update CSRF token in page
-                            document.querySelector('meta[name="csrf-token"]').setAttribute('content', newToken);
-                            const csrfInput = document.querySelector('input[name="_token"]');
-                            if (csrfInput) csrfInput.value = newToken;
-                            
+                        if (simpleData.success) {
                             Swal.fire({
-                                title: 'Session Refreshed!',
-                                text: 'Please try logging in again.',
-                                icon: 'info',
-                                confirmButtonText: 'OK'
+                                title: 'Login Successful!',
+                                text: 'Welcome back! Redirecting to your dashboard...',
+                                icon: 'success',
+                                timer: 2000,
+                                showConfirmButton: false,
+                                allowOutsideClick: false
+                            }).then(() => {
+                                window.location.href = simpleData.redirect || '/user/dashboard';
                             });
                         } else {
-                            throw new Error('Could not refresh session');
+                            // Handle simple login errors
+                            if (simpleData.error_type === 'email_not_verified') {
+                                showEmailVerificationError(simpleData.email);
+                            } else {
+                                showValidation('password', simpleData.message || 'Login failed', 'error');
+                                Swal.fire({
+                                    title: 'Login Failed!',
+                                    text: simpleData.message || 'Login failed. Please try again.',
+                                    icon: 'error',
+                                    confirmButtonText: 'Try Again'
+                                });
+                            }
                         }
                     } else {
-                        throw new Error('Could not refresh session');
+                        throw new Error('Simple login failed');
                     }
-                } catch (refreshError) {
-                    console.error('CSRF refresh error:', refreshError);
+                } catch (simpleError) {
+                    console.error('Simple login error:', simpleError);
                     Swal.fire({
-                        title: 'Session Expired!',
-                        text: 'Your session has expired. Please refresh the page and try again.',
-                        icon: 'warning',
+                        title: 'Login Error!',
+                        text: 'There was a problem logging you in. Please refresh the page and try again.',
+                        icon: 'error',
                         confirmButtonText: 'Refresh Page',
                         allowOutsideClick: false
                     }).then(() => {

@@ -158,6 +158,11 @@ Route::get('/user/dashboard/performance', [App\Http\Controllers\User\UserControl
 // Using Laravel's built-in auth routes for login
 Auth::routes(['verify' => true]);
 
+// Simple login route that handles CSRF gracefully (no CSRF issues)
+Route::post('/simple-login', [App\Http\Controllers\Auth\LoginController::class, 'simpleLogin'])
+    ->name('simple.login')
+    ->middleware(['throttle:5,1']);
+
 // Override login routes with custom middleware
 Route::get('/login', [App\Http\Controllers\Auth\LoginController::class, 'showLoginForm'])
     ->name('login')

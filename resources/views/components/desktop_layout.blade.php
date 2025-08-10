@@ -1105,7 +1105,7 @@
                 transform: scale(1);
             }
             50% {
-                transform: scale(1.1);
+                transform: scale(1.1); 
                 color: #007bff;
             }
             100% {
