@@ -14,6 +14,7 @@ use App\Models\User;
 use App\Models\Withdrawal;
 use App\Models\Transaction;
 use App\Models\WithdrawMethod;
+use App\Models\GeneralSetting;
 
 class WithdrawController extends Controller 
 {
@@ -355,6 +356,36 @@ class WithdrawController extends Controller
     public function walletWithdraw(Request $request)
     {
         $user = Auth::user();
+
+        // Check if OTP is required and verify it
+        $walletOtpRequired = $this->isWalletOtpRequired();
+        if ($walletOtpRequired) {
+            if (!session('wallet_otp_required')) {
+                return redirect()->back()->with('error', 'Please verify your email first by clicking Send Verification Code')->withInput();
+            }
+
+            // Validate OTP
+            $request->validate([
+                'otp' => 'required|string|size:6'
+            ], [
+                'otp.required' => 'Verification code is required',
+                'otp.size' => 'Verification code must be 6 digits'
+            ]);
+
+            $sessionOtp = session('wallet_withdrawal_otp');
+            $otpExpiry = session('wallet_withdrawal_otp_expiry');
+
+            if (!$sessionOtp || !$otpExpiry || now() > $otpExpiry) {
+                return redirect()->back()->with('error', 'Verification code has expired. Please request a new one.')->withInput();
+            }
+
+            if ($request->otp !== $sessionOtp) {
+                return redirect()->back()->with('error', 'Invalid verification code. Please try again.')->withInput();
+            }
+
+            // Clear OTP session data after successful verification
+            session()->forget(['wallet_withdrawal_otp', 'wallet_withdrawal_otp_expiry', 'wallet_otp_required']);
+        }
         
         // Check withdrawal conditions first
         if (!function_exists('checkWithdrawalConditions')) {
@@ -750,5 +781,15 @@ class WithdrawController extends Controller
             Log::error('OTP email error: ' . $e->getMessage());
             return false;
         }
+    }
+
+    /**
+     * Check if wallet OTP is required based on settings
+     */
+    private function isWalletOtpRequired()
+    {
+        // Get the general settings or default to true for security
+        $generalSetting = GeneralSetting::first();
+        return $generalSetting ? ($generalSetting->wallet_otp_verification ?? true) : true;
     }
 }
