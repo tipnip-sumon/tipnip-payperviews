@@ -223,6 +223,21 @@
                                     @enderror
                                 </div>
 
+                                <!-- Method Information Display -->
+                                <div id="method-info" class="card bg-light mb-3" style="display: none;">
+                                    <div class="card-body">
+                                        <div id="method-details"></div>
+                                    </div>
+                                </div>
+
+                                <!-- Charge Calculation Display -->
+                                <div id="charge-calculation" class="card bg-info text-white mb-3" style="display: none;">
+                                    <div class="card-body">
+                                        <h6 class="text-white mb-3">Withdrawal Calculation</h6>
+                                        <div id="calculation-details"></div>
+                                    </div>
+                                </div>
+
                                 <div class="alert alert-info">
                                     <i class="fe fe-info me-2"></i>
                                     <strong>Step 1:</strong> Fill out the withdrawal details above and click "Send Verification Code" to receive an OTP via email.
@@ -405,110 +420,157 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const amountInput = document.getElementById('amount');
-    const methodSelect = document.getElementById('withdraw_method');
+    const methodSelect = document.getElementById('method_id'); // Fixed selector ID
     const methodInfo = document.getElementById('method-info');
     const methodDetails = document.getElementById('method-details');
     const chargeCalculation = document.getElementById('charge-calculation');
+    const calculationDetails = document.getElementById('calculation-details');
     const maxAmount = {{ $totalWalletBalance }};
     
     // Amount input validation
-    amountInput.addEventListener('input', function() {
-        if (parseFloat(this.value) > maxAmount) {
-            this.value = maxAmount;
-        }
-        updateChargeCalculation();
-    });
+    if (amountInput) {
+        amountInput.addEventListener('input', function() {
+            if (parseFloat(this.value) > maxAmount) {
+                this.value = maxAmount;
+            }
+            updateChargeCalculation();
+        });
+    }
 
     // Method selection handler
-    methodSelect.addEventListener('change', function() {
-        const selectedOption = this.options[this.selectedIndex];
-        
-        if (this.value) {
-            const minAmount = parseFloat(selectedOption.dataset.min);
-            const maxAmount = parseFloat(selectedOption.dataset.max);
-            const chargeType = selectedOption.dataset.chargeType;
-            const charge = parseFloat(selectedOption.dataset.charge);
+    if (methodSelect) {
+        methodSelect.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
             
-            // Update amount input constraints
-            amountInput.min = minAmount;
-            amountInput.max = Math.min(maxAmount, {{ $totalWalletBalance }});
-            
-            // Show method information
-            methodDetails.innerHTML = `
-                <strong>Selected Method:</strong> ${selectedOption.text.split('(')[0].trim()}<br>
-                <strong>Limits:</strong> $${minAmount.toFixed(2)} - $${Math.min(maxAmount, {{ $totalWalletBalance }}).toFixed(2)}<br>
-                <strong>Charge:</strong> ${chargeType === 'percent' ? charge + '%' : '$' + charge.toFixed(2)}
-            `;
-            
-            methodInfo.style.display = 'block';
-            updateChargeCalculation();
-        } else {
-            methodInfo.style.display = 'none';
-            amountInput.min = 1;
-            amountInput.max = {{ $totalWalletBalance }};
-        }
-    });
+            if (this.value && selectedOption) {
+                const minAmount = parseFloat(selectedOption.dataset.min) || 0;
+                const maxAmount = parseFloat(selectedOption.dataset.max) || 999999;
+                const fixedCharge = parseFloat(selectedOption.dataset.fixedCharge) || 0;
+                const percentCharge = parseFloat(selectedOption.dataset.percentCharge) || 0;
+                
+                // Update amount input constraints
+                if (amountInput) {
+                    amountInput.min = minAmount;
+                    amountInput.max = Math.min(maxAmount, {{ $totalWalletBalance }});
+                }
+                
+                // Show method information
+                let chargeText = 'No fee';
+                if (fixedCharge > 0 || percentCharge > 0) {
+                    chargeText = '';
+                    if (fixedCharge > 0) {
+                        chargeText += '$' + fixedCharge.toFixed(2);
+                    }
+                    if (fixedCharge > 0 && percentCharge > 0) {
+                        chargeText += ' + ';
+                    }
+                    if (percentCharge > 0) {
+                        chargeText += percentCharge + '%';
+                    }
+                    chargeText += ' fee';
+                }
+                
+                methodDetails.innerHTML = `
+                    <div class="row">
+                        <div class="col-md-12 mb-2">
+                            <strong><i class="fe fe-credit-card me-2"></i>Selected Method:</strong> ${selectedOption.text.split('(')[0].trim()}
+                        </div>
+                        <div class="col-md-6">
+                            <strong><i class="fe fe-dollar-sign me-2"></i>Limits:</strong><br>
+                            <span class="text-muted">Min: $${minAmount.toFixed(2)} - Max: $${Math.min(maxAmount, {{ $totalWalletBalance }}).toFixed(2)}</span>
+                        </div>
+                        <div class="col-md-6">
+                            <strong><i class="fe fe-percent me-2"></i>Charge:</strong><br>
+                            <span class="text-muted">${chargeText}</span>
+                        </div>
+                    </div>
+                `;
+                
+                methodInfo.style.display = 'block';
+                updateChargeCalculation();
+            } else {
+                methodInfo.style.display = 'none';
+                chargeCalculation.style.display = 'none';
+                if (amountInput) {
+                    amountInput.min = 1;
+                    amountInput.max = {{ $totalWalletBalance }};
+                }
+            }
+        });
+    }
 
     function updateChargeCalculation() {
+        if (!methodSelect || !amountInput) return;
+        
         const selectedOption = methodSelect.options[methodSelect.selectedIndex];
         const amount = parseFloat(amountInput.value);
         
-        if (methodSelect.value && amount > 0) {
-            const chargeType = selectedOption.dataset.chargeType;
-            const chargeRate = parseFloat(selectedOption.dataset.charge);
+        if (methodSelect.value && amount > 0 && selectedOption) {
+            const fixedCharge = parseFloat(selectedOption.dataset.fixedCharge) || 0;
+            const percentCharge = parseFloat(selectedOption.dataset.percentCharge) || 0;
             
-            let chargeAmount = 0;
-            if (chargeType === 'percent') {
-                chargeAmount = (amount * chargeRate) / 100;
-            } else {
-                chargeAmount = chargeRate;
+            let chargeAmount = fixedCharge;
+            if (percentCharge > 0) {
+                chargeAmount += (amount * percentCharge) / 100;
             }
             
             const finalAmount = amount - chargeAmount;
             
-            chargeCalculation.innerHTML = `
+            calculationDetails.innerHTML = `
                 <div class="row text-center">
                     <div class="col-4">
-                        <strong>Requested:</strong><br>
-                        <span class="text-primary">$${amount.toFixed(2)}</span>
+                        <div class="text-center">
+                            <strong>Requested Amount</strong><br>
+                            <span class="fs-5 text-white">$${amount.toFixed(2)}</span>
+                        </div>
                     </div>
                     <div class="col-4">
-                        <strong>Charge:</strong><br>
-                        <span class="text-warning">$${chargeAmount.toFixed(2)}</span>
+                        <div class="text-center">
+                            <strong>Processing Fee</strong><br>
+                            <span class="fs-5 text-warning">$${chargeAmount.toFixed(2)}</span>
+                        </div>
                     </div>
                     <div class="col-4">
-                        <strong>You'll Receive:</strong><br>
-                        <span class="text-success">$${finalAmount.toFixed(2)}</span>
+                        <div class="text-center">
+                            <strong>You'll Receive</strong><br>
+                            <span class="fs-5 text-success fw-bold">$${finalAmount.toFixed(2)}</span>
+                        </div>
                     </div>
                 </div>
             `;
+            chargeCalculation.style.display = 'block';
         } else {
-            chargeCalculation.innerHTML = '';
+            chargeCalculation.style.display = 'none';
         }
     }
 
     // Validate amount against method limits on form submission
-    document.querySelector('form').addEventListener('submit', function(e) {
-        const selectedOption = methodSelect.options[methodSelect.selectedIndex];
-        const amount = parseFloat(amountInput.value);
-        
-        if (methodSelect.value && amount > 0) {
-            const minAmount = parseFloat(selectedOption.dataset.min);
-            const maxAmount = parseFloat(selectedOption.dataset.max);
+    const withdrawForm = document.querySelector('form[action*="withdraw.wallet.submit"]');
+    if (withdrawForm) {
+        withdrawForm.addEventListener('submit', function(e) {
+            if (!methodSelect || !amountInput) return;
             
-            if (amount < minAmount) {
-                e.preventDefault();
-                alert(`Minimum withdrawal amount for this method is $${minAmount.toFixed(2)}`);
-                return;
-            }
+            const selectedOption = methodSelect.options[methodSelect.selectedIndex];
+            const amount = parseFloat(amountInput.value);
             
-            if (amount > maxAmount) {
-                e.preventDefault();
-                alert(`Maximum withdrawal amount for this method is $${maxAmount.toFixed(2)}`);
-                return;
+            if (methodSelect.value && amount > 0 && selectedOption) {
+                const minAmount = parseFloat(selectedOption.dataset.min) || 0;
+                const maxAmount = parseFloat(selectedOption.dataset.max) || 999999;
+                
+                if (amount < minAmount) {
+                    e.preventDefault();
+                    alert(`Minimum withdrawal amount for this method is $${minAmount.toFixed(2)}`);
+                    return;
+                }
+                
+                if (amount > Math.min(maxAmount, {{ $totalWalletBalance }})) {
+                    e.preventDefault();
+                    alert(`Maximum withdrawal amount for this method is $${Math.min(maxAmount, {{ $totalWalletBalance }}).toFixed(2)}`);
+                    return;
+                }
             }
-        }
-    });
+        });
+    }
 });
 </script>
 @endsection
