@@ -375,6 +375,15 @@ class WithdrawController extends Controller
             $sessionOtp = session('wallet_withdrawal_otp');
             $otpExpiry = session('wallet_withdrawal_otp_expiry');
 
+            // Debug logging
+            Log::info('OTP Verification Debug', [
+                'session_otp' => $sessionOtp,
+                'otp_expiry' => $otpExpiry,
+                'current_time' => now(),
+                'is_expired' => $otpExpiry ? now() > $otpExpiry : 'no_expiry',
+                'user_otp' => $request->otp
+            ]);
+
             if (!$sessionOtp || !$otpExpiry || now() > $otpExpiry) {
                 return redirect()->back()->with('error', 'Verification code has expired. Please request a new one.')->withInput();
             }
@@ -730,11 +739,20 @@ class WithdrawController extends Controller
 
             // Generate and send OTP
             $otp = sprintf('%06d', random_int(0, 999999));
+            $expiry = now()->addMinutes(30); // Temporarily increased to 30 minutes for testing
             
             session([
                 'wallet_withdrawal_otp' => $otp,
-                'wallet_withdrawal_otp_expiry' => now()->addMinutes(10),
+                'wallet_withdrawal_otp_expiry' => $expiry,
                 'wallet_otp_required' => true
+            ]);
+
+            // Debug logging
+            Log::info('OTP Generation Debug', [
+                'generated_otp' => $otp,
+                'expiry_time' => $expiry,
+                'current_time' => now(),
+                'user_id' => $user->id
             ]);
 
             // Send OTP email
