@@ -17,6 +17,52 @@
                     </div>
                 </div>
                 
+                <!-- Session Messages -->
+                @if(session('success'))
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        <i class="fas fa-check-circle me-2"></i>
+                        {{ session('success') }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                @endif
+
+                @if(session('error'))
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        {{ session('error') }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                @endif
+
+                @if(session('warning'))
+                    <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        {{ session('warning') }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                @endif
+
+                @if(session('info'))
+                    <div class="alert alert-info alert-dismissible fade show" role="alert">
+                        <i class="fas fa-info-circle me-2"></i>
+                        {{ session('info') }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                @endif
+
+                @if ($errors->any())
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Please correct the following errors:</strong>
+                        <ul class="mt-2 mb-0">
+                            @foreach ($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                @endif
+                
                 <form action="{{ route('admin.transfer-withdraw-conditions.update') }}" method="POST" id="conditionsForm">
                     @csrf
                     @method('PUT')
@@ -64,6 +110,17 @@
                                             <label class="form-check-label" for="transfer_profile_complete_required">
                                                 <strong>Profile Completion Required</strong>
                                                 <br><small class="text-muted">Users must complete their profile information</small>
+                                            </label>
+                                        </div>
+
+                                        <!-- OTP Requirement -->
+                                        <div class="form-check form-switch mb-3">
+                                            <input class="form-check-input" type="checkbox" id="transfer_otp_required" 
+                                                   name="transfer_otp_required" 
+                                                   {{ ($transferConditions['otp_required'] ?? false) ? 'checked' : '' }}>
+                                            <label class="form-check-label" for="transfer_otp_required">
+                                                <strong>OTP Verification Required</strong>
+                                                <br><small class="text-muted">Require OTP verification for transfers</small>
                                             </label>
                                         </div>
 
@@ -185,6 +242,58 @@
                                                 <strong>Profile Completion Required</strong>
                                                 <br><small class="text-muted">Users must complete their profile information</small>
                                             </label>
+                                        </div>
+
+                                        <!-- Withdrawal Types -->
+                                        <div class="row mb-3">
+                                            <div class="col-md-6">
+                                                <div class="form-check form-switch mb-3">
+                                                    <input class="form-check-input" type="checkbox" id="withdrawal_deposit_withdrawal_enabled" 
+                                                           name="withdrawal_deposit_withdrawal_enabled" 
+                                                           {{ ($withdrawalConditions['deposit_withdrawal_enabled'] ?? true) ? 'checked' : '' }}>
+                                                    <label class="form-check-label" for="withdrawal_deposit_withdrawal_enabled">
+                                                        <strong>Enable Deposit Withdrawals</strong>
+                                                        <br><small class="text-muted">Allow users to withdraw from deposit investments</small>
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="form-check form-switch mb-3">
+                                                    <input class="form-check-input" type="checkbox" id="withdrawal_wallet_withdrawal_enabled" 
+                                                           name="withdrawal_wallet_withdrawal_enabled" 
+                                                           {{ ($withdrawalConditions['wallet_withdrawal_enabled'] ?? true) ? 'checked' : '' }}>
+                                                    <label class="form-check-label" for="withdrawal_wallet_withdrawal_enabled">
+                                                        <strong>Enable Wallet Withdrawals</strong>
+                                                        <br><small class="text-muted">Allow users to withdraw from wallet balance</small>
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- OTP Requirements -->
+                                        <div class="row mb-3">
+                                            <div class="col-md-6">
+                                                <div class="form-check form-switch mb-3">
+                                                    <input class="form-check-input" type="checkbox" id="withdrawal_deposit_otp_required" 
+                                                           name="withdrawal_deposit_otp_required" 
+                                                           {{ ($withdrawalConditions['deposit_otp_required'] ?? true) ? 'checked' : '' }}>
+                                                    <label class="form-check-label" for="withdrawal_deposit_otp_required">
+                                                        <strong>Require OTP for Deposit Withdrawals</strong>
+                                                        <br><small class="text-muted">Send verification code for deposit withdrawals</small>
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="form-check form-switch mb-3">
+                                                    <input class="form-check-input" type="checkbox" id="withdrawal_wallet_otp_required" 
+                                                           name="withdrawal_wallet_otp_required" 
+                                                           {{ ($withdrawalConditions['wallet_otp_required'] ?? true) ? 'checked' : '' }}>
+                                                    <label class="form-check-label" for="withdrawal_wallet_otp_required">
+                                                        <strong>Require OTP for Wallet Withdrawals</strong>
+                                                        <br><small class="text-muted">Send verification code for wallet withdrawals</small>
+                                                    </label>
+                                                </div>
+                                            </div>
                                         </div>
 
                                         <!-- Referral Requirement -->
@@ -437,6 +546,25 @@
                 $(this).remove();
             });
         }
+
+        // Show session messages as toasts and auto-hide alerts
+        $(document).ready(function() {
+            // Auto-hide alert messages after 5 seconds
+            $('.alert').not('.alert-info').delay(5000).fadeOut('slow');
+            
+            // Show session messages as toasts
+            @if(session('success'))
+                showToast('success', '{{ addslashes(session('success')) }}');
+            @endif
+            
+            @if(session('error'))
+                showToast('error', '{{ addslashes(session('error')) }}');
+            @endif
+            
+            @if(session('warning'))
+                showToast('error', '{{ addslashes(session('warning')) }}');
+            @endif
+        });
 
         // Form submission with loading state
         $('#conditionsForm').on('submit', function() {

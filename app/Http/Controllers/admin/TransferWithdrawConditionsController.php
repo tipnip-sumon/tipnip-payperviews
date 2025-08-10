@@ -22,6 +22,7 @@ class TransferWithdrawConditionsController extends Controller
             $transferConditions = $settings->transfer_conditions ?? [
                 'kyc_required' => true,
                 'email_verification_required' => true,
+                'otp_required' => false,
                 'profile_complete_required' => true,
                 'referral_required' => true,
                 'referral_conditions' => [
@@ -35,8 +36,12 @@ class TransferWithdrawConditionsController extends Controller
             ];
             
             $withdrawalConditions = $settings->withdrawal_conditions ?? [
+                'deposit_withdrawal_enabled' => true,
+                'wallet_withdrawal_enabled' => true,
                 'kyc_required' => true,
                 'email_verification_required' => true,
+                'deposit_otp_required' => true,
+                'wallet_otp_required' => true,
                 'profile_complete_required' => true,
                 'referral_required' => true,
                 'referral_conditions' => [
@@ -72,6 +77,7 @@ class TransferWithdrawConditionsController extends Controller
             $transferConditions = [
                 'kyc_required' => $request->has('transfer_kyc_required'),
                 'email_verification_required' => $request->has('transfer_email_verification_required'),
+                'otp_required' => $request->has('transfer_otp_required'),
                 'profile_complete_required' => $request->has('transfer_profile_complete_required'),
                 'referral_required' => $request->has('transfer_referral_required'),
                 'referral_conditions' => [
@@ -86,8 +92,12 @@ class TransferWithdrawConditionsController extends Controller
             
             // Prepare the withdrawal conditions data
             $withdrawalConditions = [
+                'deposit_withdrawal_enabled' => $request->has('withdrawal_deposit_withdrawal_enabled'),
+                'wallet_withdrawal_enabled' => $request->has('withdrawal_wallet_withdrawal_enabled'),
                 'kyc_required' => $request->has('withdrawal_kyc_required'),
                 'email_verification_required' => $request->has('withdrawal_email_verification_required'),
+                'deposit_otp_required' => $request->has('withdrawal_deposit_otp_required'),
+                'wallet_otp_required' => $request->has('withdrawal_wallet_otp_required'),
                 'profile_complete_required' => $request->has('withdrawal_profile_complete_required'),
                 'referral_required' => $request->has('withdrawal_referral_required'),
                 'referral_conditions' => [
