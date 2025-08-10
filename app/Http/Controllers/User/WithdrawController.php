@@ -375,30 +375,43 @@ class WithdrawController extends Controller
             $sessionOtp = session('wallet_withdrawal_otp');
             $otpExpiry = session('wallet_withdrawal_otp_expiry');
 
-            // Debug logging
-            Log::info('OTP Verification Debug', [
+            // Enhanced debug logging
+            Log::info('=== OTP Verification Debug ===', [
                 'session_otp' => $sessionOtp,
-                'otp_expiry' => $otpExpiry,
-                'current_time' => now(),
+                'otp_expiry' => $otpExpiry ? $otpExpiry->format('Y-m-d H:i:s') : null,
+                'current_time' => now()->format('Y-m-d H:i:s'),
                 'is_expired' => $otpExpiry ? now() > $otpExpiry : 'no_expiry',
-                'user_otp' => $request->otp
+                'user_otp' => $request->otp,
+                'session_id' => session()->getId(),
+                'wallet_otp_required' => session('wallet_otp_required')
             ]);
 
+            // Check if OTP exists and is not expired
             if (!$sessionOtp || !$otpExpiry || now() > $otpExpiry) {
+                // Clear invalid/expired session data
+                session()->forget(['wallet_withdrawal_otp', 'wallet_withdrawal_otp_expiry', 'wallet_otp_required']);
+                session()->save();
+                
                 // Add more detailed error message for debugging
                 $errorDetails = [];
                 if (!$sessionOtp) $errorDetails[] = 'No OTP found in session';
                 if (!$otpExpiry) $errorDetails[] = 'No expiry time found in session';
-                if ($otpExpiry && now() > $otpExpiry) $errorDetails[] = 'OTP expired (' . now()->diffForHumans($otpExpiry) . ')';
+                if ($otpExpiry && now() > $otpExpiry) {
+                    $expiredAgo = now()->diffForHumans($otpExpiry);
+                    $errorDetails[] = "OTP expired {$expiredAgo}";
+                }
                 
                 Log::error('OTP Verification Failed', [
                     'session_otp' => $sessionOtp,
-                    'expiry' => $otpExpiry,
-                    'current_time' => now(),
+                    'expiry' => $otpExpiry ? $otpExpiry->format('Y-m-d H:i:s') : null,
+                    'current_time' => now()->format('Y-m-d H:i:s'),
                     'details' => $errorDetails
                 ]);
                 
-                return redirect()->back()->with('error', 'Verification code issue: ' . implode(', ', $errorDetails))->withInput();
+                $errorMessage = count($errorDetails) > 0 ? implode(', ', $errorDetails) : 'Verification code issue';
+                $errorMessage .= '. Please click "Send Verification Code" to get a new code.';
+                
+                return redirect()->back()->with('error', $errorMessage)->withInput();
             }
 
             if ($request->otp !== $sessionOtp) {
@@ -705,16 +718,24 @@ class WithdrawController extends Controller
     public function sendWalletWithdrawOtp(Request $request)
     {
         try {
-            Log::info('sendWalletWithdrawOtp method called', [
+            Log::info('=== sendWalletWithdrawOtp method called ===', [
                 'user_id' => Auth::id(),
-                'request_data' => $request->all()
+                'request_data' => $request->except(['password']),
+                'session_id' => session()->getId(),
+                'request_method' => $request->method(),
+                'request_uri' => $request->getRequestUri()
             ]);
             
             $user = Auth::user();
 
             // Check withdrawal conditions
+            if (!function_exists('checkWithdrawalConditions')) {
+                require_once app_path('helpers/ConditionHelper.php');
+            }
+            
             $conditionCheck = checkWithdrawalConditions($user);
             if (!$conditionCheck['allowed']) {
+                Log::warning('Withdrawal conditions not met', $conditionCheck);
                 return response()->json([
                     'success' => false,
                     'message' => 'Withdrawal requirements not met: ' . implode(', ', $conditionCheck['failures'])
@@ -730,6 +751,7 @@ class WithdrawController extends Controller
             ]);
 
             if ($validator->fails()) {
+                Log::warning('Validation failed', ['errors' => $validator->errors()->all()]);
                 return response()->json([
                     'success' => false,
                     'message' => 'Validation failed: ' . implode(', ', $validator->errors()->all())
@@ -738,72 +760,94 @@ class WithdrawController extends Controller
 
             // Verify password
             if (!Hash::check($request->password, $user->password)) {
+                Log::warning('Invalid password for user', ['user_id' => $user->id]);
                 return response()->json([
                     'success' => false,
                     'message' => 'Invalid transaction password'
                 ], 422);
             }
 
-            // Store form data in session
-            session([
-                'wallet_withdrawal_form_data' => [
-                    'amount' => $request->amount,
-                    'method_id' => $request->method_id,
-                    'account_details' => $request->account_details,
-                    'password' => $request->password,
-                    'type' => 'wallet'
-                ]
+            // Store form data in session with explicit session save
+            $formData = [
+                'amount' => $request->amount,
+                'method_id' => $request->method_id,
+                'account_details' => $request->account_details,
+                'password' => $request->password,
+                'type' => 'wallet'
+            ];
+            
+            session()->put('wallet_withdrawal_form_data', $formData);
+            session()->save(); // Force session save
+            
+            Log::info('Form data stored in session', [
+                'form_data' => \Illuminate\Support\Arr::except($formData, ['password']),
+                'session_after_store' => \Illuminate\Support\Arr::except(session('wallet_withdrawal_form_data', []), ['password'])
             ]);
 
             // Generate and send OTP
-            $otp = sprintf('%06d', random_int(0, 999999));
-            $expiry = now()->addMinutes(30); // Temporarily increased to 30 minutes for testing
+            $otp = sprintf('%06d', random_int(100000, 999999));
+            $expiry = now()->addMinutes(10); // 10 minutes expiry
             
-            Log::info('About to store OTP in session', [
-                'otp' => $otp,
-                'expiry' => $expiry
+            Log::info('Generated OTP details', [
+                'otp_length' => strlen($otp),
+                'expiry_minutes' => 10,
+                'expiry_time' => $expiry->format('Y-m-d H:i:s'),
+                'current_time' => now()->format('Y-m-d H:i:s')
             ]);
             
-            session([
-                'wallet_withdrawal_otp' => $otp,
-                'wallet_withdrawal_otp_expiry' => $expiry,
-                'wallet_otp_required' => true
-            ]);
+            // Store OTP in session with explicit save
+            session()->put('wallet_withdrawal_otp', $otp);
+            session()->put('wallet_withdrawal_otp_expiry', $expiry);
+            session()->put('wallet_otp_required', true);
+            session()->save(); // Force session save
 
-            Log::info('OTP stored in session, verifying storage', [
-                'stored_otp' => session('wallet_withdrawal_otp'),
-                'stored_expiry' => session('wallet_withdrawal_otp_expiry'),
-                'stored_required' => session('wallet_otp_required')
-            ]);
-
-            // Debug logging
-            Log::info('OTP Generation Debug', [
-                'generated_otp' => $otp,
-                'expiry_time' => $expiry,
-                'current_time' => now(),
-                'user_id' => $user->id
+            // Verify session storage immediately
+            $storedOtp = session('wallet_withdrawal_otp');
+            $storedExpiry = session('wallet_withdrawal_otp_expiry');
+            $storedRequired = session('wallet_otp_required');
+            
+            Log::info('Session storage verification', [
+                'otp_stored' => $storedOtp === $otp,
+                'expiry_stored' => $storedExpiry != null,
+                'required_stored' => $storedRequired === true,
+                'stored_otp' => $storedOtp,
+                'stored_expiry' => $storedExpiry ? $storedExpiry->format('Y-m-d H:i:s') : null,
+                'stored_required' => $storedRequired,
+                'session_id_after_store' => session()->getId()
             ]);
 
             // Send OTP email
             $emailSent = $this->sendOtpEmail($user, $otp, 'wallet');
 
             if (!$emailSent) {
+                Log::error('Failed to send OTP email');
                 return response()->json([
                     'success' => false,
                     'message' => 'Failed to send verification code. Please try again.'
                 ], 500);
             }
 
+            Log::info('OTP email sent successfully', [
+                'user_email' => $user->email,
+                'otp_expires_at' => $expiry->format('Y-m-d H:i:s')
+            ]);
+
             return response()->json([
                 'success' => true,
-                'message' => 'Verification code sent to your email. Please check your inbox.'
+                'message' => 'Verification code sent to your email (' . substr($user->email, 0, 3) . '***). Code expires in 10 minutes.',
+                'expires_at' => $expiry->format('Y-m-d H:i:s')
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Wallet withdraw OTP error: ' . $e->getMessage());
+            Log::error('Wallet withdraw OTP error', [
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return response()->json([
                 'success' => false,
-                'message' => 'An error occurred. Please try again.'
+                'message' => 'An error occurred while sending verification code. Please try again.'
             ], 500);
         }
     }

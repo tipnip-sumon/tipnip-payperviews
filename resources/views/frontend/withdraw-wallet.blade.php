@@ -520,6 +520,11 @@ $(document).ready(function() {
             },
             success: function(response) {
                 if (response.success) {
+                    // Store expiry time for countdown
+                    if (response.expires_at) {
+                        sessionStorage.setItem('otp_expires_at', response.expires_at);
+                    }
+                    
                     Swal.fire({
                         title: 'Code Sent!',
                         text: response.message,
@@ -1110,6 +1115,137 @@ function initializeWithdrawalPage() {
             }
         });
     }
+    
+    // OTP Timer and Auto-Resend Functionality
+    @if($walletOtpRequired && session('wallet_otp_required'))
+    $(document).ready(function() {
+        // Check for stored expiry time
+        const expiryTime = sessionStorage.getItem('otp_expires_at');
+        if (expiryTime) {
+            startOtpCountdown(expiryTime);
+        }
+        
+        // Add resend button after OTP input
+        const otpInput = $('#otp');
+        if (otpInput.length && !$('#resend-otp-btn').length) {
+            const resendButton = `
+                <div class="mt-2 text-center">
+                    <span id="otp-timer" class="text-muted small"></span>
+                    <button type="button" id="resend-otp-btn" class="btn btn-link btn-sm p-0" style="display: none;">
+                        <span id="resend-otp-spinner" class="spinner-border spinner-border-sm me-1" style="display: none;"></span>
+                        Resend Code
+                    </button>
+                </div>
+            `;
+            otpInput.closest('.mb-3').append(resendButton);
+        }
+        
+        // Handle resend button click
+        $(document).on('click', '#resend-otp-btn', function(e) {
+            e.preventDefault();
+            const $btn = $(this);
+            const $spinner = $('#resend-otp-spinner');
+            
+            $btn.prop('disabled', true);
+            $spinner.show();
+            
+            // Get form data for resending
+            const formData = {
+                amount: $('#amount').val(),
+                method_id: $('#withdraw_method').val(),
+                account_details: $('#account_details').val(),
+                password: $('input[name="password"][type="hidden"]').val() || $('#password').val(),
+                _token: $('meta[name="csrf-token"]').attr('content')
+            };
+            
+            $.ajax({
+                url: '{{ route("user.withdraw.wallet.send-otp") }}',
+                method: 'POST',
+                data: formData,
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                },
+                success: function(response) {
+                    if (response.success) {
+                        // Store new expiry time
+                        if (response.expires_at) {
+                            sessionStorage.setItem('otp_expires_at', response.expires_at);
+                            startOtpCountdown(response.expires_at);
+                        }
+                        
+                        // Show success message
+                        const Toast = Swal.mixin({
+                            toast: true,
+                            position: 'top-end',
+                            showConfirmButton: false,
+                            timer: 3000,
+                            timerProgressBar: true
+                        });
+                        
+                        Toast.fire({
+                            icon: 'success',
+                            title: 'New verification code sent!'
+                        });
+                    } else {
+                        throw new Error(response.message || 'Failed to resend OTP');
+                    }
+                },
+                error: function(xhr) {
+                    console.error('Resend OTP Error:', xhr);
+                    Swal.fire({
+                        title: 'Error!',
+                        text: 'Failed to resend verification code. Please try again.',
+                        icon: 'error',
+                        confirmButtonText: 'OK'
+                    });
+                },
+                complete: function() {
+                    $btn.prop('disabled', false);
+                    $spinner.hide();
+                }
+            });
+        });
+    });
+    
+    function startOtpCountdown(expiryTime) {
+        const targetTime = new Date(expiryTime).getTime();
+        const $timer = $('#otp-timer');
+        const $resendBtn = $('#resend-otp-btn');
+        
+        const countdown = setInterval(function() {
+            const now = new Date().getTime();
+            const distance = targetTime - now;
+            
+            if (distance > 0) {
+                const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+                
+                $timer.text(`Code expires in ${minutes}:${seconds.toString().padStart(2, '0')}`);
+                $resendBtn.hide();
+            } else {
+                // Code expired
+                clearInterval(countdown);
+                $timer.text('Code expired').addClass('text-danger');
+                $resendBtn.show();
+                sessionStorage.removeItem('otp_expires_at');
+                
+                // Show expiry notification
+                const Toast = Swal.mixin({
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 5000,
+                    timerProgressBar: true
+                });
+                
+                Toast.fire({
+                    icon: 'warning',
+                    title: 'Verification code expired. Please request a new one.'
+                });
+            }
+        }, 1000);
+    }
+    @endif
 }
 </script>
 @endpush
