@@ -355,6 +355,15 @@ class WithdrawController extends Controller
      */
     public function walletWithdraw(Request $request)
     {
+        // Add immediate debug logging before any processing
+        Log::info('=== WALLET WITHDRAW METHOD HIT ===', [
+            'timestamp' => now()->format('Y-m-d H:i:s'),
+            'method' => $request->method(),
+            'user_id' => Auth::id(),
+            'request_data' => $request->except(['password', 'otp']),
+            'session_id' => session()->getId(),
+        ]);
+
         $user = Auth::user();
 
         // Check if OTP is required and verify it

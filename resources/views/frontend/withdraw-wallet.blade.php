@@ -308,12 +308,6 @@
                                         @if($walletOtpRequired && !session('wallet_otp_required'))
                                             <!-- Send OTP Button -->
                                             <div class="text-center">
-                                                <!-- Temporary test button -->
-                                                <button class="btn btn-warning btn-sm mb-2" type="button" id="test-ajax-btn">
-                                                    Test AJAX Connection
-                                                </button>
-                                                <br>
-                                                
                                                 <button class="btn btn-info btn-lg w-100" type="button" id="send-wallet-otp-btn">
                                                     <span id="send-wallet-otp-spinner" class="spinner-border spinner-border-sm me-2" style="display: none;"></span>
                                                     <span id="send-wallet-otp-text">Send Verification Code</span>
@@ -446,33 +440,6 @@
 $(document).ready(function() {
     console.log('jQuery loaded and ready!'); // Debug log
     console.log('Send OTP button exists:', $('#send-wallet-otp-btn').length > 0); // Debug log
-    console.log('Test button exists:', $('#test-ajax-btn').length > 0); // Debug log
-    
-    // Test AJAX handler
-    $(document).on('click', '#test-ajax-btn', function(e) {
-        e.preventDefault();
-        console.log('=== Test AJAX Button Clicked ===');
-        
-        $.ajax({
-            url: '/user/withdraw/wallet/test-simple',
-            method: 'POST',
-            data: {
-                test: 'data',
-                _token: $('meta[name="csrf-token"]').attr('content')
-            },
-            headers: {
-                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-            },
-            success: function(response) {
-                console.log('=== Test AJAX Success ===', response);
-                alert('Test AJAX Success: ' + response.message);
-            },
-            error: function(xhr) {
-                console.error('=== Test AJAX Error ===', xhr);
-                alert('Test AJAX Error: ' + xhr.status + ' - ' + xhr.statusText);
-            }
-        });
-    });
     
     // Flag to control form submission
     let allowFormSubmission = false;
@@ -674,11 +641,20 @@ $(document).ready(function() {
                         }
                         
                         // Allow form submission and submit
+                        console.log('=== Form Submission Debug ===');
+                        console.log('Form action URL:', $('#withdrawForm').attr('action'));
+                        console.log('Form method:', $('#withdrawForm').attr('method'));
+                        console.log('CSRF token:', $('#withdrawForm').find('input[name="_token"]').val());
+                        
                         window.allowWithdrawalFormSubmission();
                         $('#withdrawForm')[0].submit();
                         
                     }).fail(function() {
                         console.log('Failed to get fresh CSRF token, proceeding with existing token');
+                        console.log('=== Fallback Form Submission Debug ===');
+                        console.log('Form action URL:', $('#withdrawForm').attr('action'));
+                        console.log('Form method:', $('#withdrawForm').attr('method'));
+                        
                         // Fallback: try with existing token
                         window.allowWithdrawalFormSubmission();
                         $('#withdrawForm')[0].submit();
