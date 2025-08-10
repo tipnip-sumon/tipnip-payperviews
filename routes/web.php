@@ -99,6 +99,7 @@ Route::get('get-countries', function () {
 // =============================================================================
 
 Route::get('/admin', [AdminController::class, 'index'])->name('admin.index')->middleware('clear.login.cache');
+Route::get('/admin/login', [AdminController::class, 'index'])->name('admin.login.form')->middleware('clear.login.cache');
 Route::post('admin/login', [AdminController::class, 'login'])->name('admin.login')->middleware('throttle:5,1');
 Route::get('/admin/video-leaderboard', [VideoLinkController::class, 'leaderboard'])->name('video.leaderboard')->middleware(['ok-user','prevent-back']);
 
