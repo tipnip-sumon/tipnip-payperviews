@@ -7,13 +7,12 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Mail;
-use App\Models\User;
 use App\Models\Withdrawal;
 use App\Models\Transaction;
 use App\Models\WithdrawMethod;
+use App\Models\GeneralSetting;
+use Carbon\Carbon;
 
 class WithdrawController extends Controller 
 {
@@ -105,6 +104,152 @@ class WithdrawController extends Controller
                 'icon' => 'error'
             ])->withInput();
         }
+
+        // Check if OTP verification is required for deposit withdrawals
+        $settings = GeneralSetting::getSettings();
+        $withdrawalConditions = $settings->withdrawal_conditions ?? [];
+        $otpRequired = $withdrawalConditions['deposit_otp_required'] ?? false;
+        
+        if ($otpRequired) {
+            // If OTP is provided, verify it
+            if ($request->has('otp_code')) {
+                return $this->verifyOtpAndWithdraw($request);
+            } else {
+                // If no OTP provided, send OTP and show verification form
+                return $this->sendOtpForWithdrawal($request);
+            }
+        }
+        
+        // If OTP not required, proceed with normal withdrawal
+        return $this->processWithdrawal($request);
+    }
+    
+    /**
+     * Send OTP for withdrawal verification
+     */
+    private function sendOtpForWithdrawal(Request $request)
+    {
+        $user = Auth::user();
+        
+        // Basic validation first
+        $request->validate([
+            'password' => 'required',
+            'method_id' => 'required|exists:withdraw_methods,id',
+            'account_details' => 'required|string|max:500'
+        ]);
+        
+        // Verify password
+        if (!password_verify($request->password, $user->password)) {
+            return back()->with('swal_error', [
+                'title' => 'Authentication Failed!',
+                'text' => 'Invalid transaction password',
+                'icon' => 'error'
+            ]);
+        }
+        
+        // Generate OTP
+        $otp = random_int(100000, 999999);
+        
+        // Update user with OTP
+        $user->ver_code = $otp;
+        $user->ver_code_send_at = Carbon::now();
+        $user->save();
+        
+        // Send OTP email
+        try {
+            $this->sendOtpEmail($user, $otp);
+            
+            // Store withdrawal data in session for later use
+            session([
+                'withdrawal_data' => [
+                    'password' => $request->password,
+                    'method_id' => $request->method_id,
+                    'account_details' => $request->account_details,
+                    'otp_sent_at' => time()
+                ]
+            ]);
+            
+            return back()->with('otp_required', true)->with('swal_success', [
+                'title' => 'OTP Sent!',
+                'text' => 'A 6-digit verification code has been sent to your email address. Please enter it below to complete your withdrawal.',
+                'icon' => 'success'
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('OTP email sending failed: ' . $e->getMessage());
+            return back()->with('swal_error', [
+                'title' => 'Email Error!',
+                'text' => 'Failed to send OTP email. Please try again.',
+                'icon' => 'error'
+            ]);
+        }
+    }
+    
+    /**
+     * Verify OTP and process withdrawal
+     */
+    private function verifyOtpAndWithdraw(Request $request)
+    {
+        $user = Auth::user();
+        
+        // Validate OTP
+        $request->validate([
+            'otp_code' => 'required|numeric|digits:6'
+        ]);
+        
+        // Check if OTP is valid and not expired (10 minutes)
+        if (!$user->ver_code || $user->ver_code != $request->otp_code) {
+            return back()->with('swal_error', [
+                'title' => 'Invalid OTP!',
+                'text' => 'The verification code you entered is incorrect.',
+                'icon' => 'error'
+            ])->withInput();
+        }
+        
+        if (!$user->ver_code_send_at || Carbon::parse($user->ver_code_send_at)->addMinutes(10)->isPast()) {
+            return back()->with('swal_error', [
+                'title' => 'OTP Expired!',
+                'text' => 'The verification code has expired. Please request a new one.',
+                'icon' => 'error'
+            ]);
+        }
+        
+        // Get withdrawal data from session
+        $withdrawalData = session('withdrawal_data');
+        if (!$withdrawalData) {
+            return back()->with('swal_error', [
+                'title' => 'Session Expired!',
+                'text' => 'Please start the withdrawal process again.',
+                'icon' => 'error'
+            ]);
+        }
+        
+        // Clear OTP and session data
+        $user->ver_code = null;
+        $user->ver_code_send_at = null;
+        $user->save();
+        session()->forget('withdrawal_data');
+        
+        // Create a new request with the stored data
+        $withdrawalRequest = new Request();
+        $withdrawalRequest->merge($withdrawalData);
+        
+        // Process the withdrawal
+        return $this->processWithdrawal($withdrawalRequest);
+    }
+    
+    /**
+     * Process the actual withdrawal (without OTP verification)
+     */
+    private function processWithdrawal(Request $request)
+    {
+        $user = Auth::user();
+    /**
+     * Process the actual withdrawal (without OTP verification)
+     */
+    private function processWithdrawal(Request $request)
+    {
+        $user = Auth::user();
         
         // Get the selected withdrawal method for validation
         $withdrawMethod = WithdrawMethod::where('id', $request->method_id)->where('status', 1)->first();
@@ -117,7 +262,7 @@ class WithdrawController extends Controller
             ]);
         }
         
-        // Validate request
+        // Validate request (password already validated in OTP flow if applicable)
         $request->validate([
             'password' => 'required',
             'method_id' => 'required|exists:withdraw_methods,id',
@@ -129,13 +274,15 @@ class WithdrawController extends Controller
             'account_details.required' => 'Account details are required'
         ]);
         
-        // Verify password
-        if (!Auth::attempt(['username' => $user->username, 'password' => $request->password])) {
-            return back()->with('swal_error', [
-                'title' => 'Authentication Failed!',
-                'text' => 'Invalid transaction password',
-                'icon' => 'error'
-            ]);
+        // Verify password (only if not coming from OTP flow)
+        if (!session('withdrawal_data')) {
+            if (!password_verify($request->password, $user->password)) {
+                return back()->with('swal_error', [
+                    'title' => 'Authentication Failed!',
+                    'text' => 'Invalid transaction password',
+                    'icon' => 'error'
+                ]);
+            }
         }
         
         // Check if user has active deposit
@@ -236,6 +383,30 @@ class WithdrawController extends Controller
     }
     
     /**
+     * Send OTP email to user
+     */
+    private function sendOtpEmail($user, $otp)
+    {
+        $subject = 'Withdrawal Verification Code - ' . config('app.name');
+        $message = "
+            <h2>Withdrawal Verification</h2>
+            <p>Hello {$user->name},</p>
+            <p>Your withdrawal verification code is: <strong style='font-size: 24px; color: #007bff;'>{$otp}</strong></p>
+            <p>This code will expire in 10 minutes.</p>
+            <p>If you didn't request this withdrawal, please ignore this email.</p>
+            <br>
+            <p>Best regards,<br>" . config('app.name') . " Team</p>
+        ";
+        
+        Mail::send([], [], function ($mail) use ($user, $subject, $message) {
+            $mail->to($user->email)
+                 ->subject($subject)
+                 ->html($message);
+        });
+    }
+    }
+    
+    /**
      * Display withdrawal history (deposit withdrawals only)
      */
     public function history()
@@ -324,14 +495,6 @@ class WithdrawController extends Controller
             ->limit(5)
             ->get();
         
-        // Get OTP settings for wallet withdrawals
-        $withdrawalConditions = json_decode(DB::table('general_settings')->value('withdrawal_conditions'), true) ?? [];
-        $walletOtpRequired = $withdrawalConditions['wallet_otp_required'] ?? false;
-        
-        // Check if user is currently in an OTP session for wallet withdrawal
-        $isWalletOtpSession = session('wallet_otp_required') === true;
-        $walletStoredData = session('wallet_withdrawal_form_data');
-
         $data = [
             'pageTitle' => 'Withdraw Wallet Balance',
             'depositWallet' => $depositWallet,
@@ -340,10 +503,7 @@ class WithdrawController extends Controller
             'withdrawMethods' => $withdrawMethods,
             'withdrawalStats' => $withdrawalStats,
             'recentWithdrawals' => $recentWithdrawals,
-            'kycVerified' => $user->kv == 1,
-            'walletOtpRequired' => $walletOtpRequired,
-            'isWalletOtpSession' => $isWalletOtpSession,
-            'walletStoredData' => $walletStoredData
+            'kycVerified' => $user->kv == 1
         ];
         
         return view('frontend.withdraw-wallet', $data);
@@ -560,195 +720,5 @@ class WithdrawController extends Controller
         ];
         
         return view('frontend.wallet-withdrawal-history', $data);
-    }
-
-    /**
-     * Send OTP for deposit withdrawal via AJAX
-     */
-    public function sendDepositWithdrawOtp(Request $request)
-    {
-        try {
-            $user = Auth::user();
-
-            // Check withdrawal conditions
-            $conditionCheck = checkWithdrawalConditions($user);
-            if (!$conditionCheck['allowed']) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Withdrawal requirements not met: ' . implode(', ', $conditionCheck['failures'])
-                ], 422);
-            }
-
-            // Validate the form data
-            $validator = Validator::make($request->all(), [
-                'amount' => 'required|numeric|min:1',
-                'method_id' => 'required|exists:withdraw_methods,id',
-                'account_details' => 'required|string|max:1000',
-                'password' => 'required|string'
-            ]);
-
-            if ($validator->fails()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Validation failed: ' . implode(', ', $validator->errors()->all())
-                ], 422);
-            }
-
-            // Verify password
-            if (!Hash::check($request->password, $user->password)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Invalid transaction password'
-                ], 422);
-            }
-
-            // Store form data in session
-            session([
-                'deposit_withdrawal_form_data' => [
-                    'amount' => $request->amount,
-                    'method_id' => $request->method_id,
-                    'account_details' => $request->account_details,
-                    'password' => $request->password,
-                    'type' => 'deposit'
-                ]
-            ]);
-
-            // Generate and send OTP
-            $otp = sprintf('%06d', random_int(0, 999999));
-            
-            session([
-                'deposit_otp_code' => $otp,
-                'deposit_otp_expires' => now()->addMinutes(10),
-                'deposit_otp_required' => true
-            ]);
-
-            // Send OTP email
-            $emailSent = $this->sendOtpEmail($user, $otp, 'deposit');
-
-            if (!$emailSent) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Failed to send verification code. Please try again.'
-                ], 500);
-            }
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Verification code sent to your email. Please check your inbox.'
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('Deposit withdraw OTP error: ' . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'An error occurred. Please try again.'
-            ], 500);
-        }
-    }
-
-    /**
-     * Send OTP for wallet withdrawal via AJAX
-     */
-    public function sendWalletWithdrawOtp(Request $request)
-    {
-        try {
-            $user = Auth::user();
-
-            // Check withdrawal conditions
-            $conditionCheck = checkWithdrawalConditions($user);
-            if (!$conditionCheck['allowed']) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Withdrawal requirements not met: ' . implode(', ', $conditionCheck['failures'])
-                ], 422);
-            }
-
-            // Validate the form data
-            $validator = Validator::make($request->all(), [
-                'amount' => 'required|numeric|min:1',
-                'method_id' => 'required|exists:withdraw_methods,id',
-                'account_details' => 'required|string|max:1000',
-                'password' => 'required|string'
-            ]);
-
-            if ($validator->fails()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Validation failed: ' . implode(', ', $validator->errors()->all())
-                ], 422);
-            }
-
-            // Verify password
-            if (!Hash::check($request->password, $user->password)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Invalid transaction password'
-                ], 422);
-            }
-
-            // Store form data in session
-            session([
-                'wallet_withdrawal_form_data' => [
-                    'amount' => $request->amount,
-                    'method_id' => $request->method_id,
-                    'account_details' => $request->account_details,
-                    'password' => $request->password,
-                    'type' => 'wallet'
-                ]
-            ]);
-
-            // Generate and send OTP
-            $otp = sprintf('%06d', random_int(0, 999999));
-            
-            session([
-                'wallet_otp_code' => $otp,
-                'wallet_otp_expires' => now()->addMinutes(10),
-                'wallet_otp_required' => true
-            ]);
-
-            // Send OTP email
-            $emailSent = $this->sendOtpEmail($user, $otp, 'wallet');
-
-            if (!$emailSent) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Failed to send verification code. Please try again.'
-                ], 500);
-            }
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Verification code sent to your email. Please check your inbox.'
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('Wallet withdraw OTP error: ' . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'An error occurred. Please try again.'
-            ], 500);
-        }
-    }
-
-    /**
-     * Send OTP email to user
-     */
-    private function sendOtpEmail($user, $otp, $type = 'wallet')
-    {
-        try {
-            $subject = $type === 'wallet' ? 'Wallet Withdrawal OTP' : 'Withdrawal OTP';
-            $emailContent = "Your withdrawal verification code is: {$otp}. This code will expire in 10 minutes.";
-            
-            // Send email using Laravel Mail facade
-            Mail::raw($emailContent, function ($message) use ($user, $subject) {
-                $message->to($user->email, $user->username)
-                        ->subject($subject);
-            });
-            return true;
-            
-        } catch (\Exception $e) {
-            Log::error('OTP email error: ' . $e->getMessage());
-            return false;
-        }
     }
 }

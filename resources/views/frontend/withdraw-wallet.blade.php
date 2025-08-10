@@ -169,7 +169,7 @@
                             You don't have sufficient wallet balance to make a withdrawal.
                         </div>
                     @else
-                        <form action="{{ route('user.withdraw.wallet.submit') }}" method="POST" 
+                        <form action="{{ route('user.withdraw.wallet.submit') }}" method="POST" id="withdrawForm"
                               style="{{ (!isset($kycVerified) || !$kycVerified) ? 'pointer-events: none;' : '' }}">
                             @csrf
                             
@@ -181,9 +181,19 @@
                                             <span class="input-group-text">$</span>
                                             <input type="number" class="form-control @error('amount') is-invalid @enderror" 
                                                    id="amount" name="amount" min="1" max="{{ $totalWalletBalance }}" 
-                                                   step="0.01" value="{{ old('amount') }}" required>
+                                                   step="0.01" value="{{ session('wallet_withdrawal_form_data.amount') ?? old('amount') }}" 
+                                                   {{ session('wallet_otp_required') ? 'readonly' : '' }} required>
+                                            @if(session('wallet_otp_required'))
+                                                <span class="input-group-text bg-success text-white">
+                                                    <i class="ri-check-line"></i>
+                                                </span>
+                                            @endif
                                         </div>
-                                        <small class="text-muted">Available Balance: ${{ number_format($totalWalletBalance, 2) }}</small>
+                                        @if(session('wallet_otp_required'))
+                                            <small class="text-success">Available Balance: ${{ number_format($totalWalletBalance, 2) }} - Amount saved</small>
+                                        @else
+                                            <small class="text-muted">Available Balance: ${{ number_format($totalWalletBalance, 2) }}</small>
+                                        @endif
                                         @error('amount')
                                             <div class="invalid-feedback">{{ $message }}</div>
                                         @enderror
@@ -194,7 +204,8 @@
                                     <div class="mb-3">
                                         <label for="withdraw_method" class="form-label">Withdrawal Method <span class="text-danger">*</span></label>
                                         <select class="form-select @error('method_id') is-invalid @enderror" 
-                                                id="withdraw_method" name="method_id" required>
+                                                id="withdraw_method" name="method_id" 
+                                                {{ session('wallet_otp_required') ? 'readonly disabled' : '' }} required>
                                             <option value="">Select Method</option>
                                             @forelse($withdrawMethods as $method)
                                                 <option value="{{ $method->id }}" 
@@ -205,24 +216,22 @@
                                                         data-daily-limit="{{ $method->daily_limit ?? 0 }}"
                                                         data-currency="{{ $method->currency ?? 'USD' }}"
                                                         data-icon="{{ $method->icon ?? 'fe fe-credit-card' }}"
-                                                        {{ old('method_id') == $method->id ? 'selected' : '' }}>
+                                                        {{ (old('method_id') == $method->id || (session('wallet_withdrawal_form_data.method_id') == $method->id)) ? 'selected' : '' }}>
                                                     @if($method->icon)
                                                         <i class="{{ $method->icon }} me-2"></i>
                                                     @endif
                                                     {{ $method->name }}
-                                                    {{-- {{ $method->currency ?? 'USD' }} - {{ $method->name }}  --}}
-                                                    {{-- (Min: ${{ number_format($method->min_amount, 2) }}, Max: ${{ number_format($method->max_amount, 2) }}) --}}
-                                                    {{-- @if($method->fixed_charge > 0 || $method->percent_charge > 0)
-                                                        - Charges: 
-                                                        @if($method->fixed_charge > 0)${{ number_format($method->fixed_charge, 2) }}@endif
-                                                        @if($method->fixed_charge > 0 && $method->percent_charge > 0) + @endif
-                                                        @if($method->percent_charge > 0){{ $method->percent_charge }}%@endif
-                                                    @endif --}}
                                                 </option>
                                             @empty
                                                 <option value="" disabled>No withdrawal methods available</option>
                                             @endforelse
                                         </select>
+                                        @if(session('wallet_otp_required'))
+                                            <small class="text-success">
+                                                <i class="ri-check-line me-1"></i>
+                                                Method selected and saved
+                                            </small>
+                                        @endif
                                         @error('method_id')
                                             <div class="invalid-feedback">{{ $message }}</div>
                                         @enderror
@@ -238,9 +247,20 @@
 
                             <div class="mb-3">
                                 <label for="account_details" class="form-label">Account Details <span class="text-danger">*</span></label>
-                                <textarea class="form-control @error('account_details') is-invalid @enderror" 
-                                          id="account_details" name="account_details" rows="4" required
-                                          placeholder="Please provide your account details (account number, email, wallet address, etc.)">{{ old('account_details') }}</textarea>
+                                @if(session('wallet_otp_required'))
+                                    <div class="input-group">
+                                        <textarea class="form-control @error('account_details') is-invalid @enderror" 
+                                                  id="account_details" name="account_details" rows="4" readonly required>{{ session('wallet_withdrawal_form_data.account_details') ?? old('account_details') }}</textarea>
+                                        <span class="input-group-text bg-success text-white">
+                                            <i class="ri-check-line"></i>
+                                        </span>
+                                    </div>
+                                    <small class="text-success">Account details saved</small>
+                                @else
+                                    <textarea class="form-control @error('account_details') is-invalid @enderror" 
+                                              id="account_details" name="account_details" rows="4" required
+                                              placeholder="Please provide your account details (account number, email, wallet address, etc.)">{{ old('account_details') }}</textarea>
+                                @endif
                                 @error('account_details')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
@@ -248,8 +268,23 @@
 
                             <div class="mb-3">
                                 <label for="password" class="form-label">Transaction Password <span class="text-danger">*</span></label>
-                                <input type="password" class="form-control @error('password') is-invalid @enderror" 
-                                       id="password" name="password" required>
+                                @if(session('wallet_otp_required'))
+                                    <div class="input-group">
+                                        <input type="password" class="form-control @error('password') is-invalid @enderror" 
+                                               id="password" name="password" value="••••••••" readonly required>
+                                        <input type="hidden" name="password" value="{{ session('wallet_withdrawal_form_data.password') ?? '' }}">
+                                        <span class="input-group-text bg-success text-white">
+                                            <i class="ri-check-line"></i>
+                                        </span>
+                                    </div>
+                                    <small class="text-success">
+                                        <i class="ri-check-line me-1"></i>
+                                        Password verified. Ready for OTP verification.
+                                    </small>
+                                @else
+                                    <input type="password" class="form-control @error('password') is-invalid @enderror" 
+                                           id="password" name="password" required>
+                                @endif
                                 @error('password')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
@@ -260,17 +295,53 @@
                                 <strong>Important:</strong> Withdrawal charges depend on the selected method. Please check the charge calculation below before submitting your request.
                             </div>
 
-                            <button type="submit" class="btn btn-primary" 
-                                    {{ (!isset($kycVerified) || !$kycVerified) ? 'disabled' : '' }}>
-                                <i class="fe fe-send me-2"></i>
-                                Submit Withdrawal Request
-                            </button>
-                            
                             @if(!isset($kycVerified) || !$kycVerified)
                                 <div class="mt-3">
                                     <button type="button" class="btn btn-warning" onclick="showKycAlert()">
                                         <i class="fas fa-user-check me-2"></i>Complete KYC to Withdraw
                                     </button>
+                                </div>
+                            @else
+                                <!-- Submit Button Section -->
+                                <div class="col-12">
+                                    <div class="mt-4">
+                                        @if($walletOtpRequired && !session('wallet_otp_required'))
+                                            <!-- Send OTP Button -->
+                                            <div class="text-center">
+                                                <button class="btn btn-info btn-lg w-100" type="button" id="send-wallet-otp-btn">
+                                                    <span id="send-wallet-otp-spinner" class="spinner-border spinner-border-sm me-2" style="display: none;"></span>
+                                                    <span id="send-wallet-otp-text">Send Verification Code</span>
+                                                </button>
+                                                <small class="text-muted d-block mt-2">A 6-digit verification code will be sent to your email</small>
+                                            </div>
+                                        @elseif($walletOtpRequired && session('wallet_otp_required'))
+                                            <!-- OTP Verification Section -->
+                                            <div class="text-center">
+                                                <div class="mb-3">
+                                                    <label for="otp" class="form-label">Verification Code <span class="text-danger">*</span></label>
+                                                    <input type="text" class="form-control @error('otp') is-invalid @enderror text-center" 
+                                                           id="otp" name="otp" maxlength="6" placeholder="Enter 6-digit code" required>
+                                                    <small class="text-success">
+                                                        <i class="ri-mail-check-line me-1"></i>
+                                                        Verification code sent to your email. Please check your inbox.
+                                                    </small>
+                                                    @error('otp')
+                                                        <div class="invalid-feedback">{{ $message }}</div>
+                                                    @enderror
+                                                </div>
+                                                <button class="btn btn-primary btn-lg w-100" type="button" id="walletWithdrawBtn">
+                                                    <i class="ri-shield-check-line me-2"></i>Verify Code & Withdraw
+                                                </button>
+                                            </div>
+                                        @else
+                                            <!-- Direct Submit (No OTP Required) -->
+                                            <div class="text-center">
+                                                <button class="btn btn-success btn-lg w-100" type="button" id="walletWithdrawBtn">
+                                                    <i class="ri-send-plane-line me-2"></i>Submit Withdrawal Request
+                                                </button>
+                                            </div>
+                                        @endif
+                                    </div>
                                 </div>
                             @endif
                         </form>
@@ -364,6 +435,180 @@
 
 @push('script')
 <script>
+$(document).ready(function() {
+    console.log('jQuery loaded and ready!'); // Debug log
+    console.log('Send OTP button exists:', $('#send-wallet-otp-btn').length > 0); // Debug log
+    
+    // Prevent unwanted form submissions (only allow via AJAX or explicit submit handlers)
+    $('#withdrawForm').on('submit', function(e) {
+        e.preventDefault();
+        console.log('Form submit intercepted'); // Debug log
+        return false;
+    });
+    
+    // Initialize withdrawal page functionality
+    initializeWithdrawalPage();
+    
+    // Handle Send OTP Button Click (AJAX)
+    $(document).on('click', '#send-wallet-otp-btn', function(e) {
+        e.preventDefault();
+        console.log('Send OTP button clicked!'); // Debug log
+        
+        const $btn = $(this);
+        const $form = $('#withdrawForm');
+        const $spinner = $('#send-wallet-otp-spinner');
+        const $text = $('#send-wallet-otp-text');
+        
+        console.log('Button found:', $btn.length > 0); // Debug log
+        console.log('Form found:', $form.length > 0); // Debug log
+        
+        // Collect form data manually to handle readonly/disabled fields
+        const formData = {
+            amount: $('#amount').val(),
+            method_id: $('#withdraw_method').val(),
+            account_details: $('#account_details').val(),
+            password: $('input[name="password"][type="hidden"]').val() || $('#password').val(),
+            _token: $('meta[name="csrf-token"]').attr('content')
+        };
+
+        // Debug: Log form data to console
+        console.log('Form data being sent:', formData);
+
+        // Validate form data
+        if (!formData.amount || !formData.method_id || !formData.account_details || !formData.password) {
+            console.log('Validation failed - missing fields:', {
+                amount: formData.amount,
+                method_id: formData.method_id,
+                account_details: formData.account_details,
+                password: formData.password ? '***masked***' : 'empty'
+            });
+            
+            Swal.fire({
+                title: 'Missing Information!',
+                text: 'Please fill in all required fields before sending OTP',
+                icon: 'warning',
+                confirmButtonText: 'OK'
+            });
+            return false;
+        }
+
+        // Show loading state
+        $btn.prop('disabled', true);
+        $spinner.show();
+        $text.text('Sending...');
+
+        // Send AJAX request
+        $.ajax({
+            url: '{{ route("user.withdraw.wallet.send-otp") }}',
+            method: 'POST',
+            data: formData,
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            },
+            success: function(response) {
+                if (response.success) {
+                    Swal.fire({
+                        title: 'Code Sent!',
+                        text: response.message,
+                        icon: 'success',
+                        confirmButtonText: 'OK'
+                    }).then(() => {
+                        // Reload the page to show OTP form
+                        location.reload();
+                    });
+                } else {
+                    throw new Error(response.message || 'Failed to send OTP');
+                }
+            },
+            error: function(xhr) {
+                console.error('AJAX Error:', xhr);
+                let message = 'Failed to send verification code. Please try again.';
+                
+                if (xhr.responseJSON) {
+                    if (xhr.responseJSON.message) {
+                        message = xhr.responseJSON.message;
+                    } else if (xhr.responseJSON.errors) {
+                        // Handle validation errors
+                        const errors = Object.values(xhr.responseJSON.errors).flat();
+                        message = 'Validation errors: ' + errors.join(', ');
+                    }
+                }
+                
+                Swal.fire({
+                    title: 'Error!',
+                    text: message,
+                    icon: 'error',
+                    confirmButtonText: 'OK'
+                });
+            },
+            complete: function() {
+                // Reset button state
+                $btn.prop('disabled', false);
+                $spinner.hide();
+                $text.text('Send Verification Code');
+            }
+        });
+    });
+    
+    // Handle Withdrawal Button Click
+    $(document).on('click', '#walletWithdrawBtn', function(e) {
+        e.preventDefault();
+        console.log('Withdrawal button clicked!'); // Debug log
+        submitWithdrawalForm();
+    });
+
+    // Handle actual withdrawal submission (called from within the app)
+    function submitWithdrawalForm() {
+        const $form = $('#withdrawForm');
+        const walletOtpRequired = {{ $walletOtpRequired ? 'true' : 'false' }};
+        const otpSession = {{ session('wallet_otp_required') ? 'true' : 'false' }};
+        const otpCode = $('#otp').val();
+        const methodName = $('#withdraw_method option:selected').text();
+        const amount = $('#amount').val();
+
+        // If OTP is required and we're in OTP session, validate OTP
+        if (walletOtpRequired && otpSession) {
+            if (!otpCode || otpCode.length !== 6) {
+                Swal.fire({
+                    title: 'Invalid OTP!',
+                    text: 'Please enter the 6-digit verification code sent to your email',
+                    icon: 'warning',
+                    confirmButtonText: 'OK'
+                });
+                $('#otp').focus();
+                return false;
+            }
+            
+            // Confirm OTP verification
+            Swal.fire({
+                title: 'Verify OTP & Complete Withdrawal',
+                html: `Enter verification code: <strong>${otpCode}</strong><br><br>
+                       Withdrawing $${amount} via <strong>${methodName}</strong><br>
+                       <small class="text-muted">This will complete your wallet withdrawal request</small>`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#28a745',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Verify & Withdraw',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $('#walletWithdrawBtn').html('<i class="ri-loader-4-line me-2 spin"></i>Verifying OTP...').prop('disabled', true);
+                    // Actually submit the form
+                    $form.off('submit').submit();
+                }
+            });
+        } else {
+            Swal.fire({
+                title: 'Error!',
+                text: 'Please use the Send Verification Code button first.',
+                icon: 'error',
+                confirmButtonText: 'OK'
+            });
+        }
+    }
+});
+
 // Wait for DOM to be loaded
 document.addEventListener('DOMContentLoaded', function() {
     // Check if this is a redirect after form submission

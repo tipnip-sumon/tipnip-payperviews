@@ -130,9 +130,6 @@ class RegisterController extends Controller
             }
             
             $sponsorId = $sponsor ? $sponsor->id : null;
-        } else {
-            // If no sponsor provided, automatically set to user ID 1 (default sponsor)
-            $sponsorId = 1;
         }
         
         $user = User::create([

@@ -21,10 +21,10 @@
             <a href="{{ route('user.notifications.settings') }}" class="btn btn-outline-secondary btn-wave">
                 <i class="fe fe-settings me-2"></i>Settings
             </a>
-            <button class="btn btn-primary btn-wave" onclick="handleMarkAllRead()">
+            <button class="btn btn-primary btn-wave" onclick="markAllAsRead()">
                 <i class="fe fe-check-circle me-2"></i>Mark All Read
             </button>
-            <button class="btn btn-outline-danger btn-wave ms-2" onclick="handleClearAll()">
+            <button class="btn btn-outline-danger btn-wave ms-2" onclick="clearAllNotifications()">
                 <i class="fe fe-trash me-2"></i>Clear All
             </button>
         </div>
@@ -215,33 +215,7 @@
 @endsection
 
 @push('script')
-<!-- SweetAlert2 CDN - Load first -->
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
 <script>
-    // Check if SweetAlert2 is loaded
-    document.addEventListener('DOMContentLoaded', function() {
-        if (typeof Swal === 'undefined') {
-            console.error('SweetAlert2 is not loaded! Please check the CDN link.');
-            // Fallback: Create a basic Swal object to prevent errors
-            window.Swal = {
-                fire: function(options) {
-                    if (typeof options === 'string') {
-                        alert(options);
-                    } else if (options && options.title) {
-                        const message = options.title + (options.text ? '\n' + options.text : '');
-                        return Promise.resolve({ isConfirmed: confirm(message) });
-                    }
-                    return Promise.resolve({ isConfirmed: false });
-                },
-                showLoading: function() {},
-                close: function() {}
-            };
-        } else {
-            console.log('SweetAlert2 loaded successfully!');
-        }
-    });
-
     function markAsRead(notificationId) {
         fetch(`{{ route("user.notifications.read", ":id") }}`.replace(':id', notificationId), {
             method: 'POST',
@@ -479,21 +453,7 @@
         });
     }
 
-    // Mobile detection function for clear all
-    function handleClearAll() {
-        // Always use the desktop version with SweetAlert when on notifications page
-        // The mobile version is for the modal only
-        clearAllNotificationsDesktop();
-    }
-
-    // Mobile detection function for mark all read
-    function handleMarkAllRead() {
-        // Always use the desktop version with SweetAlert when on notifications page
-        // The mobile version is for the modal only
-        markAllAsRead();
-    }
-
-    function clearAllNotificationsDesktop() {
+    function clearAllNotifications() {
         Swal.fire({
             title: 'Clear All Notifications?',
             text: 'This action cannot be undone and will permanently delete all your notifications.',
@@ -509,8 +469,8 @@
                 cancelButton: 'btn btn-secondary'
             },
             buttonsStyling: false
-            }).then((result) => {
-                if (!result.isConfirmed) return;
+        }).then((result) => {
+            if (!result.isConfirmed) return;
 
             const csrfToken = document.querySelector('meta[name="csrf-token"]');
             if (!csrfToken) {
@@ -543,7 +503,7 @@
             });
 
             // Show loading state
-            const clearButton = document.querySelector('button[onclick="handleClearAll()"]');
+            const clearButton = document.querySelector('button[onclick="clearAllNotifications()"]');
             const originalText = clearButton ? clearButton.innerHTML : '';
             if (clearButton) {
                 clearButton.innerHTML = '<i class="fe fe-loader me-1"></i>Clearing...';
@@ -642,6 +602,7 @@
                 clearButton.disabled = false;
             }
         });
+        });
     }
 
     function filterNotifications() {
@@ -695,7 +656,6 @@
         }, 5000);
     }
 </script>
-
 @endpush
 
 </x-smart_layout>

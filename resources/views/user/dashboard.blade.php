@@ -2458,24 +2458,20 @@
                                         </div>
                                     </div>
                                     <div class="d-grid gap-2">
-                                        <a href="#" 
-                                           class="btn btn-success" target="_blank"
-                                           onclick="window.open('https://wa.me/?text=' + encodeURIComponent('Join me on {{ config("app.name") }} and start earning! ') + encodeURIComponent(link))">
+                                        <a href="https://wa.me/?text=Join me on {{ config("app.name") }} and start earning! ${encodeURIComponent(link)}" 
+                                           class="btn btn-success" target="_blank">
                                             <i class="fab fa-whatsapp me-2"></i>Share on WhatsApp
                                         </a>
-                                        <a href="#" 
-                                           class="btn btn-primary" target="_blank"
-                                           onclick="window.open('https://t.me/share/url?url=' + encodeURIComponent(link) + '&text=' + encodeURIComponent('Join me on {{ config("app.name") }} and start earning!'))">
+                                        <a href="https://t.me/share/url?url=${encodeURIComponent(link)}&text=Join me on {{ config("app.name") }} and start earning!" 
+                                           class="btn btn-primary" target="_blank">
                                             <i class="fab fa-telegram me-2"></i>Share on Telegram
                                         </a>
-                                        <a href="#" 
-                                           class="btn btn-primary" target="_blank"
-                                           onclick="window.open('https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(link))">
+                                        <a href="https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(link)}" 
+                                           class="btn btn-primary" target="_blank">
                                             <i class="fab fa-facebook me-2"></i>Share on Facebook
                                         </a>
-                                        <a href="#" 
-                                           class="btn btn-info" target="_blank"
-                                           onclick="window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent('Join me on {{ config("app.name") }} and start earning!') + '&url=' + encodeURIComponent(link))">
+                                        <a href="https://twitter.com/intent/tweet?text=Join me on {{ config('app.name') }} and start earning!&url=${encodeURIComponent(link)}" 
+                                           class="btn btn-info" target="_blank">
                                             <i class="fab fa-twitter me-2"></i>Share on Twitter
                                         </a>
                                     </div>

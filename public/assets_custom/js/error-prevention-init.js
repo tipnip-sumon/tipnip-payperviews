@@ -32,9 +32,7 @@
 
         const container = document.createElement('div');
         container.id = 'error-prevention-elements';
-        if (container && container.style) {
-            container.style.display = 'none';
-        }
+        container.style.display = 'none';
         
         essentialElements.forEach(elem => {
             if (!document.getElementById(elem.id)) {
@@ -50,7 +48,7 @@
 
     // Override critical functions before other scripts load
     function setupCriticalOverrides() {
-        // Override querySelector to return fallback elements ONLY for theme switcher
+        // Override querySelector to return fallback elements
         const originalQuerySelector = Document.prototype.querySelector;
         Document.prototype.querySelector = function(selector) {
             const result = originalQuerySelector.call(this, selector);
@@ -59,7 +57,7 @@
                 const fallback = document.createElement('button');
                 fallback.id = selector.replace('#', '');
                 fallback.addEventListener = function(event, handler) {
-                    // Silent fallback - no console spam
+                    console.warn(`Event listener added to fallback element: ${selector}`);
                     return handler;
                 };
                 return fallback;
@@ -69,59 +67,21 @@
 
         // Override addEventListener to handle null elements gracefully
         const originalAddEventListener = EventTarget.prototype.addEventListener;
-        // Safe addEventListener override with loop prevention
-        let errorEventDepth = 0;
-        const MAX_ERROR_DEPTH = 3;
-        
         EventTarget.prototype.addEventListener = function(type, listener, options) {
             try {
                 if (!this) {
                     console.warn('addEventListener called on null element');
                     return;
                 }
-                
-                // Skip our wrapper for Bootstrap modal focus events to prevent infinite loops
-                if (type === 'focusin' || type === 'focusout' || 
-                    (this.classList && (this.classList.contains('modal') || this.classList.contains('modal-backdrop')))) {
-                    return originalAddEventListener.call(this, type, listener, options);
-                }
-                
                 return originalAddEventListener.call(this, type, function(event) {
-                    if (errorEventDepth >= MAX_ERROR_DEPTH) {
-                        return; // Prevent infinite loops
-                    }
-                    
-                    errorEventDepth++;
                     try {
                         return typeof listener === 'function' ? listener.call(this, event) : null;
                     } catch (error) {
-                        // Silently handle common errors to avoid console spam
-                        if (error.message && (
-                            error.message.includes('Cannot read properties of null') ||
-                            error.message.includes('Cannot read properties of undefined') ||
-                            error.message.includes('reading \'style\'') ||
-                            error.message.includes('reading \'classList\'') ||
-                            error.message.includes('_handleFocusin') ||
-                            error.message.includes('bootstrap') ||
-                            error.message.includes('Modal')
-                        )) {
-                            return false; // Silently handle without logging
-                        }
-                        
-                        // Only log unexpected errors in development
-                        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-                            // Event listener error handled silently for common issues
-                        }
-                    } finally {
-                        errorEventDepth--;
+                        console.warn(`Event listener error (${type}):`, error.message);
                     }
                 }, options);
             } catch (error) {
-                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-                    console.warn('addEventListener override error:', error.message);
-                }
-                // Fallback to original
-                return originalAddEventListener.call(this, type, listener, options);
+                console.warn('addEventListener override error:', error.message);
             }
         };
 
@@ -281,7 +241,11 @@
             detail: { modules, config }
         }));
         
-        // Error prevention system initialized (silent mode)
+        console.log('Error prevention system initialized', {
+            modules: Object.keys(modules).filter(name => modules[name].loaded),
+            failed: Object.keys(modules).filter(name => !modules[name].loaded),
+            timestamp: new Date().toISOString()
+        });
     }
 
     // Create debug information display
@@ -317,5 +281,7 @@
         reload: initializeErrorPrevention
     };
 
-    // Error Prevention Master Initializer loaded (silent mode)
+    if (config.debug) {
+        console.log('Error Prevention Master Initializer loaded');
+    }
 })();

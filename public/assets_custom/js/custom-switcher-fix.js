@@ -32,9 +32,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!switcherContainer) {
         switcherContainer = document.createElement('div');
         switcherContainer.id = 'switcher-fallback-container';
-        if (switcherContainer && switcherContainer.style) {
-            switcherContainer.style.display = 'none';
-        }
+        switcherContainer.style.display = 'none';
         document.body.appendChild(switcherContainer);
     }
 
@@ -46,7 +44,7 @@ document.addEventListener('DOMContentLoaded', function() {
             element.id = elementId;
             element.className = 'switcher-fallback-btn';
             switcherContainer.appendChild(element);
-            // Created missing switcher element (silent mode)
+            console.log('Created missing switcher element:', selector);
         }
     });
 
@@ -63,85 +61,30 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Safe addEventListener wrapper for switcher elements with loop prevention
+// Safe addEventListener wrapper for switcher elements
 const originalAddEventListener = EventTarget.prototype.addEventListener;
-let eventCallDepth = 0;
-const MAX_CALL_DEPTH = 5;
-
 EventTarget.prototype.addEventListener = function(type, listener, options) {
     try {
-        if (!this || typeof originalAddEventListener !== 'function') {
-            return;
+        if (this && typeof originalAddEventListener === 'function') {
+            return originalAddEventListener.call(this, type, function(event) {
+                try {
+                    if (typeof listener === 'function') {
+                        return listener.call(this, event);
+                    }
+                } catch (error) {
+                    console.warn('Event listener error caught:', error);
+                }
+            }, options);
         }
-        
-        // Bypass our wrapper for Bootstrap focus events to prevent loops
-        if (type === 'focusin' || type === 'focusout' || (this.classList && this.classList.contains('modal'))) {
-            return originalAddEventListener.call(this, type, listener, options);
-        }
-        
-        return originalAddEventListener.call(this, type, function(event) {
-            // Prevent infinite recursion
-            if (eventCallDepth >= MAX_CALL_DEPTH) {
-                return;
-            }
-            
-            eventCallDepth++;
-            try {
-                if (typeof listener === 'function') {
-                    return listener.call(this, event);
-                }
-            } catch (error) {
-                // Silently handle common null property errors and Bootstrap modal errors
-                if (error.message && (
-                    error.message.includes('Cannot read properties of null') ||
-                    error.message.includes('Cannot read properties of undefined') ||
-                    error.message.includes('reading \'style\'') ||
-                    error.message.includes('reading \'classList\'') ||
-                    error.message.includes('_handleFocusin') ||
-                    error.message.includes('bootstrap') ||
-                    error.message.includes('Modal')
-                )) {
-                    return; // Silently handle these errors without logging
-                }
-                
-                // Only log unexpected errors in development to avoid console spam
-                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-                    console.warn('Event listener error caught:', error.message);
-                }
-            } finally {
-                eventCallDepth--;
-            }
-        }, options);
     } catch (error) {
-        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-            console.warn('addEventListener wrapper error:', error.message);
-        }
-        // Fallback to original
-        return originalAddEventListener.call(this, type, listener, options);
+        console.warn('addEventListener wrapper error:', error);
     }
 };
 
-// Global error handler for custom switcher and Bootstrap modals
+// Global error handler for custom switcher
 window.addEventListener('error', function(e) {
-    // Handle Bootstrap modal errors
-    if (e.message && (
-        e.message.includes('Cannot read properties of null') ||
-        e.message.includes('_showElement') ||
-        e.message.includes('_resetAdjustments') ||
-        e.message.includes('bootstrap.bundle.min.js')
-    )) {
-        // Only log in development
-        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-            console.warn('Bootstrap modal error caught and handled:', e.message);
-        }
-        return true; // Prevent error from bubbling up
-    }
-    
-    // Handle custom switcher errors
     if (e.filename && (e.filename.includes('custom-switcher') || e.message.includes('switcherClick'))) {
-        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-            console.warn('Custom switcher error caught and handled:', e.message);
-        }
+        console.warn('Custom switcher error caught and handled:', e.message);
         return true; // Prevent error from bubbling up
     }
 });

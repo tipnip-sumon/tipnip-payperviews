@@ -6,13 +6,9 @@
  * the server's clock rather than the client's.
  */
 
-// Only declare if not already declared (prevent multiple inclusion errors)
-if (typeof window.serverTimeOffset === 'undefined') {
-    window.serverTimeOffset = null;
-}
-if (typeof window.lastFetchTime === 'undefined') {
-    window.lastFetchTime = null;
-}
+// Cached values
+let serverTimeOffset = null;
+let lastFetchTime = null;
 
 /**
  * Fetches the current server time from the API
@@ -27,8 +23,8 @@ window.getServerTime = async function() {
         // Calculate and store the offset
         const serverTime = new Date(data.server_time);
         const clientTime = new Date();
-        window.serverTimeOffset = serverTime.getTime() - clientTime.getTime();
-        window.lastFetchTime = clientTime.getTime();
+        serverTimeOffset = serverTime.getTime() - clientTime.getTime();
+        lastFetchTime = clientTime.getTime();
         
         return data.server_time;
     } catch (e) {

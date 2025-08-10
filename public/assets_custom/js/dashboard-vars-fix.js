@@ -88,5 +88,5 @@
         return originalAppendChild.call(this, element);
     };
 
-    // Dashboard variable declaration fix loaded (silent mode)
+    console.log('Dashboard variable declaration fix loaded');
 })();

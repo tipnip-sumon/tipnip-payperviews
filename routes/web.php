@@ -74,33 +74,6 @@ Route::get('/clear-cache/{type?}', [BrowserCacheController::class, 'clearDomainC
     ->where('type', 'all|cache|cookies|storage|execution')
     ->name('browser.cache.clear.type');
 
-// EMERGENCY ROUTES FOR LIVE SERVER ISSUES
-use App\Http\Controllers\EmergencyController;
-
-// Emergency cache clear for critical issues
-Route::get('/emergency/cache-clear', [EmergencyController::class, 'emergencyCacheClear'])
-    ->name('emergency.cache.clear');
-
-// Emergency loop breaker for infinite Bootstrap loops
-Route::get('/emergency/loop-breaker', function() {
-    return response()->file(public_path('emergency-loop-breaker.js'), [
-        'Content-Type' => 'application/javascript',
-        'Cache-Control' => 'no-cache, no-store, must-revalidate'
-    ]);
-})->name('emergency.loop.breaker');
-
-// System status check
-Route::get('/emergency/status', [EmergencyController::class, 'systemStatus'])
-    ->name('emergency.status');
-
-// Force asset refresh
-Route::get('/emergency/refresh-assets', [EmergencyController::class, 'forceAssetRefresh'])
-    ->name('emergency.refresh.assets');
-
-// Health check
-Route::get('/health', [EmergencyController::class, 'healthCheck'])
-    ->name('health.check');
-
 // Country data endpoint
 Route::get('get-countries', function () {
     $c        = json_decode(file_get_contents(resource_path('views/country/country.json')));
@@ -171,7 +144,7 @@ Route::get('/home', function () {
 
 // User Dashboard Route
 Route::get('/user/dashboard', [App\Http\Controllers\User\UserController::class, 'home'])
-    ->name('user.dashboard')->middleware(['auth', 'fresh.login', 'no-cache', 'device.detect']);
+    ->name('user.dashboard')->middleware(['auth', 'fresh.login', 'no-cache']);
 
 // Dashboard Performance Metrics API
 Route::get('/user/dashboard/performance', [App\Http\Controllers\User\UserController::class, 'getPerformanceMetrics'])
@@ -181,32 +154,16 @@ Route::get('/user/dashboard/performance', [App\Http\Controllers\User\UserControl
 // AUTHENTICATION ROUTES  
 // =============================================================================
 
-// Custom authentication routes (excluding register to avoid conflicts)
-Auth::routes(['register' => false, 'verify' => true]);
+// Using Laravel's built-in auth routes for login
+Auth::routes(['verify' => true]);
 
 // Override login routes with custom middleware
-Route::get('/login_old', [App\Http\Controllers\Auth\LoginController::class, 'showLoginForm'])
-    ->name('login.old')
+Route::get('/login', [App\Http\Controllers\Auth\LoginController::class, 'showLoginForm'])
+    ->name('login')
     ->middleware('clear.login.cache');
 
-// Fresh login page (main login)
-Route::get('/login', [App\Http\Controllers\Auth\LoginController::class, 'showLoginForm'])
-    ->name('login')->middleware('clear.login.cache');
-
-Route::post('/login', [App\Http\Controllers\Auth\LoginController::class, 'login'])
-    ->name('login.submit');
-
-// Old registration routes (renamed for backup)
-Route::get('/register_old', [App\Http\Controllers\Auth\RegisterController::class, 'showRegistrationForm'])
-    ->name('register.old');
-
-Route::post('/register_old', [App\Http\Controllers\Auth\RegisterController::class, 'register'])
-    ->name('register.old.submit');
-
-// Main registration page (fresh implementation without Vite dependencies)
-Route::get('/register', function () {
-    return view('auth.register_fresh');
-})->name('register');
+Route::get('/register', [App\Http\Controllers\Auth\RegisterController::class, 'showRegistrationForm'])
+    ->name('register');
 
 Route::post('/register', [App\Http\Controllers\Auth\RegisterController::class, 'register'])
     ->name('register.submit');
@@ -733,7 +690,7 @@ Route::controller(RequirementsController::class)->middleware('auth','prevent-bac
 });
 
 // Notification Routes
-Route::controller(\App\Http\Controllers\User\NotificationController::class)->middleware('auth','prevent-back','device.detect')->group(function () {
+Route::controller(\App\Http\Controllers\User\NotificationController::class)->middleware('auth','prevent-back')->group(function () {
     Route::get('/user/notifications', 'index')->name('user.notifications.index');
     Route::get('/user/notifications/dropdown', 'getDropdownNotifications')->name('user.notifications.dropdown');
     Route::get('/user/notifications/{id}', 'show')->name('user.notifications.show');
@@ -797,6 +754,9 @@ Route::controller(App\Http\Controllers\User\WithdrawController::class)->middlewa
     Route::get('/user/withdraw/wallet','walletIndex')->name('user.withdraw.wallet');
     Route::post('/user/withdraw/wallet','walletWithdraw')->name('user.withdraw.wallet.submit');
     Route::get('/user/withdraw/wallet/history','walletHistory')->name('user.withdraw.wallet.history');
+    // AJAX OTP Routes
+    Route::post('/user/withdraw/send-otp','sendDepositWithdrawOtp')->name('user.withdraw.send-otp');
+    Route::post('/user/withdraw/wallet/send-otp','sendWalletWithdrawOtp')->name('user.withdraw.wallet.send-otp');
 });
 
 // =============================================================================
@@ -905,7 +865,7 @@ Route::prefix('user')->middleware(['auth', 'verified','prevent-back'])->group(fu
     Route::get('/video-recent-activity', [VideoLinkController::class, 'recentActivity'])->name('video.recent-activity');
 });
 
-Route::controller(VideoViewController::class)->middleware('auth','prevent-back','device.detect')->group(function () {
+Route::controller(VideoViewController::class)->middleware('auth','prevent-back')->group(function () {
     Route::get('/user/video-views/gallery', 'gallery')->name('user.video-views.gallery');
     Route::get('/user/video-views', 'index')->name('user.video-views.index');
     Route::get('/user/video-views/history', 'history')->name('user.video-views.history');
