@@ -1971,13 +1971,19 @@
                                 }
                             });
                         } else {
-                            // Show earnings modal with updated values
-                            $('#earnings-amount').text('You earned $' + parseFloat(response.earned_amount).toFixed(4));
-                            $('#earnings-message').text(response.message || 'Congratulations! Your earnings have been added to your balance.');
-                            $('#total-balance').text(currentBalance.toFixed(4));
+                            // Hide video modal first to prevent conflicts
+                            $('#videoWatchModal').modal('hide');
                             
-                            // Show the earnings modal
-                            $('#earningsModal').modal('show');
+                            // Wait for video modal to close, then show earnings modal
+                            setTimeout(function() {
+                                // Show earnings modal with updated values
+                                $('#earnings-amount').text('You earned $' + parseFloat(response.earned_amount).toFixed(4));
+                                $('#earnings-message').text(response.message || 'Congratulations! Your earnings have been added to your balance.');
+                                $('#total-balance').text(currentBalance.toFixed(4));
+                                
+                                // Show the earnings modal
+                                $('#earningsModal').modal('show');
+                            }, 300);
                         }
                         
                     } else {
@@ -2211,19 +2217,34 @@
             $('#continue-watching-btn').on('click', function() {
                 console.log('Continue Watching button clicked - closing modal only (no page reload needed)');
                 
-                // Just close the modal since we've already updated the UI
-                $('#earningsModal').modal('hide');
+                // Force close any open modals to prevent conflicts
+                $('.modal').modal('hide');
                 
-                // Optional: Show a brief success message
-                Swal.fire({
-                    title: 'Success!',
-                    text: 'Your earnings have been added to your balance. You can continue watching more videos.',
-                    icon: 'success',
-                    timer: 2000,
-                    showConfirmButton: false,
-                    toast: true,
-                    position: 'top-end'
-                });
+                // Wait a bit for modals to close, then show success message
+                setTimeout(function() {
+                    Swal.fire({
+                        title: 'Success!',
+                        text: 'Your earnings have been added to your balance. You can continue watching more videos.',
+                        icon: 'success',
+                        timer: 2000,
+                        showConfirmButton: false,
+                        toast: true,
+                        position: 'top-end'
+                    });
+                }, 300);
+            });
+            
+            // Global modal conflict prevention - ensure only one modal at a time
+            $('.modal').on('show.bs.modal', function() {
+                // Close any other open modals before showing this one
+                $('.modal').not(this).modal('hide');
+            });
+            
+            // Prevent modal backdrop conflicts
+            $(document).on('hidden.bs.modal', '.modal', function() {
+                if ($('.modal.show').length > 0) {
+                    $('body').addClass('modal-open');
+                }
             });
             
             // Remove the automatic reload from earnings modal close

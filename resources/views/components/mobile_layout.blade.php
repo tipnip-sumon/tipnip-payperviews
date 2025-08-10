@@ -14,12 +14,6 @@
     <!-- Favicon -->
     <link rel="icon" href="{{asset('assets/images/brand-logos/favicon.ico')}}" type="image/x-icon">
 
-    <!-- Choices JS -->
-    <script src="{{asset('assets/libs/choices.js/public/assets/scripts/choices.min.js')}}"></script>
-
-    <!-- Main Theme Js -->
-    <script src="{{asset('assets/js/main.js')}}"></script> 
-
     <!-- Bootstrap Css -->
     <link id="style" href="{{asset('assets/libs/bootstrap/css/bootstrap.min.css')}}" rel="stylesheet" >
 
@@ -63,10 +57,6 @@
             }
         }
     </style>
-
-    <!-- Error Prevention System -->
-    <link rel="stylesheet" href="{{asset('assets_custom/css/error-prevention.css')}}">
-    <script src="{{asset('assets_custom/js/error-prevention-init.js')}}"></script>
 
     @stack('styles')
 </head>
@@ -1282,7 +1272,7 @@
                                 </button>
                             </div>
                             <div class="col-12">
-                                <button onclick="clearAllNotifications()" class="btn btn-outline-danger w-100 p-3 mobile-feature-btn d-flex flex-column align-items-center">
+                                <button onclick="clearAllNotificationsMobile()" class="btn btn-outline-danger w-100 p-3 mobile-feature-btn d-flex flex-column align-items-center">
                                     <i class="bx bx-trash mb-1"></i>
                                     <div class="mobile-btn-content text-center">
                                         <strong class="small">Clear All</strong>
@@ -3066,13 +3056,8 @@
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-    <!-- Custom JS -->
-    <script src="{{asset('assets/js/custom.js')}}"></script>
-
-    <!-- Mobile Functions - Clean & Organized -->
-    <script src="{{asset('assets_custom/js/mobile-functions.js')}}"></script> 
-
     @stack('script')
+    
     <script>
         function confirmLogout() {
         try {
@@ -3113,6 +3098,240 @@
         
         // Primary: Try simple logout (no CSRF, no middleware)
         window.location.href = "{{ route('simple.logout') }}";
+    }
+
+    // Mobile Clear All Notifications Function (for mobile modals)
+    function clearAllNotificationsMobile() {
+        if (typeof Swal === 'undefined') {
+            console.error('SweetAlert not available for mobile clear function');
+            if (confirm('Clear all notifications? This cannot be undone.')) {
+                // Fallback to direct API call
+                window.location.href = "{{ route('user.notifications.clear-all') }}";
+            }
+            return;
+        }
+        
+        Swal.fire({
+            title: 'Clear All Notifications?',
+            text: 'This action cannot be undone and will permanently delete all your notifications.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: '<i class="fe fe-trash me-1"></i>Yes, Clear All',
+            cancelButtonText: '<i class="fe fe-x me-1"></i>Cancel',
+            reverseButtons: true,
+            customClass: {
+                confirmButton: 'btn btn-danger',
+                cancelButton: 'btn btn-secondary'
+            },
+            buttonsStyling: false
+        }).then((result) => {
+            if (!result.isConfirmed) return;
+
+            const csrfToken = document.querySelector('meta[name="csrf-token"]');
+            if (!csrfToken) {
+                console.error('CSRF token not found');
+                Swal.fire({
+                    title: 'Error!',
+                    text: 'CSRF token not found. Please refresh the page.',
+                    icon: 'error',
+                    confirmButtonText: 'OK',
+                    customClass: {
+                        confirmButton: 'btn btn-primary'
+                    },
+                    buttonsStyling: false
+                });
+                return;
+            }
+
+            console.log('Mobile: Clearing all notifications...');
+
+            // Show processing state
+            Swal.fire({
+                title: 'Clearing Notifications...',
+                text: 'Please wait while we clear all your notifications.',
+                icon: 'info',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            fetch('{{ route("user.notifications.clear-all") }}', {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken.getAttribute('content'),
+                    'Accept': 'application/json'
+                }
+            })
+            .then(response => {
+                console.log('Mobile clear response status:', response.status);
+                
+                if (response.status === 404) {
+                    throw new Error('Clear all endpoint not found. Please contact support.');
+                } else if (response.status === 401) {
+                    throw new Error('Authentication required. Please log in again.');
+                } else if (response.status === 419) {
+                    throw new Error('Session expired. Please refresh the page and try again.');
+                } else if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Mobile clear response:', data);
+                if (data.success) {
+                    Swal.fire({
+                        title: 'Success!',
+                        text: 'All notifications have been cleared.',
+                        icon: 'success',
+                        confirmButtonText: 'OK',
+                        customClass: {
+                            confirmButton: 'btn btn-success'
+                        },
+                        buttonsStyling: false
+                    }).then(() => {
+                        // Reload the page to show cleared notifications
+                        window.location.reload();
+                    });
+                } else {
+                    throw new Error(data.message || 'Failed to clear notifications');
+                }
+            })
+            .catch(error => {
+                console.error('Mobile clear error:', error);
+                Swal.fire({
+                    title: 'Error!',
+                    text: error.message || 'Failed to clear notifications. Please try again.',
+                    icon: 'error',
+                    confirmButtonText: 'OK',
+                    customClass: {
+                        confirmButton: 'btn btn-primary'
+                    },
+                    buttonsStyling: false
+                });
+            });
+        });
+    }
+
+    // Mobile Mark All Notifications Read Function (for mobile modals)
+    function markAllNotificationsRead() {
+        if (typeof Swal === 'undefined') {
+            console.error('SweetAlert not available for mobile mark read function');
+            if (confirm('Mark all notifications as read?')) {
+                // Fallback to page reload
+                window.location.reload();
+            }
+            return;
+        }
+        
+        Swal.fire({
+            title: 'Mark All as Read?',
+            text: 'This will mark all your notifications as read.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#28a745',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: '<i class="fe fe-check me-1"></i>Yes, Mark All Read',
+            cancelButtonText: '<i class="fe fe-x me-1"></i>Cancel',
+            reverseButtons: true,
+            customClass: {
+                confirmButton: 'btn btn-success',
+                cancelButton: 'btn btn-secondary'
+            },
+            buttonsStyling: false
+        }).then((result) => {
+            if (!result.isConfirmed) return;
+
+            const csrfToken = document.querySelector('meta[name="csrf-token"]');
+            if (!csrfToken) {
+                console.error('CSRF token not found');
+                Swal.fire({
+                    title: 'Error!',
+                    text: 'CSRF token not found. Please refresh the page.',
+                    icon: 'error',
+                    confirmButtonText: 'OK',
+                    customClass: {
+                        confirmButton: 'btn btn-primary'
+                    },
+                    buttonsStyling: false
+                });
+                return;
+            }
+
+            console.log('Mobile: Marking all notifications as read...');
+
+            // Show processing state
+            Swal.fire({
+                title: 'Updating Notifications...',
+                text: 'Please wait while we mark all notifications as read.',
+                icon: 'info',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            fetch('{{ route("user.notifications.read-all") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken.getAttribute('content'),
+                    'Accept': 'application/json'
+                }
+            })
+            .then(response => {
+                console.log('Mobile mark read response status:', response.status);
+                
+                if (response.status === 404) {
+                    throw new Error('Mark all read endpoint not found. Please contact support.');
+                } else if (response.status === 401) {
+                    throw new Error('Authentication required. Please log in again.');
+                } else if (response.status === 419) {
+                    throw new Error('Session expired. Please refresh the page and try again.');
+                } else if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Mobile mark read response:', data);
+                if (data.success) {
+                    Swal.fire({
+                        title: 'Success!',
+                        text: 'All notifications have been marked as read.',
+                        icon: 'success',
+                        confirmButtonText: 'OK',
+                        customClass: {
+                            confirmButton: 'btn btn-success'
+                        },
+                        buttonsStyling: false
+                    }).then(() => {
+                        // Reload the page to show updated notifications
+                        window.location.reload();
+                    });
+                } else {
+                    throw new Error(data.message || 'Failed to mark notifications as read');
+                }
+            })
+            .catch(error => {
+                console.error('Mobile mark read error:', error);
+                Swal.fire({
+                    title: 'Error!',
+                    text: error.message || 'Failed to mark notifications as read. Please try again.',
+                    icon: 'error',
+                    confirmButtonText: 'OK',
+                    customClass: {
+                        confirmButton: 'btn btn-primary'
+                    },
+                    buttonsStyling: false
+                });
+            });
+        });
     }
 
     // Debug mobile reload issues
@@ -3175,9 +3394,6 @@
                 console.error('❌ openMobileModal function is NOT available - this will cause errors!');
             }
         }
-                }
-            }, 1000);
-        }
         
         // Test Bootstrap Modal availability (dev only)
         if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
@@ -3218,8 +3434,12 @@
                 // Check if CSRF token exists
                 const csrfTokenElement = document.querySelector('meta[name="csrf-token"]');
                 if (!csrfTokenElement) {
+                    console.log('No CSRF token found, skipping notification update');
                     return; // Silently fail if no CSRF token
                 }
+
+                // Add debug logging for notification count requests
+                console.log('📊 Updating notification badges (mobile & desktop)...');
 
                 fetch('{{ route("user.notifications.count") }}', {
                     method: 'GET',
@@ -3231,6 +3451,8 @@
                     }
                 })
                 .then(response => {
+                    console.log('📊 Notification count response status:', response.status);
+                    
                     if (!response.ok) {
                         throw new Error(`HTTP error! status: ${response.status}`);
                     }
@@ -3238,6 +3460,7 @@
                     // Check if response is actually JSON
                     const contentType = response.headers.get('content-type');
                     if (!contentType || !contentType.includes('application/json')) {
+                        console.warn('⚠️ Notification count response is not JSON, content-type:', contentType);
                         throw new Error('Response is not JSON');
                     }
                     
@@ -3245,55 +3468,100 @@
                 })
                 .then(data => {
                     if (data && typeof data.count !== 'undefined') {
-                        const mobileBadge = document.querySelector('.notifications-link .notification-dot');
-                        const bellIcon = document.querySelector('.notifications-link .bx-bell');
+                        console.log('📊 Notification count received:', data.count);
+                        
+                        // UPDATE DESKTOP ELEMENTS
+                        const desktopBadge = document.getElementById('notification-icon-badge');
+                        const desktopBellIcon = document.querySelector('.notifications-dropdown .header-link i, .notifications-dropdown .bx-bell');
+                        
+                        // UPDATE MOBILE ELEMENTS  
+                        const mobileBadges = document.querySelectorAll('.notifications-link .notification-dot');
+                        const mobileBellIcons = document.querySelectorAll('.notifications-link .bx-bell');
                         
                         if (data.count > 0) {
-                            if (mobileBadge) {
-                                mobileBadge.textContent = data.count;
-                                mobileBadge.style.display = 'flex';
+                            // UPDATE DESKTOP BADGE
+                            if (desktopBadge) {
+                                desktopBadge.textContent = data.count;
+                                desktopBadge.style.display = 'flex';
+                                console.log('✅ Desktop badge updated:', data.count);
                             } else {
-                                // Create badge if it doesn't exist
-                                const wrapper = document.querySelector('.notifications-link .nav-icon-wrapper');
-                                if (wrapper) {
-                                    const newBadge = document.createElement('span');
-                                    newBadge.className = 'notification-dot';
-                                    newBadge.textContent = data.count;
-                                    wrapper.appendChild(newBadge);
+                                // Create desktop badge if it doesn't exist
+                                const desktopNotificationLink = document.querySelector('.notifications-dropdown .header-link');
+                                if (desktopNotificationLink) {
+                                    const newDesktopBadge = document.createElement('span');
+                                    newDesktopBadge.className = 'badge bg-primary rounded-pill header-icon-badge pulse pulse-primary';
+                                    newDesktopBadge.id = 'notification-icon-badge';
+                                    newDesktopBadge.textContent = data.count;
+                                    desktopNotificationLink.appendChild(newDesktopBadge);
+                                    console.log('✅ Desktop badge created:', data.count);
                                 }
                             }
                             
-                            // Add pulse animation to bell icon
-                            if (bellIcon) {
+                            // UPDATE MOBILE BADGES
+                            mobileBadges.forEach((badge, index) => {
+                                badge.textContent = data.count;
+                                badge.style.display = 'flex';
+                                console.log(`✅ Mobile badge ${index + 1} updated:`, data.count);
+                            });
+                            
+                            // If no mobile badges exist, create them
+                            if (mobileBadges.length === 0) {
+                                const mobileWrappers = document.querySelectorAll('.notifications-link .nav-icon-wrapper');
+                                mobileWrappers.forEach((wrapper, index) => {
+                                    const newMobileBadge = document.createElement('span');
+                                    newMobileBadge.className = 'notification-dot';
+                                    newMobileBadge.textContent = data.count;
+                                    wrapper.appendChild(newMobileBadge);
+                                    console.log(`✅ Mobile badge ${index + 1} created:`, data.count);
+                                });
+                            }
+                            
+                            // ADD PULSE ANIMATION TO BELL ICONS
+                            if (desktopBellIcon) {
+                                desktopBellIcon.classList.add('pulse-animation');
+                            }
+                            mobileBellIcons.forEach(bellIcon => {
                                 bellIcon.classList.add('pulse-animation');
-                            }
+                            });
+                            
                         } else {
-                            if (mobileBadge) {
-                                mobileBadge.style.display = 'none';
+                            // HIDE ALL BADGES WHEN COUNT IS 0
+                            if (desktopBadge) {
+                                desktopBadge.style.display = 'none';
+                                console.log('✅ Desktop badge hidden');
                             }
-                            // Remove pulse animation from bell icon
-                            if (bellIcon) {
+                            
+                            mobileBadges.forEach((badge, index) => {
+                                badge.style.display = 'none';
+                                console.log(`✅ Mobile badge ${index + 1} hidden`);
+                            });
+                            
+                            // REMOVE PULSE ANIMATION FROM BELL ICONS
+                            if (desktopBellIcon) {
+                                desktopBellIcon.classList.remove('pulse-animation');
+                            }
+                            mobileBellIcons.forEach(bellIcon => {
                                 bellIcon.classList.remove('pulse-animation');
-                            }
+                            });
                         }
                     }
                 })
                 .catch(error => {
                     // Only log errors in development
                     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-                        console.log('Mobile notification update error:', error);
+                        console.log('Notification update error:', error);
                     }
                     // Silently fail in production to prevent console spam
                 });
             } catch (error) {
                 // Only log errors in development
                 if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-                    console.log('Mobile notification update initialization error:', error);
+                    console.log('Notification update initialization error:', error);
                 }
             }
         }
 
-        // Update mobile notification badge every 30 seconds
+        // Update notification badge every 30 seconds
         setInterval(updateMobileNotificationBadge, 30000);
 
         // Also update when page becomes visible again (user returns to tab)
@@ -3312,5 +3580,9 @@
     <div id="loader" class="d-none"></div>
     <div class="loader-overlay" style="display: none;"></div>
     <div class="loading-spinner" style="display: none;"></div>
+    
+    <!-- Mobile specific JavaScript files - loaded at bottom for proper DOM handling -->
+    <script src="{{ asset('assets/js/custom.js') }}" defer></script>
+    <script src="{{ asset('assets_custom/js/mobile-functions.js') }}" defer></script>
 </body>
 </html>

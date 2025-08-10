@@ -42,10 +42,6 @@
     <!-- Choices Css -->
     <link rel="stylesheet" href="{{asset('assets/libs/choices.js/public/assets/styles/choices.min.css')}}">
 
-    <!-- Error Prevention System -->
-    <link rel="stylesheet" href="{{asset('assets_custom/css/error-prevention.css')}}">
-    <script src="{{asset('assets_custom/js/error-prevention-init.js')}}"></script>
-
     @stack('styles')
     
     <!-- Desktop Layout Custom Styles -->
@@ -1638,7 +1634,7 @@
     <script src="{{asset('assets/js/custom-switcher.min.js')}}"></script>
 
     <!-- SweetAlert2 -->
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script> 
     
     <!-- SweetAlert2 Test Script (Debug Mode Only) -->
     <!-- Custom JS -->
@@ -2171,76 +2167,12 @@
         }
     }
 
-    // Real-time notification badge update system
+    // Real-time notification badge update system - Using unified function from mobile layout
     @auth
-    function updateNotificationBadge() {
-        fetch('{{ route("user.notifications.count") }}', {
-            method: 'GET',
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-            }
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-            const contentType = response.headers.get('content-type');
-            if (!contentType || !contentType.includes('application/json')) {
-                throw new Error('Response is not JSON');
-            }
-            return response.json();
-        })
-        .then(data => {
-            const badge = document.getElementById('notification-icon-badge');
-            const bellIcon = document.querySelector('.notifications-dropdown .header-link i');
-            
-            if (data.count > 0) {
-                if (badge) {
-                    badge.textContent = data.count;
-                    badge.style.display = 'flex';
-                } else {
-                    // Create badge if it doesn't exist
-                    const newBadge = document.createElement('span');
-                    newBadge.className = 'badge bg-primary rounded-pill header-icon-badge pulse pulse-primary';
-                    newBadge.id = 'notification-icon-badge';
-                    newBadge.textContent = data.count;
-                    document.querySelector('.notifications-dropdown .header-link').appendChild(newBadge);
-                }
-                
-                // Add pulse animation to bell icon
-                if (bellIcon) {
-                    bellIcon.classList.add('pulse-animation');
-                }
-            } else {
-                if (badge) {
-                    badge.style.display = 'none';
-                }
-                // Remove pulse animation from bell icon
-                if (bellIcon) {
-                    bellIcon.classList.remove('pulse-animation');
-                }
-            }
-        })
-        .catch(error => {
-            console.log('Notification update error:', error);
-        });
-    }
-
-    // Update notification badge every 30 seconds
-    setInterval(updateNotificationBadge, 30000);
-
-    // Also update when page becomes visible again (user returns to tab)
-    document.addEventListener('visibilitychange', function() {
-        if (!document.hidden) {
-            updateNotificationBadge();
-        }
-    });
-
-    // Initial update after page load
-    document.addEventListener('DOMContentLoaded', function() {
-        setTimeout(updateNotificationBadge, 2000); // Wait 2 seconds after page load
-    });
+    // Note: The unified updateMobileNotificationBadge function in mobile_layout.blade.php
+    // now handles both mobile and desktop notification badges automatically.
+    // This comment serves as documentation that desktop notifications are handled
+    // by the mobile layout's unified function.
     @endauth
     </script>
 
