@@ -2,31 +2,32 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\LandController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\User\UserController;
+use App\Http\Controllers\NewsletterController;
 use App\Http\Controllers\admin\AdminController;
 use App\Http\Controllers\User\InvestController;
+use App\Http\Controllers\BrowserCacheController;
 use App\Http\Controllers\User\ProfileController;
 use App\Http\Controllers\User\SupportController;
+use App\Http\Controllers\User\WithdrawController;
 use App\Http\Controllers\admin\AdminKycController;
 use App\Http\Controllers\User\VideoViewController;
-use App\Http\Controllers\User\RequirementsController;
+
+use App\Http\Controllers\admin\AnalyticsController;
 use App\Http\Controllers\admin\VideoLinkController;
 use App\Http\Controllers\Gateway\DepositController;
-
+use App\Http\Controllers\User\RequirementsController;
 use App\Http\Controllers\admin\GeneralSettingController;
+use App\Http\Controllers\admin\ModalManagementController;
 use App\Http\Controllers\admin\AdminTransReceiveController;
 use App\Http\Controllers\admin\UserController as AdminUserController;
 use App\Http\Controllers\admin\PaymentController as AdminPaymentController;
 use App\Http\Controllers\admin\SupportController as AdminSupportController;
-use App\Http\Controllers\admin\AnalyticsController;
-use App\Http\Controllers\admin\ModalManagementController;
-use App\Http\Controllers\NewsletterController;
-use App\Http\Controllers\BrowserCacheController;
 
 // =============================================================================
 // STORAGE ROUTES (Fix for development server symbolic link issues)
@@ -747,7 +748,7 @@ Route::controller(App\Http\Controllers\Api\TicketValidationController::class)->m
 // WITHDRAWAL ROUTES
 // =============================================================================
 
-Route::controller(App\Http\Controllers\User\WithdrawController::class)->middleware('auth','prevent-back')->group(function () {
+Route::controller(WithdrawController::class)->middleware('auth','prevent-back')->group(function () {
     Route::get('/user/withdraw','index')->name('user.withdraw');
     Route::post('/user/withdraw','withdraw')->name('user.withdraw.submit');
     Route::get('/user/withdraw/history','history')->name('user.withdraw.history');
