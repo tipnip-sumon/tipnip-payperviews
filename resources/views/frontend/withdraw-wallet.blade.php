@@ -641,20 +641,11 @@ $(document).ready(function() {
                         }
                         
                         // Allow form submission and submit
-                        console.log('=== Form Submission Debug ===');
-                        console.log('Form action URL:', $('#withdrawForm').attr('action'));
-                        console.log('Form method:', $('#withdrawForm').attr('method'));
-                        console.log('CSRF token:', $('#withdrawForm').find('input[name="_token"]').val());
-                        
                         window.allowWithdrawalFormSubmission();
                         $('#withdrawForm')[0].submit();
                         
                     }).fail(function() {
                         console.log('Failed to get fresh CSRF token, proceeding with existing token');
-                        console.log('=== Fallback Form Submission Debug ===');
-                        console.log('Form action URL:', $('#withdrawForm').attr('action'));
-                        console.log('Form method:', $('#withdrawForm').attr('method'));
-                        
                         // Fallback: try with existing token
                         window.allowWithdrawalFormSubmission();
                         $('#withdrawForm')[0].submit();
