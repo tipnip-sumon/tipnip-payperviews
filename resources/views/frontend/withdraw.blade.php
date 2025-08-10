@@ -156,7 +156,7 @@
                                                         data-icon="{{ $method->icon ?? 'fe fe-credit-card' }}"
                                                         data-processing-time="{{ $method->processing_time }}"
                                                         data-instructions="{{ $method->instructions }}"
-                                                        {{ old('method_id') == $method->id ? 'selected' : '' }}>
+                                                        {{ old('method_id', $depositStoredData['method_id'] ?? '') == $method->id ? 'selected' : '' }}>
                                                     @if($method->icon)
                                                         <i class="{{ $method->icon }} me-2"></i>
                                                     @endif
@@ -195,7 +195,7 @@
                                 <i class="ri-information-line me-2 text-info"></i>Account Details:
                             </label>
                             <textarea name="account_details" id="account_details" class="form-control" rows="4" 
-                                      placeholder="Enter your account details (e.g., Bank account number, PayPal email, etc.)" required></textarea>
+                                      placeholder="Enter your account details (e.g., Bank account number, PayPal email, etc.)" required>{{ old('account_details', $depositStoredData['account_details'] ?? '') }}</textarea>
                             <small class="text-muted">Provide complete and accurate details to avoid delays in processing.</small>
                             @error('account_details')
                                 <div class="text-danger small mt-1"><i class="ri-error-warning-line me-1"></i>{{ $message }}</div>
@@ -241,6 +241,52 @@
                             @enderror
                         </div>
                         
+                        <!-- OTP Verification Section -->
+                        @if($isDepositOtpSession ?? false)
+                        <div class="mb-4" id="otpSection">
+                            <div class="card border-primary">
+                                <div class="card-header bg-primary text-white">
+                                    <h6 class="mb-0">
+                                        <i class="ri-shield-check-line me-2"></i>Email Verification Required
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <p class="mb-3">
+                                        <i class="ri-mail-line me-2 text-primary"></i>
+                                        We've sent a 6-digit verification code to your email address. Please enter the code below to proceed with your withdrawal.
+                                    </p>
+                                    <div class="mb-3">
+                                        <label for="otp_code" class="form-label fs-14 text-dark fw-semibold">
+                                            Verification Code:
+                                        </label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-light">
+                                                <i class="ri-key-line text-primary"></i>
+                                            </span>
+                                            <input type="text" name="otp_code" class="form-control text-center fs-16" 
+                                                   id="otp_code" placeholder="000000" maxlength="6" 
+                                                   pattern="[0-9]{6}" title="Please enter a 6-digit verification code" required>
+                                        </div>
+                                        @error('otp_code')
+                                            <div class="text-danger small mt-1">
+                                                <i class="ri-error-warning-line me-1"></i>{{ $message }}
+                                            </div>
+                                        @enderror
+                                    </div>
+                                    
+                                    <div class="text-center">
+                                        <small class="text-muted">
+                                            Didn't receive the code? 
+                                            <a href="javascript:void(0)" onclick="resendOtp()" class="text-primary">
+                                                Resend Code
+                                            </a>
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        @endif
+                        
                         <!-- Important Notice -->
                         <div class="alert alert-warning border-0">
                             <h6><i class="ri-alert-line me-2"></i>Important Notice:</h6>
@@ -255,9 +301,15 @@
                     
                     <div class="card-footer bg-light text-center p-4">
                         @if(isset($kycVerified) && $kycVerified)
-                            <button class="btn btn-danger btn-lg w-100" type="submit" id="withdrawBtn">
-                                <i class="ri-money-dollar-circle-line me-2"></i>Request Withdrawal (${{ number_format($withdrawalDetails['net_amount'], 2) }})
-                            </button>
+                            @if($isDepositOtpSession ?? false)
+                                <button class="btn btn-success btn-lg w-100" type="submit" id="withdrawBtn">
+                                    <i class="ri-shield-check-line me-2"></i>Verify OTP & Complete Withdrawal
+                                </button>
+                            @else
+                                <button class="btn btn-danger btn-lg w-100" type="submit" id="withdrawBtn">
+                                    <i class="ri-money-dollar-circle-line me-2"></i>Send OTP & Request Withdrawal (${{ number_format($withdrawalDetails['net_amount'], 2) }})
+                                </button>
+                            @endif
                         @else
                             <button class="btn btn-secondary btn-lg w-100" type="button" disabled>
                                 <i class="fas fa-lock me-2"></i>KYC Verification Required
@@ -411,7 +463,8 @@
                 const method = $('#withdraw_method').val();
                 const details = $('#account_details').val();
                 const methodName = $('#withdraw_method option:selected').text();
-
+                const isOtpMode = $('#otpSection').length > 0 && $('#otpSection').is(':visible');
+                
                 if (!password || !method || !details) {
                     Swal.fire({
                         title: 'Missing Information!',
@@ -421,27 +474,74 @@
                     });
                     return false;
                 }
-
-                Swal.fire({
-                    title: 'Confirm Withdrawal',
-                    html: `Are you sure you want to withdraw your deposit via <strong>${methodName}</strong>?<br><br>
-                           <small class="text-muted">• A 20% processing fee will be deducted<br>
-                           • You will lose access to ad viewing<br>
-                           • This action cannot be undone</small>`,
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonColor: '#dc3545',
-                    cancelButtonColor: '#6c757d',
-                    confirmButtonText: 'Yes, Withdraw',
-                    cancelButtonText: 'Cancel',
-                    reverseButtons: true
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        $('#withdrawBtn').html('<i class="ri-loader-4-line me-2 spin"></i>Processing Withdrawal...').prop('disabled', true);
-                        this.submit();
+                
+                if (isOtpMode) {
+                    // OTP verification mode
+                    const otpCode = $('#otp_code').val();
+                    if (!otpCode || otpCode.length !== 6) {
+                        Swal.fire({
+                            title: 'Invalid OTP!',
+                            text: 'Please enter a valid 6-digit verification code',
+                            icon: 'warning',
+                            confirmButtonText: 'OK'
+                        });
+                        return false;
                     }
-                });
+                    
+                    Swal.fire({
+                        title: 'Verify OTP & Complete Withdrawal',
+                        html: `Completing withdrawal via <strong>${methodName}</strong> with OTP verification.<br><br>
+                               <small class="text-muted">• OTP Code: ${otpCode}<br>
+                               • This will finalize your withdrawal request</small>`,
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonColor: '#28a745',
+                        cancelButtonColor: '#6c757d',
+                        confirmButtonText: 'Verify & Complete',
+                        cancelButtonText: 'Cancel',
+                        reverseButtons: true
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            $('#withdrawBtn').html('<i class="ri-loader-4-line me-2 spin"></i>Verifying OTP...').prop('disabled', true);
+                            this.submit();
+                        }
+                    });
+                } else {
+                    // Initial submission mode (send OTP)
+                    Swal.fire({
+                        title: 'Send OTP & Request Withdrawal',
+                        html: `Send verification code to your email for withdrawal via <strong>${methodName}</strong>?<br><br>
+                               <small class="text-muted">• A 20% processing fee will be deducted<br>
+                               • You will lose access to ad viewing<br>
+                               • An OTP will be sent to your email</small>`,
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#dc3545',
+                        cancelButtonColor: '#6c757d',
+                        confirmButtonText: 'Send OTP',
+                        cancelButtonText: 'Cancel',
+                        reverseButtons: true
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            $('#withdrawBtn').html('<i class="ri-loader-4-line me-2 spin"></i>Sending OTP...').prop('disabled', true);
+                            this.submit();
+                        }
+                    });
+                }
             });
+            
+            // Auto-focus on OTP input and restrict to numbers only
+            $('#otp_code').on('input', function() {
+                this.value = this.value.replace(/[^0-9]/g, '');
+                if (this.value.length > 6) {
+                    this.value = this.value.slice(0, 6);
+                }
+            });
+            
+            // Auto-focus OTP field when shown
+            @if($isDepositOtpSession ?? false)
+                $('#otp_code').focus();
+            @endif
             
             // Add spinning animation
             $('<style>')
@@ -449,6 +549,31 @@
                 .html('.spin { animation: spin 1s linear infinite; } @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }')
                 .appendTo('head');
         });
+        
+        // Resend OTP function
+        function resendOtp() {
+            Swal.fire({
+                title: 'Resend OTP?',
+                text: 'This will clear the current form and send a new verification code.',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#007bff',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Resend Code',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Create a form to clear OTP session and resend
+                    $('<form method="POST" action="{{ route("user.withdraw.submit") }}">' +
+                      '<input type="hidden" name="_token" value="' + $('meta[name="csrf-token"]').attr('content') + '">' +
+                      '<input type="hidden" name="clear_otp" value="1">' +
+                      '<input type="hidden" name="method_id" value="' + $('#withdraw_method').val() + '">' +
+                      '<input type="hidden" name="account_details" value="' + $('#account_details').val() + '">' +
+                      '<input type="hidden" name="password" value="' + $('#password').val() + '">' +
+                      '</form>').appendTo('body').submit();
+                }
+            });
+        }
 
         // Handle SweetAlert messages from backend
         @if(session('swal_success'))
