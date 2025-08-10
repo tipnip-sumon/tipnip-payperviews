@@ -417,6 +417,7 @@
     </div>
 </div>
 
+@push('script')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const amountInput = document.getElementById('amount');
@@ -571,7 +572,27 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+
+    // Handle SweetAlert messages from backend
+    @if(session('swal_success'))
+        Swal.fire({
+            title: '{{ session("swal_success.title") }}',
+            text: '{{ session("swal_success.text") }}',
+            icon: '{{ session("swal_success.icon") }}',
+            confirmButtonText: 'OK'
+        });
+    @endif
+
+    @if(session('swal_error'))
+        Swal.fire({
+            title: '{{ session("swal_error.title") }}',
+            text: '{{ session("swal_error.text") }}',
+            icon: '{{ session("swal_error.icon") }}',
+            confirmButtonText: 'OK'
+        });
+    @endif
 });
 </script>
+@endpush
 @endsection
 </x-smart_layout>
