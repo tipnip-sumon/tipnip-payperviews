@@ -666,7 +666,7 @@ class WithdrawController extends Controller
             });
 
             if ($emailSent !== false) {
-                return back()->with('swal_success', [
+                return redirect()->route('user.withdraw.wallet')->with('swal_success', [
                     'title' => 'OTP Sent!',
                     'text' => 'Verification code has been sent to your email address. Please check your email and enter the 6-digit code below.',
                     'icon' => 'success'
@@ -678,7 +678,7 @@ class WithdrawController extends Controller
                 $freshUser->save();
                 session()->forget(['wallet_withdrawal_data', 'show_wallet_otp_form']);
                 
-                return back()->withInput()->with('swal_error', [
+                return redirect()->route('user.withdraw.wallet')->withInput()->with('swal_error', [
                     'title' => 'Email Error!',
                     'text' => 'Could not send verification code. Please check your email settings or try again later.',
                     'icon' => 'error'
@@ -687,7 +687,7 @@ class WithdrawController extends Controller
             
         } catch (\Exception $e) {
             Log::error('Wallet OTP email sending failed: ' . $e->getMessage());
-            return back()->with('swal_error', [
+            return redirect()->route('user.withdraw.wallet')->with('swal_error', [
                 'title' => 'Email Error!',
                 'text' => 'Could not send verification code. Please try again.',
                 'icon' => 'error'
@@ -714,7 +714,7 @@ class WithdrawController extends Controller
         
         // Check OTP first
         if (!$user->ver_code || $user->ver_code != $request->otp_code) {
-            return back()->with('swal_error', [
+            return redirect()->route('user.withdraw.wallet')->with('swal_error', [
                 'title' => 'Invalid OTP!',
                 'text' => 'The verification code you entered is incorrect.',
                 'icon' => 'error'
@@ -723,7 +723,7 @@ class WithdrawController extends Controller
         
         // Check OTP expiry (10 minutes)
         if (!$user->ver_code_send_at || Carbon::parse($user->ver_code_send_at)->addMinutes(10)->isPast()) {
-            return back()->with('swal_error', [
+            return redirect()->route('user.withdraw.wallet')->with('swal_error', [
                 'title' => 'OTP Expired!',
                 'text' => 'The verification code has expired. Please request a new one.',
                 'icon' => 'error'
@@ -732,7 +732,7 @@ class WithdrawController extends Controller
         
         // NOW verify password after OTP is confirmed
         if (!Auth::attempt(['username' => $user->username, 'password' => $request->password])) {
-            return back()->with('swal_error', [
+            return redirect()->route('user.withdraw.wallet')->with('swal_error', [
                 'title' => 'Authentication Failed!',
                 'text' => 'Invalid transaction password',
                 'icon' => 'error'
@@ -742,7 +742,7 @@ class WithdrawController extends Controller
         // Get withdrawal data from session
         $withdrawalData = session('wallet_withdrawal_data');
         if (!$withdrawalData) {
-            return back()->with('swal_error', [
+            return redirect()->route('user.withdraw.wallet')->with('swal_error', [
                 'title' => 'Session Expired!',
                 'text' => 'Please start the withdrawal process again.',
                 'icon' => 'error'
@@ -767,14 +767,14 @@ class WithdrawController extends Controller
             // Check if profile completion is the specific issue
             $failures = $conditionCheck['failures'];
             if (count($failures) === 1 && strpos($failures[0], 'Profile completion') !== false) {
-                return redirect()->back()->with('swal_error', [
+                return redirect()->route('user.withdraw.wallet')->with('swal_error', [
                     'title' => 'Profile Incomplete!',
                     'text' => 'Please complete your profile information before making withdrawals. Update your profile with all required details including name, mobile, country, and address.',
                     'icon' => 'warning'
                 ]);
             }
             
-            return redirect()->back()->with('swal_error', [
+            return redirect()->route('user.withdraw.wallet')->with('swal_error', [
                 'title' => 'Requirements Not Met!',
                 'text' => 'Withdrawal requirements not met: ' . implode(', ', $conditionCheck['failures']),
                 'icon' => 'error'
