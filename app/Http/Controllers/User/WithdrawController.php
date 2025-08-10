@@ -705,6 +705,11 @@ class WithdrawController extends Controller
     public function sendWalletWithdrawOtp(Request $request)
     {
         try {
+            Log::info('sendWalletWithdrawOtp method called', [
+                'user_id' => Auth::id(),
+                'request_data' => $request->all()
+            ]);
+            
             $user = Auth::user();
 
             // Check withdrawal conditions
@@ -754,10 +759,21 @@ class WithdrawController extends Controller
             $otp = sprintf('%06d', random_int(0, 999999));
             $expiry = now()->addMinutes(30); // Temporarily increased to 30 minutes for testing
             
+            Log::info('About to store OTP in session', [
+                'otp' => $otp,
+                'expiry' => $expiry
+            ]);
+            
             session([
                 'wallet_withdrawal_otp' => $otp,
                 'wallet_withdrawal_otp_expiry' => $expiry,
                 'wallet_otp_required' => true
+            ]);
+
+            Log::info('OTP stored in session, verifying storage', [
+                'stored_otp' => session('wallet_withdrawal_otp'),
+                'stored_expiry' => session('wallet_withdrawal_otp_expiry'),
+                'stored_required' => session('wallet_otp_required')
             ]);
 
             // Debug logging
