@@ -433,6 +433,7 @@
                                             data-earning="{{ $userStats['earning_rate'] ?? $video->cost_per_click ?? 0.001 }}"
                                             data-video-category="{{ $video->category ?? 'general' }}"
                                             data-video-views="{{ $video->views_count ?? 0 }}"
+                                            data-duration="{{ $video->duration ?? 30 }}"
                                             style="border-radius: 0.75rem; padding: 12px 20px;">
                                         <div class="d-flex align-items-center justify-content-center">
                                             <i class="fas fa-play me-2"></i>
@@ -672,19 +673,22 @@
         }
     </style>
     
-    <script src="{{ asset('assets/js/jquery-3.7.1.min.js') }}"></script>
+    <script src="{{ asset('assets_custom/js/jquery-3.7.1.min.js') }}"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="{{ asset('server-time.js') }}"></script>
     
     <!-- Wait for jQuery to load -->
     <script>
-        // Development mode check
-        const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        // Development mode check (only declare if not already declared)
+        if (typeof isDevelopment === 'undefined') {
+            window.isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        }
+        const isDevelopment = window.isDevelopment;
         
         // Ensure jQuery is loaded before proceeding
         if (typeof $ === 'undefined') {
             if (isDevelopment) console.error('jQuery not loaded properly');
-            document.write('<script src="https://code.jquery.com/jquery-3.7.1.min.js"><\/script>');
+            document.write('<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>');
         }
         
         // Ensure CSRF token is available
@@ -719,7 +723,7 @@
         $(document).ready(function() {
             // Ensure jQuery is available
             if (typeof $ === 'undefined') {
-                if (isDevelopment) console.error('jQuery not available for tab detection');
+                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') console.error('jQuery not available for tab detection');
                 return;
             }
             
@@ -761,9 +765,9 @@
         // Track when tab becomes visible/hidden
         document.addEventListener('visibilitychange', function() {
             if (document.hidden) {
-                if (isDevelopment) console.log('Tab hidden - pausing activity');
+                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') console.log('Tab hidden - pausing activity');
             } else {
-                if (isDevelopment) console.log('Tab visible - resuming activity');
+                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') console.log('Tab visible - resuming activity');
                 // Check if we're still the active tab
                 checkTabStatus();
             }
@@ -828,7 +832,7 @@
     <script>
         // Check if server-time.js loaded correctly
         if (typeof window.getServerTime !== 'function') {
-            if (isDevelopment) console.error('server-time.js not loaded properly, adding fallback implementation');
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') console.error('server-time.js not loaded properly, adding fallback implementation');
             // Fallback implementation
             window.getServerTime = async function() {
                 try {
@@ -837,7 +841,7 @@
                     const data = await response.json();
                     return data.server_time;
                 } catch (e) {
-                    if (isDevelopment) console.error('Error in fallback getServerTime:', e);
+                    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') console.error('Error in fallback getServerTime:', e);
                     return null;
                 }
             };
@@ -845,11 +849,11 @@
         
         // Force show timer immediately when page loads
         document.addEventListener('DOMContentLoaded', function() {
-            if (isDevelopment) console.log('DOM loaded - forcing timer visibility');
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') console.log('DOM loaded - forcing timer visibility');
             var timerElement = document.getElementById('countdown-timer');
             if (timerElement) {
                 timerElement.style.display = 'block';
-                if (isDevelopment) console.log('Timer element found and display set to block');
+                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') console.log('Timer element found and display set to block');
                 
                 // Start a temporary local timer immediately while waiting for server time
                 function tempUpdateTimer() {
@@ -878,16 +882,16 @@
                 // Replace with server time after a short delay
                 setTimeout(function() {
                     clearInterval(tempTimerInterval);
-                    if (isDevelopment) console.log('Temporary timer stopped, initializing server time countdown');
+                    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') console.log('Temporary timer stopped, initializing server time countdown');
                 }, 3000);
             } else {
-                if (isDevelopment) console.error('Timer element not found!');
+                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') console.error('Timer element not found!');
             }
         });
         
         // Server-time based countdown timer with improved UI
         $(document).ready(function() {
-            if (isDevelopment) console.log('Gallery page loaded, initializing countdown timer...');
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') console.log('Gallery page loaded, initializing countdown timer...');
             
             // Initialize global variables for video watching
             window.currentVideoId = null;
@@ -938,7 +942,7 @@
                     
                     isTimerInitialized = true;
                 } catch (error) {
-                    if (isDevelopment) console.error('Error initializing server time:', error);
+                    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') console.error('Error initializing server time:', error);
                     fallbackToLocalTimer();
                 }
             }
@@ -1377,20 +1381,79 @@
                 }
             }
 
-            // Handle watch button clicks
-            $(document).on('click', '.watch-btn', function() {
+            // EMERGENCY FIX: Direct video button initialization to bypass error prevention conflicts
+            function initializeVideoButtons() {
+                console.log('Initializing video buttons directly...');
+                
+                // Find all video buttons and ensure they're clickable
+                $('.watch-btn').each(function() {
+                    const button = this;
+                    
+                    // Remove any conflicting event listeners
+                    $(button).off('click.errorPrevention');
+                    
+                    // Ensure button is properly enabled
+                    if (!$(button).hasClass('watched') && !$(button).hasClass('clicked-processing')) {
+                        $(button).prop('disabled', false);
+                        console.log('Video button enabled:', $(button).data('video-id'));
+                    }
+                });
+                
+                console.log('Video buttons initialized, count:', $('.watch-btn').length);
+            }
+            
+            // Initialize on document ready and periodically
+            $(document).ready(function() {
+                setTimeout(initializeVideoButtons, 1000);
+                setInterval(initializeVideoButtons, 10000); // Re-check every 10 seconds
+            });
+
+            // Handle watch button clicks with enhanced error prevention bypass
+            $(document).on('click', '.watch-btn', function(e) {
                 try {
-                    // Store reference to clicked button
-                    const clickedButton = this;
+                    // CRITICAL: Prevent any interference from error prevention systems
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.stopImmediatePropagation();
+                    
+                    console.log('Video button clicked - bypassing all interference...');
+                    
+                    // Force-process this click
+                    processVideoButtonClick(this);
+                    
+                } catch (error) {
+                    console.error('Click handler error:', error);
+                    // Fallback: try direct processing
+                    try {
+                        processVideoButtonClick(this);
+                    } catch (fallbackError) {
+                        console.error('Fallback click processing failed:', fallbackError);
+                    }
+                }
+            });
+            
+            // Separate function to process video button clicks
+            function processVideoButtonClick(button) {
+                try {
+                    console.log('Processing video button click...');
+                    
+                    // Store reference to clicked button globally so it can be accessed in other handlers
+                    window.clickedButton = button;
+                    
+                    // SAFETY: Prevent multiple rapid clicks or processing
+                    if (window.videoProcessing) {
+                        console.log('Video processing already in progress, ignoring click');
+                        return false;
+                    }
                     
                     // Debug: Log button state
-                    console.log('Button clicked. Classes:', $(this).attr('class'));
-                    console.log('Button disabled:', $(this).prop('disabled'));
-                    console.log('Button has watched class:', $(this).hasClass('watched'));
+                    console.log('Button clicked. Classes:', $(button).attr('class'));
+                    console.log('Button disabled:', $(button).prop('disabled'));
+                    console.log('Button has watched class:', $(button).hasClass('watched'));
                     
                     // Check if video is already watched (prevent already watched videos from being clicked)
                     // Only check for 'watched' class and if button is specifically disabled due to completion
-                    if ($(this).hasClass('watched') || ($(this).prop('disabled') && $(this).hasClass('clicked-processing') === false)) {
+                    if ($(button).hasClass('watched') || ($(button).prop('disabled') && $(button).hasClass('clicked-processing') === false)) {
                         Swal.fire({
                             title: 'Already Watched',
                             text: 'You have already watched this video and earned money from it.',
@@ -1403,35 +1466,38 @@
                     }
                     
                     // Check if button is currently being processed (prevent double-clicks during loading)
-                    if ($(this).hasClass('clicked-processing') || $(this).prop('disabled')) {
+                    if ($(button).hasClass('clicked-processing') || $(button).prop('disabled')) {
                         console.log('Button is currently being processed, ignoring click');
                         return;
                     }
                     
                     // Immediately mark this button as clicked to prevent double-clicks
-                    $(this).addClass('clicked-processing').prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>Loading...');
+                    $(button).addClass('clicked-processing').prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>Loading...');
+                    
+                    // Set global flag to prevent multiple processing
+                    window.videoProcessing = true;
                     
                     // Get video data from button attributes
-                    currentVideoId = $(this).data('video-id');
-                    const videoUrl = $(this).data('video-url');
-                    const videoTitle = $(this).data('video-title') || 'Video';
-                    const videoCategory = $(this).data('video-category') || 'general';
-                    const videoViews = parseInt($(this).data('video-views')) || 0;
-                    const videoDuration = parseInt($(this).data('duration')) || 30;
-                    earningAmount = parseFloat($(this).data('earning')) || 0;
+                    currentVideoId = $(button).data('video-id');
+                    const videoUrl = $(button).data('video-url');
+                    const videoTitle = $(button).data('video-title') || 'Video';
+                    const videoCategory = $(button).data('video-category') || 'general';
+                    const videoViews = parseInt($(button).data('video-views')) || 0;
+                    const videoDuration = parseInt($(button).data('duration')) || 30;
+                    earningAmount = parseFloat($(button).data('earning')) || 0;
                     
                     // Validate required data
                     if (!currentVideoId) {
                         showVideoError('Video ID is missing. Please refresh the page and try again.');
                         // Reset button
-                        resetVideoButton(this);
+                        resetVideoButton(button);
                         return;
                     }
                     
                     if (!videoUrl || videoUrl.trim() === '') {
                         showVideoError('Video URL is missing. Please contact support.');
                         // Reset button
-                        resetVideoButton(this);
+                        resetVideoButton(button);
                         return;
                     }
                     
@@ -1471,11 +1537,73 @@
                         showVideoError('Invalid video URL format. Please contact support.');
                         return;
                     }
+                    // IMPROVED: Ensure video playback works reliably
+                    // Check for multiple video systems and use the best available one
+                    
+                    console.log('Attempting to play video:', { 
+                        videoId: currentVideoId, 
+                        videoTitle: videoTitle, 
+                        videoUrl: videoUrl,
+                        embedUrl: embedUrl,
+                        earningAmount: earningAmount 
+                    });
+                    
+                    // Try global video system first if available
+                    if (typeof window.playVideo === 'function' && document.getElementById('globalVideoModal')) {
+                        console.log('Using global video system');
+                        
+                        // Reset button first (will be managed by global system)
+                        resetVideoButton(button);
+                        
+                        // Use the proven global video system
+                        try {
+                            window.playVideo(currentVideoId, videoTitle, embedUrl, earningAmount, minimumWatchTime);
+                            return; // Exit early, global system handles everything
+                        } catch (globalError) {
+                            console.error('Global video system failed:', globalError);
+                            // Continue to fallback
+                        }
+                    }
+                    
+                    // Fallback to custom modal system
+                    console.log('Using custom gallery modal system');
+                    
+                    // Ensure modal exists
+                    if (!document.getElementById('videoWatchModal')) {
+                        console.error('Custom video modal not found!');
+                        showVideoError('Video modal not available. Please refresh the page.');
+                        resetVideoButton(button);
+                        return;
+                    }
                     
                     // Set iframe source and show modal
                     try {
-                        $('#video-iframe').attr('src', embedUrl);
-                        $('#videoWatchModal').modal('show');
+                        // Validate embed URL
+                        if (!embedUrl || embedUrl.trim() === '') {
+                            throw new Error('Empty embed URL');
+                        }
+                        
+                        console.log('Setting iframe source:', embedUrl);
+                        
+                        // Set iframe source with error handling
+                        const iframe = document.getElementById('video-iframe');
+                        if (!iframe) {
+                            throw new Error('Video iframe element not found');
+                        }
+                        
+                        iframe.src = embedUrl;
+                        
+                        // Show modal with Bootstrap
+                        const modalElement = document.getElementById('videoWatchModal');
+                        if (!modalElement) {
+                            throw new Error('Video modal element not found');
+                        }
+                        
+                        // Use Bootstrap modal
+                        const modal = new bootstrap.Modal(modalElement);
+                        modal.show();
+                        
+                        console.log('Custom video modal opened successfully');
                         
                         // Reset progress and video state
                         watchDuration = 0;
@@ -1495,7 +1623,7 @@
                 } catch (error) {
                     showVideoError('Failed to initialize video. Please refresh the page and try again.');
                 }
-            });
+            } // Close processVideoButtonClick function
             
             // Helper function to show video errors
             function showVideoError(message) {
@@ -1534,7 +1662,10 @@
 
             // Helper function to update the video count badge in real-time
             function updateVideoCountBadge() {
-                const remainingVideos = $('.video-card:visible').length;
+                // Use filter() instead of :visible selector to avoid querySelectorAll errors
+                const remainingVideos = $('.video-card').filter(function() {
+                    return $(this).is(':visible');
+                }).length;
                 const videoBadge = $('#video-count-badge');
                 
                 console.log('Updating video count badge:', remainingVideos, 'videos remaining');
@@ -1567,8 +1698,10 @@
                     }
                 }
                 
-                // Also update the title if needed
-                const cardTitle = $('.card-title:contains("Watch Videos & Earn Money")');
+                // Also update the title if needed - use filter() instead of :contains() selector
+                const cardTitle = $('.card-title').filter(function() {
+                    return $(this).text().includes('Watch Videos & Earn Money');
+                });
                 if (cardTitle.length > 0 && remainingVideos === 0) {
                     // Could update the title to reflect completion, but let's keep it simple for now
                 }
@@ -1851,36 +1984,96 @@
                     success: function(response) {
                     $('#video-overlay').addClass('d-none');
                     
+                    // SAFETY: Hide any existing modals to prevent conflicts
+                    $('#videoWatchModal').modal('hide');
+                    $('.modal').modal('hide'); // Close any open modals
+                    
                     // Debug: Log server response
                     console.log('Server response:', response);
                     console.log('Response message:', response.message);
                     console.log('Response success:', response.success);
+                    // PRIORITY CHECK: Handle "already watched" cases FIRST and ONLY
+                    const isAlreadyWatched = response.message && (
+                        response.message.toLowerCase().includes('already earned') ||
+                        response.message.toLowerCase().includes('already watched') ||
+                        response.message.toLowerCase().includes('already viewed') ||
+                        response.message.toLowerCase().includes('video already') ||
+                        (response.success === false && response.message.toLowerCase().includes('already'))
+                    );
                     
-                    // Check if this is an "already watched" scenario where earnings were still processed
-                    const isAlreadyWatched = response.message && response.message.toLowerCase().includes('already earned');
-                    const hasEarnings = response.earned_amount && parseFloat(response.earned_amount) > 0;
-                    const hasBalanceUpdate = response.user_balance || response.total_earnings;
-                    
-                    // Special handling for false "already watched" errors (when server incorrectly identifies fresh videos as watched)
-                    if (isAlreadyWatched && !hasEarnings && !hasBalanceUpdate && response.success === false) {
-                        console.warn('Server returned false "already watched" error for fresh video');
+                    // If already watched, handle IMMEDIATELY and exit
+                    if (isAlreadyWatched) {
+                        console.warn('Video already watched - showing single notification');
+                        console.log('Preventing all other modals and processing...');
                         
-                        // Reset button state
-                        resetVideoButton(clickedButton);
+                        // Set global flag to prevent other systems from showing modals
+                        window.alreadyWatchedHandled = true;
                         
-                        // Show a different message indicating this might be a server issue
-                        Swal.fire({
-                            title: 'Temporary Issue',
-                            text: 'There was a temporary issue processing your request. Please try again in a moment.',
-                            icon: 'warning',
-                            confirmButtonText: 'OK',
-                            timer: 4000,
-                            timerProgressBar: true
-                        });
+                        // AGGRESSIVELY hide ALL modals immediately
+                        $('#videoWatchModal, #earningsModal, #globalVideoModal, #globalEarningsModal, .modal').modal('hide');
+                        
+                        // Close any SweetAlert instances
+                        if (window.Swal) {
+                            Swal.close();
+                        }
+                        
+                        // Reset button state using global reference
+                        if (window.clickedButton) {
+                            resetVideoButton(window.clickedButton);
+                        }
+                        
+                        // Clear processing flag FIRST
+                        window.videoProcessing = false;
+                        
+                        // Small delay to ensure modals are hidden before showing SweetAlert
+                        setTimeout(function() {
+                            // Show a single notification for already watched videos
+                            Swal.fire({
+                                title: 'Video Already Watched',
+                                text: 'You have already earned from this video today. Your earnings are safely in your balance.',
+                                icon: 'info',
+                                confirmButtonText: 'Got it!',
+                                timer: 3000,
+                                timerProgressBar: true,
+                                showClass: {
+                                    popup: 'animate__animated animate__fadeInDown'
+                                },
+                                hideClass: {
+                                    popup: 'animate__animated animate__fadeOutUp'
+                                }
+                            }).finally(function() {
+                                // Clear the flag after SweetAlert is closed
+                                window.alreadyWatchedHandled = false;
+                            });
+                        }, 100);
+                        
+                        // CRITICAL: Exit here - do not continue to any other logic
                         return;
                     }
                     
-                    if (response.success || (isAlreadyWatched && (hasEarnings || hasBalanceUpdate))) {
+                    // Only for genuinely successful new earnings - check if NOT already handled
+                    const hasEarnings = response.earned_amount && parseFloat(response.earned_amount) > 0;
+                    const hasBalanceUpdate = response.user_balance || response.total_earnings;
+                                confirmButtonText: 'Got it!',
+                                timer: 3000,
+                                timerProgressBar: true,
+                                showClass: {
+                                    popup: 'animate__animated animate__fadeInDown'
+                                },
+                                hideClass: {
+                                    popup: 'animate__animated animate__fadeOutUp'
+                                }
+                            }).finally(function() {
+                                // Clear the flag after SweetAlert is closed
+                                window.alreadyWatchedHandled = false;
+                            });
+                        }, 100);
+                        
+                        // Stop all processing here - do NOT continue to other modal logic
+                        return;
+                    
+                    // Only proceed to main success logic if NOT already handled AND genuinely successful
+                    if (!window.alreadyWatchedHandled && response.success && !isAlreadyWatched) {
                         // INSTANT UI REFRESH - Always update displays regardless of success/already watched status
                         if (hasBalanceUpdate || hasEarnings) {
                             // Force refresh of income dashboard with live data
@@ -1914,8 +2107,10 @@
                             // Update the video count badge in real-time
                             updateVideoCountBadge();
                             
-                            // Check if there are any videos left in the gallery
-                            const remainingVideos = $('.video-card:visible').length;
+                            // Check if there are any videos left in the gallery - use filter() to avoid querySelectorAll errors
+                            const remainingVideos = $('.video-card').filter(function() {
+                                return $(this).is(':visible');
+                            }).length;
                             
                             if (remainingVideos === 0) {
                                 // No more videos - show completion message
@@ -1928,7 +2123,7 @@
                                             <p class="text-muted">Excellent work! You've watched all your assigned videos for today and earned money from each one.</p>
                                             <div class="mt-4">
                                                 <span class="badge bg-success bg-gradient px-3 py-2 fs-6">
-                                                    <i class="fas fa-coins"></i> Total Earned Today: $${parseFloat(response.today_earnings || response.earned_amount || 0).toFixed(4)}
+                                                    <i class="fas fa-coins"></i> Total Earned Today: $' + parseFloat(response.today_earnings || response.earned_amount || 0).toFixed(4) + '
                                                 </span>
                                             </div>
                                             <div class="mt-3">
@@ -1948,117 +2143,26 @@
                             }
                         });
                         
-                        // Show earnings modal with appropriate messaging
-                        if (isAlreadyWatched) {
-                            $('#earnings-amount').text('Video Already Watched');
-                            $('#earnings-message').text('You have already earned from this video today. Your previous earnings are included in your balance.');
-                            // Don't show the earnings modal for already watched videos, just close the video modal
-                            $('#videoWatchModal').modal('hide');
-                            
-                            // Show a more friendly notification
-                            Swal.fire({
-                                title: 'Video Already Watched',
-                                text: 'You have already earned from this video today. Your earnings are safely in your balance.',
-                                icon: 'info',
-                                confirmButtonText: 'Got it!',
-                                timer: 3000,
-                                timerProgressBar: true,
-                                showClass: {
-                                    popup: 'animate__animated animate__fadeInDown'
-                                },
-                                hideClass: {
-                                    popup: 'animate__animated animate__fadeOutUp'
-                                }
-                            });
-                        } else {
-                            // Hide video modal first to prevent conflicts
-                            $('#videoWatchModal').modal('hide');
-                            
-                            // Wait for video modal to close, then show earnings modal
-                            setTimeout(function() {
-                                // Show earnings modal with updated values
-                                $('#earnings-amount').text('You earned $' + parseFloat(response.earned_amount).toFixed(4));
-                                $('#earnings-message').text(response.message || 'Congratulations! Your earnings have been added to your balance.');
-                                $('#total-balance').text(currentBalance.toFixed(4));
-                                
-                                // Show the earnings modal
-                                $('#earningsModal').modal('show');
-                            }, 300);
-                        }
+                        // Show earnings modal with updated values for genuine new earnings
+                        $('#earnings-amount').text('You earned $' + parseFloat(response.earned_amount).toFixed(4));
+                        $('#earnings-message').text(response.message || 'Congratulations! Your earnings have been added to your balance.');
+                        $('#total-balance').text(currentBalance.toFixed(4));
+                        
+                        // Show the earnings modal only for genuine new earnings
+                        $('#earningsModal').modal('show');
                         
                     } else {
-                        // Check if this is an "already watched" case that should be treated as informational
-                        const isAlreadyWatched = response.message && response.message.toLowerCase().includes('already earned');
+                        // Handle genuine errors (not already watched cases, which are handled above)
+                        Swal.fire({
+                            title: 'Unable to Process',
+                            text: response.message || 'Unable to process your request at this time.',
+                            icon: 'warning',
+                            confirmButtonText: 'OK',
+                            footer: 'If this continues, please contact support.'
+                        });
                         
-                        if (isAlreadyWatched) {
-                            // Hide video modal first
-                            $('#videoWatchModal').modal('hide');
-                            
-                            // Remove video from gallery to prevent future clicks
-                            const videoCard = $(`.video-card[data-video-id="${currentVideoId}"]`);
-                            const watchButton = videoCard.find('.watch-btn');
-                            
-                            // Mark as already watched immediately
-                            watchButton.addClass('watched btn-success').removeClass('btn-primary clicked-processing')
-                                      .html('<i class="fas fa-check me-2"></i>Already Watched')
-                                      .prop('disabled', true);
-                            
-                            videoCard.fadeOut(300, function() {
-                                const parentCol = videoCard.closest('.col-lg-4, .col-md-6, .col-sm-12');
-                                parentCol.remove();
-                                
-                                // Update the video count badge in real-time
-                                updateVideoCountBadge();
-                                
-                                // Check if there are any videos left
-                                const remainingVideos = $('.video-card:visible').length;
-                                if (remainingVideos === 0) {
-                                    const videoContainer = $('.row').has('.video-card').first();
-                                    videoContainer.html(`
-                                        <div class="col-12">
-                                            <div class="text-center py-5">
-                                                <i class="fas fa-check-circle fa-4x text-success mb-3"></i>
-                                                <h4 class="text-dark">All Available Videos Completed!</h4>
-                                                <p class="text-muted">You've watched all your available videos for today.</p>
-                                                <div class="mt-4">
-                                                    <a href="{{ route('user.dashboard') }}" class="btn btn-primary btn-lg me-2">
-                                                        <i class="fas fa-tachometer-alt"></i> Go to Dashboard
-                                                    </a>
-                                                    <a href="{{ route('user.video-views.earnings') }}" class="btn btn-outline-success btn-lg">
-                                                        <i class="fas fa-chart-line"></i> View Earnings
-                                                    </a>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    `);
-                                }
-                            });
-                            
-                            // Show friendly notification instead of error
-                            Swal.fire({
-                                title: 'Already Watched',
-                                text: 'You have already earned from this video today. Your earnings are safely in your balance.',
-                                icon: 'info',
-                                confirmButtonText: 'Continue',
-                                timer: 4000,
-                                timerProgressBar: true,
-                                showClass: {
-                                    popup: 'animate__animated animate__bounceIn'
-                                },
-                                hideClass: {
-                                    popup: 'animate__animated animate__fadeOut'
-                                }
-                            });
-                        } else {
-                            // Handle other types of errors
-                            Swal.fire({
-                                title: 'Unable to Process',
-                                text: response.message || 'Unable to process your request at this time.',
-                                icon: 'warning',
-                                confirmButtonText: 'OK',
-                                footer: 'If this continues, please contact support.'
-                            });
-                        }
+                        // Clear processing flag at end of error
+                        window.videoProcessing = false;
                         
                         button.prop('disabled', false).html('<i class="fas fa-coins me-1"></i>Claim $' + parseFloat(earningAmount).toFixed(4));
                     }
@@ -2093,6 +2197,9 @@
                                 location.reload();
                             }
                         });
+                        
+                        // Clear processing flag on error
+                        window.videoProcessing = false;
                         
                         button.prop('disabled', false).html('<i class="fas fa-coins me-1"></i>Claim $' + parseFloat(earningAmount).toFixed(4));
                     }
@@ -2217,34 +2324,19 @@
             $('#continue-watching-btn').on('click', function() {
                 console.log('Continue Watching button clicked - closing modal only (no page reload needed)');
                 
-                // Force close any open modals to prevent conflicts
-                $('.modal').modal('hide');
+                // Just close the modal since we've already updated the UI
+                $('#earningsModal').modal('hide');
                 
-                // Wait a bit for modals to close, then show success message
-                setTimeout(function() {
-                    Swal.fire({
-                        title: 'Success!',
-                        text: 'Your earnings have been added to your balance. You can continue watching more videos.',
-                        icon: 'success',
-                        timer: 2000,
-                        showConfirmButton: false,
-                        toast: true,
-                        position: 'top-end'
-                    });
-                }, 300);
-            });
-            
-            // Global modal conflict prevention - ensure only one modal at a time
-            $('.modal').on('show.bs.modal', function() {
-                // Close any other open modals before showing this one
-                $('.modal').not(this).modal('hide');
-            });
-            
-            // Prevent modal backdrop conflicts
-            $(document).on('hidden.bs.modal', '.modal', function() {
-                if ($('.modal.show').length > 0) {
-                    $('body').addClass('modal-open');
-                }
+                // Optional: Show a brief success message
+                Swal.fire({
+                    title: 'Success!',
+                    text: 'Your earnings have been added to your balance. You can continue watching more videos.',
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false,
+                    toast: true,
+                    position: 'top-end'
+                });
             });
             
             // Remove the automatic reload from earnings modal close

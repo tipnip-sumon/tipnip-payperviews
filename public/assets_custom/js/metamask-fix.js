@@ -82,5 +82,5 @@
         };
     }
 
-    console.log('MetaMask error handler loaded');
+    // MetaMask error handler loaded (silent mode)
 })();

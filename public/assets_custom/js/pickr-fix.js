@@ -21,7 +21,9 @@
             const element = document.createElement('div');
             element.id = container.id;
             element.className = container.class;
-            element.style.display = 'none'; // Hidden fallback
+            if (element && element.style) {
+                element.style.display = 'none'; // Hidden fallback
+            }
             document.head.appendChild(element); // Add to head to ensure it exists early
         }
     });
@@ -40,7 +42,9 @@
                         console.warn('Pickr element not found:', options.el, '- creating fallback');
                         // Create a fallback element
                         const fallback = document.createElement('div');
-                        fallback.style.display = 'none';
+                        if (fallback && fallback.style) {
+                            fallback.style.display = 'none';
+                        }
                         document.body.appendChild(fallback);
                         options.el = fallback;
                     }
@@ -102,13 +106,13 @@
         }
     };
 
-    console.log('Pickr safety overrides installed');
+    // Pickr safety overrides installed (silent mode)
 })();
 
 document.addEventListener('DOMContentLoaded', function() {
     // Additional safety for late-loading Pickr instances
     if (typeof window.Pickr !== 'undefined') {
-        console.log('Pickr available, safety measures active');
+        // Pickr available, safety measures active (silent mode)
     }
 
     // Watch for Pickr errors in custom.js

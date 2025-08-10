@@ -34,7 +34,7 @@
             const stored = localStorage.getItem(CACHE_BUSTER.storageKey);
             return stored ? JSON.parse(stored) : null;
         } catch (e) {
-            if (CACHE_BUSTER.debug) console.warn('Failed to read stored device info:', e);
+            // if (CACHE_BUSTER.debug) console.warn('Failed to read stored device info:', e);
             return null;
         }
     }
@@ -43,9 +43,9 @@
     function storeCurrentDevice(deviceInfo) {
         try {
             localStorage.setItem(CACHE_BUSTER.storageKey, JSON.stringify(deviceInfo));
-            if (CACHE_BUSTER.debug) console.log('✅ Device info stored:', deviceInfo);
+            // Device info stored silently
         } catch (e) {
-            if (CACHE_BUSTER.debug) console.warn('Failed to store device info:', e);
+            // Failed to store device info (silent)
         }
     }
     
@@ -71,9 +71,9 @@
                 }
             });
             
-            if (CACHE_BUSTER.debug) console.log('🧹 Browser cache cleared');
+            // Browser cache cleared (silent mode)
         } catch (e) {
-            if (CACHE_BUSTER.debug) console.warn('Failed to clear browser cache:', e);
+            // if (CACHE_BUSTER.debug) console.warn('Failed to clear browser cache:', e);
         }
     }
     
@@ -88,9 +88,9 @@
         
         if (isAuthenticatedPage) {
             // For authenticated pages, just do a simple cache-busted reload
-            if (CACHE_BUSTER.debug) {
-                console.log('🔄 Simple cache reload for authenticated page');
-            }
+            // if (CACHE_BUSTER.debug) {
+            //     console.log('🔄 Simple cache reload for authenticated page');
+            // }
             
             // Clear cache before reload
             clearBrowserCache();
@@ -105,9 +105,9 @@
         currentUrl.searchParams.set('device_switch', '1');
         currentUrl.searchParams.set('v', CACHE_BUSTER.version);
         
-        if (CACHE_BUSTER.debug) {
-            console.log('🔄 Force reloading with cache bust:', currentUrl.href);
-        }
+        // if (CACHE_BUSTER.debug) {
+        //     console.log('🔄 Force reloading with cache bust:', currentUrl.href);
+        // }
         
         // Clear cache before reload
         clearBrowserCache();
@@ -121,10 +121,7 @@
         const currentDevice = getCurrentDevice();
         const storedDevice = getStoredDevice();
         
-        if (CACHE_BUSTER.debug) {
-            console.log('🔍 Current device:', currentDevice);
-            console.log('📱 Stored device:', storedDevice);
-        }
+        // Device check (silent mode)
         
         // If no stored device, just store current
         if (!storedDevice) {
@@ -139,15 +136,15 @@
         const significantWidthChange = Math.abs(storedDevice.width - currentDevice.width) > 300;
         
         if (deviceChanged || significantWidthChange) {
-            if (CACHE_BUSTER.debug) {
-                console.log('⚠️ Device change detected!', {
-                    typeChanged: deviceChanged,
-                    widthChanged: significantWidthChange,
-                    from: storedDevice,
-                    to: currentDevice
-                });
-            }
-            
+                //if (CACHE_BUSTER.debug) {
+                // console.log('⚠️ Device change detected!', {
+                //     typeChanged: deviceChanged,
+                //     widthChanged: significantWidthChange,
+                //     from: storedDevice,
+                //     to: currentDevice
+                // });
+                // }
+
             // Update stored device
             storeCurrentDevice(currentDevice);
             
@@ -164,9 +161,9 @@
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.getRegistrations().then(function(registrations) {
                 registrations.forEach(function(registration) {
-                    if (CACHE_BUSTER.debug) {
-                        console.log('🔧 Updating service worker:', registration.scope);
-                    }
+                    // if (CACHE_BUSTER.debug) {
+                    //     console.log('🔧 Updating service worker:', registration.scope);
+                    // }
                     registration.update();
                 });
             });
@@ -176,9 +173,9 @@
                 caches.keys().then(function(cacheNames) {
                     return Promise.all(
                         cacheNames.map(function(cacheName) {
-                            if (CACHE_BUSTER.debug) {
-                                console.log('🗑️ Clearing cache:', cacheName);
-                            }
+                            // if (CACHE_BUSTER.debug) {
+                            //     console.log('🗑️ Clearing cache:', cacheName);
+                            // }
                             return caches.delete(cacheName);
                         })
                     );
@@ -189,9 +186,7 @@
     
     // Main cache buster function
     function runCacheBuster() {
-        if (CACHE_BUSTER.debug) {
-            console.log('🚀 Running cache buster...');
-        }
+        // Cache buster running (silent mode)
         
         // Check URL parameters for forced cache bust
         const urlParams = new URLSearchParams(window.location.search);
@@ -199,7 +194,7 @@
         
         if (forceCacheBust) {
             if (CACHE_BUSTER.debug) {
-                console.log('🔥 Forced cache bust detected');
+                // Forced cache bust detected (silent mode)
             }
             clearServiceWorkerCache();
             return;
@@ -233,9 +228,7 @@
     
     // Initialize cache buster
     function initCacheBuster() {
-        if (CACHE_BUSTER.debug) {
-            console.log('📱 Initializing Cache Buster v' + CACHE_BUSTER.version);
-        }
+        // Cache Buster initializing (silent mode)
         
         // Run initial check
         runCacheBuster();
@@ -247,7 +240,7 @@
             resizeTimeout = setTimeout(function() {
                 if (checkDeviceChange()) {
                     if (CACHE_BUSTER.debug) {
-                        console.log('🔄 Device change on resize - cache bust recommended');
+                        // Device change on resize - cache bust recommended (silent mode)
                     }
                     // Don't auto-reload on resize, just update storage
                 }
@@ -256,14 +249,14 @@
         
         // Expose global functions for manual cache clearing
         window.clearPayPerViewsCache = function() {
-            console.log('🧹 Manual cache clear requested');
+            //console.log('🧹 Manual cache clear requested');
             clearBrowserCache();
             clearServiceWorkerCache();
             forceReloadWithCacheBust();
         };
         
         window.checkDeviceCache = function() {
-            console.log('🔍 Manual device check requested');
+            //console.log('🔍 Manual device check requested');
             return {
                 current: getCurrentDevice(),
                 stored: getStoredDevice(),
@@ -272,9 +265,7 @@
         };
         
         if (CACHE_BUSTER.debug) {
-            console.log('✅ Cache Buster initialized successfully');
-            console.log('🛠️ Use window.clearPayPerViewsCache() to manually clear cache');
-            console.log('🛠️ Use window.checkDeviceCache() to check device status');
+            // Cache Buster initialized (silent mode)
         }
     }
     

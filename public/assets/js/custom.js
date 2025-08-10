@@ -10,6 +10,14 @@
     }
   }
 
+  // Safe checkbox setter for switcher elements (prevents null errors on mobile)
+  function safeSetChecked(selector, checked) {
+    const element = document.querySelector(selector);
+    if (element) {
+      element.checked = checked;
+    }
+  }
+
   window.addEventListener("load", hideLoader);
   /* page loader */
 
@@ -104,7 +112,7 @@
           )
         );
       } else {
-        console.warn('Pickr element not properly initialized, skipping');
+        // Pickr element not properly initialized, skipping (silent mode)
         return;
       }
 
@@ -231,7 +239,7 @@
         html.setAttribute("data-theme-mode", "dark");
         html.setAttribute("data-menu-styles", "dark");
         html.setAttribute("data-header-styles", "dark");
-        document.querySelector("#switcher-dark-theme").checked = true;
+        safeSetChecked("#switcher-dark-theme", true);
         localStorage.setItem(
           "bodyBgRGB",
           `${color[0]}, ${color[1]}, ${color[2]}`
@@ -261,8 +269,8 @@
         html.setAttribute("style", "");
       }
       html.removeAttribute("data-bg-theme");
-      document.querySelector("#switcher-light-theme").checked = true;
-      document.querySelector("#switcher-menu-light").checked = true;
+      safeSetChecked("#switcher-light-theme", true);
+      safeSetChecked("#switcher-menu-light", true);
       document
         .querySelector("html")
         .style.removeProperty("--body-bg-rgb", localStorage.bodyBgRGB);
@@ -271,14 +279,14 @@
       html.style.removeProperty("--light-rgb");
       html.style.removeProperty("--form-control-bg");
       html.style.removeProperty("--input-border");
-      document.querySelector("#switcher-header-light").checked = true;
-      document.querySelector("#switcher-menu-light").checked = true;
-      document.querySelector("#switcher-light-theme").checked = true;
-      document.querySelector("#switcher-background4").checked = false;
-      document.querySelector("#switcher-background3").checked = false;
-      document.querySelector("#switcher-background2").checked = false;
-      document.querySelector("#switcher-background1").checked = false;
-      document.querySelector("#switcher-background").checked = false;
+      safeSetChecked("#switcher-header-light", true);
+      safeSetChecked("#switcher-menu-light", true);
+      safeSetChecked("#switcher-light-theme", true);
+      safeSetChecked("#switcher-background4", false);
+      safeSetChecked("#switcher-background3", false);
+      safeSetChecked("#switcher-background2", false);
+      safeSetChecked("#switcher-background1", false);
+      safeSetChecked("#switcher-background", false);
       localStorage.removeItem("dayonedarktheme");
       localStorage.removeItem("dayoneMenu");
       localStorage.removeItem("dayoneHeader");
@@ -295,18 +303,18 @@
         html.setAttribute("style", "");
       }
       html.setAttribute("data-menu-styles", "dark");
-      document.querySelector("#switcher-dark-theme").checked = true;
-      document.querySelector("#switcher-menu-dark").checked = true;
-      document.querySelector("#switcher-header-dark").checked = true;
+      safeSetChecked("#switcher-dark-theme", true);
+      safeSetChecked("#switcher-menu-dark", true);
+      safeSetChecked("#switcher-header-dark", true);
       checkOptions();
-      document.querySelector("#switcher-menu-dark").checked = true;
-      document.querySelector("#switcher-header-dark").checked = true;
-      document.querySelector("#switcher-dark-theme").checked = true;
-      document.querySelector("#switcher-background4").checked = false;
-      document.querySelector("#switcher-background3").checked = false;
-      document.querySelector("#switcher-background2").checked = false;
-      document.querySelector("#switcher-background1").checked = false;
-      document.querySelector("#switcher-background").checked = false;
+      safeSetChecked("#switcher-menu-dark", true);
+      safeSetChecked("#switcher-header-dark", true);
+      safeSetChecked("#switcher-dark-theme", true);
+      safeSetChecked("#switcher-background4", false);
+      safeSetChecked("#switcher-background3", false);
+      safeSetChecked("#switcher-background2", false);
+      safeSetChecked("#switcher-background1", false);
+      safeSetChecked("#switcher-background", false);
       localStorage.setItem("dayonedarktheme", "true");
       localStorage.setItem("dayoneMenu", "dark");
       localStorage.setItem("dayoneHeader", "dark");
@@ -315,7 +323,9 @@
     }
   }
   let layoutSetting = document.querySelector(".layout-setting");
-  layoutSetting.addEventListener("click", toggleTheme);
+  if (layoutSetting) {
+    layoutSetting.addEventListener("click", toggleTheme);
+  }
   /* header theme toggle */
 
   /* Choices JS */
@@ -333,7 +343,10 @@
   /* Choices JS */
 
   /* footer year */
-  document.getElementById("year").innerHTML = new Date().getFullYear();
+  const yearElement = document.getElementById("year");
+  if (yearElement) {
+    yearElement.innerHTML = new Date().getFullYear();
+  }
   /* footer year */
 
   /* node waves */
@@ -387,20 +400,24 @@
 
   /* back to top */
   const scrollToTop = document.querySelector(".scrollToTop");
-  const $rootElement = document.documentElement;
-  const $body = document.body;
-  window.onscroll = () => {
-    const scrollTop = window.scrollY || window.pageYOffset;
-    const clientHt = $rootElement.scrollHeight - $rootElement.clientHeight;
-    if (window.scrollY > 100) {
-      scrollToTop.style.display = "flex";
-    } else {
-      scrollToTop.style.display = "none";
-    }
-  };
-  scrollToTop.onclick = () => {
-    window.scrollTo(0, 0);
-  };
+  
+  // Only set up scroll-to-top if element exists
+  if (scrollToTop) {
+    const $rootElement = document.documentElement;
+    const $body = document.body;
+    window.onscroll = () => {
+      const scrollTop = window.scrollY || window.pageYOffset;
+      const clientHt = $rootElement.scrollHeight - $rootElement.clientHeight;
+      if (window.scrollY > 100) {
+        scrollToTop.style.display = "flex";
+      } else {
+        scrollToTop.style.display = "none";
+      }
+    };
+    scrollToTop.onclick = () => {
+      window.scrollTo(0, 0);
+    };
+  }
   /* back to top */
 
   /* header dropdowns scroll */
@@ -429,6 +446,11 @@ function openFullscreen() {
   let open = document.querySelector(".full-screen-open");
   let close = document.querySelector(".full-screen-close");
 
+  // Only proceed if fullscreen elements exist
+  if (!open || !close) {
+    return;
+  }
+
   if (
     !document.fullscreenElement &&
     !document.webkitFullscreenElement &&
@@ -452,7 +474,6 @@ function openFullscreen() {
     } else if (document.webkitExitFullscreen) {
       /* Safari */
       document.webkitExitFullscreen();
-      console.log("working");
     } else if (document.msExitFullscreen) {
       /* IE11 */
       document.msExitFullscreen();
@@ -483,15 +504,20 @@ headerbtn.forEach((button) => {
     e.preventDefault();
     e.stopPropagation();
     button.parentNode.parentNode.parentNode.parentNode.parentNode.remove();
-    document.getElementById("cart-data").innerText = `${
-      document.querySelectorAll(".dropdown-item-close").length
-    } Items`;
-    document.getElementById("cart-icon-badge").innerText = `${
-      document.querySelectorAll(".dropdown-item-close").length
-    }`;
-    console.log(
-      document.getElementById("header-cart-items-scroll").children.length
-    );
+    const cartData = document.getElementById("cart-data");
+    const cartIconBadge = document.getElementById("cart-icon-badge");
+    
+    if (cartData) {
+      cartData.innerText = `${
+        document.querySelectorAll(".dropdown-item-close").length
+      } Items`;
+    }
+    
+    if (cartIconBadge) {
+      cartIconBadge.innerText = `${
+        document.querySelectorAll(".dropdown-item-close").length
+      }`;
+    }
     if (document.querySelectorAll(".dropdown-item-close").length == 0) {
       let elementHide = document.querySelector(".empty-header-item");
       let elementShow = document.querySelector(".empty-item");
@@ -509,9 +535,13 @@ headerbtn1.forEach((button) => {
     e.preventDefault();
     e.stopPropagation();
     button.parentNode.parentNode.parentNode.remove();
-    document.getElementById("notifiation-data").innerText = `${
-      document.querySelectorAll(".dropdown-item-close1").length
-    } Unread`;
+    const notificationData = document.getElementById("notifiation-data");
+    
+    if (notificationData) {
+      notificationData.innerText = `${
+        document.querySelectorAll(".dropdown-item-close1").length
+      } Unread`;
+    }
     // document.getElementById("notification-icon-badge").innerText = `${
     //   document.querySelectorAll(".dropdown-item-close1").length
     // }`;

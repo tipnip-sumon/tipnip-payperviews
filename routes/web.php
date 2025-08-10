@@ -171,7 +171,7 @@ Route::get('/home', function () {
 
 // User Dashboard Route
 Route::get('/user/dashboard', [App\Http\Controllers\User\UserController::class, 'home'])
-    ->name('user.dashboard')->middleware(['auth', 'fresh.login', 'no-cache']);
+    ->name('user.dashboard')->middleware(['auth', 'fresh.login', 'no-cache', 'device.detect']);
 
 // Dashboard Performance Metrics API
 Route::get('/user/dashboard/performance', [App\Http\Controllers\User\UserController::class, 'getPerformanceMetrics'])
@@ -733,7 +733,7 @@ Route::controller(RequirementsController::class)->middleware('auth','prevent-bac
 });
 
 // Notification Routes
-Route::controller(\App\Http\Controllers\User\NotificationController::class)->middleware('auth','prevent-back')->group(function () {
+Route::controller(\App\Http\Controllers\User\NotificationController::class)->middleware('auth','prevent-back','device.detect')->group(function () {
     Route::get('/user/notifications', 'index')->name('user.notifications.index');
     Route::get('/user/notifications/dropdown', 'getDropdownNotifications')->name('user.notifications.dropdown');
     Route::get('/user/notifications/{id}', 'show')->name('user.notifications.show');
@@ -905,7 +905,7 @@ Route::prefix('user')->middleware(['auth', 'verified','prevent-back'])->group(fu
     Route::get('/video-recent-activity', [VideoLinkController::class, 'recentActivity'])->name('video.recent-activity');
 });
 
-Route::controller(VideoViewController::class)->middleware('auth','prevent-back')->group(function () {
+Route::controller(VideoViewController::class)->middleware('auth','prevent-back','device.detect')->group(function () {
     Route::get('/user/video-views/gallery', 'gallery')->name('user.video-views.gallery');
     Route::get('/user/video-views', 'index')->name('user.video-views.index');
     Route::get('/user/video-views/history', 'history')->name('user.video-views.history');

@@ -11,7 +11,7 @@
     
     // Bootstrap Modal Fix
     function fixBootstrapModals() {
-        if (DEBUG) console.log('🔧 Initializing Bootstrap Modal fixes...');
+        // Initializing Bootstrap Modal fixes (silent mode)
         
         // Override Bootstrap Modal._showElement to handle null elements
         if (window.bootstrap && window.bootstrap.Modal) {
@@ -65,7 +65,7 @@
                 }
             };
             
-            if (DEBUG) console.log('✅ Bootstrap Modal methods patched');
+            // Bootstrap Modal methods patched (silent mode)
         }
     }
     
@@ -86,8 +86,12 @@
             if (!window.bootstrap || !window.bootstrap.Modal) {
                 console.warn('Bootstrap Modal not available');
                 // Fallback: show modal with CSS
-                modalElement.style.display = 'block';
-                modalElement.classList.add('show');
+                if (modalElement && modalElement.style) {
+                    modalElement.style.display = 'block';
+                }
+                if (modalElement && modalElement.classList) {
+                    modalElement.classList.add('show');
+                }
                 return;
             }
             
@@ -118,7 +122,9 @@
                 } catch (error) {
                     console.warn('Error opening modal:', error.message);
                     // Fallback
-                    modalElement.style.display = 'block';
+                    if (modalElement && modalElement.style) {
+                        modalElement.style.display = 'block';
+                    }
                     modalElement.classList.add('show');
                 }
             }, 100);
@@ -170,8 +176,12 @@
                     if (bsModal) {
                         bsModal.hide();
                     } else {
-                        modal.style.display = 'none';
-                        modal.classList.remove('show');
+                        if (modal && modal.style) {
+                            modal.style.display = 'none';
+                        }
+                        if (modal && modal.classList) {
+                            modal.classList.remove('show');
+                        }
                     }
                 } catch (e) {
                     // Silent fail
@@ -269,7 +279,7 @@
     
     // Initialize fixes when DOM is ready
     function initializeFixes() {
-        if (DEBUG) console.log('🚀 Initializing Bootstrap Modal fixes...');
+        // Initializing Bootstrap Modal fixes (silent mode)
         
         try {
             fixBootstrapEventListeners();
@@ -291,14 +301,18 @@
                         // Fallback close
                         const modal = e.target.closest('.modal');
                         if (modal) {
-                            modal.style.display = 'none';
-                            modal.classList.remove('show');
+                            if (modal.style) {
+                                modal.style.display = 'none';
+                            }
+                            if (modal.classList) {
+                                modal.classList.remove('show');
+                            }
                         }
                     }
                 }
             });
             
-            if (DEBUG) console.log('✅ Bootstrap Modal fixes initialized successfully');
+            // Bootstrap Modal fixes initialized (silent mode)
             
         } catch (error) {
             console.warn('Error initializing modal fixes:', error.message);

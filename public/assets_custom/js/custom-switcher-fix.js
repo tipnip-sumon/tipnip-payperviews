@@ -32,7 +32,9 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!switcherContainer) {
         switcherContainer = document.createElement('div');
         switcherContainer.id = 'switcher-fallback-container';
-        switcherContainer.style.display = 'none';
+        if (switcherContainer && switcherContainer.style) {
+            switcherContainer.style.display = 'none';
+        }
         document.body.appendChild(switcherContainer);
     }
 
@@ -44,7 +46,7 @@ document.addEventListener('DOMContentLoaded', function() {
             element.id = elementId;
             element.className = 'switcher-fallback-btn';
             switcherContainer.appendChild(element);
-            console.log('Created missing switcher element:', selector);
+            // Created missing switcher element (silent mode)
         }
     });
 
@@ -89,17 +91,22 @@ EventTarget.prototype.addEventListener = function(type, listener, options) {
                     return listener.call(this, event);
                 }
             } catch (error) {
-                // Only log in development to avoid console spam
-                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-                    console.warn('Event listener error caught:', error.message);
-                }
-                // Silently handle Bootstrap modal errors
+                // Silently handle common null property errors and Bootstrap modal errors
                 if (error.message && (
                     error.message.includes('Cannot read properties of null') ||
+                    error.message.includes('Cannot read properties of undefined') ||
+                    error.message.includes('reading \'style\'') ||
+                    error.message.includes('reading \'classList\'') ||
                     error.message.includes('_handleFocusin') ||
-                    error.message.includes('bootstrap')
+                    error.message.includes('bootstrap') ||
+                    error.message.includes('Modal')
                 )) {
-                    return; // Silently handle these errors
+                    return; // Silently handle these errors without logging
+                }
+                
+                // Only log unexpected errors in development to avoid console spam
+                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                    console.warn('Event listener error caught:', error.message);
                 }
             } finally {
                 eventCallDepth--;

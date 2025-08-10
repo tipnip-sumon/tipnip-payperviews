@@ -1,8 +1,7 @@
 
 // Server-time based countdown timer with improved UI
 $(document).ready(function() {
-    // Initialize variables
-    let serverTimeOffset = 0;
+    // Initialize variables (serverTimeOffset is declared globally in server-time.js)
     let isTimerInitialized = false;
     let forceShowTimer = false;
     
@@ -24,10 +23,8 @@ $(document).ready(function() {
                 throw new Error('Failed to get server time');
             }
             
-            // Parse server time and calculate offset
+            // Parse server time (serverTimeOffset is already calculated by server-time.js)
             const serverTime = new Date(serverTimeStr);
-            const clientTime = new Date();
-            serverTimeOffset = serverTime.getTime() - clientTime.getTime();
             
             // Calculate next midnight on server time
             const nextResetTime = new Date(serverTime);

@@ -14,14 +14,20 @@
     <!-- Favicon -->
     <link rel="icon" href="{{asset('assets/images/brand-logos/favicon.ico')}}" type="image/x-icon">
 
+    <!-- Choices JS -->
+    <script src="{{asset('assets/libs/choices.js/public/assets/scripts/choices.min.js')}}"></script>
+
+    <!-- Main Theme Js -->
+    <script src="{{asset('assets/js/main.js')}}"></script> 
+
     <!-- Bootstrap Css -->
     <link id="style" href="{{asset('assets/libs/bootstrap/css/bootstrap.min.css')}}" rel="stylesheet" >
 
     <!-- Style Css -->
-    <link href="{{asset('assets/css/styles.min.css')}}" rel="stylesheet" >
+    <link href="{{asset('assets/css/styles.min.css')}}?v={{config('app.version', '1.0.0')}}" rel="stylesheet" >
 
     <!-- Icons Css -->
-    <link href="{{asset('assets/css/icons.css')}}" rel="stylesheet" >
+    <link href="{{asset('assets/css/icons.css')}}?v={{config('app.version', '1.0.0')}}" rel="stylesheet" >
 
     <!-- Node Waves Css -->
     <link href="{{asset('assets/libs/node-waves/waves.min.css')}}" rel="stylesheet" >
@@ -57,6 +63,15 @@
             }
         }
     </style>
+
+    <!-- Configuration System -->
+    <script src="{{asset('assets_custom/js/pv-config.js')}}?v={{config('app.version', '1.0.0')}}"></script>
+    @include('components.mobile-config')
+
+    <!-- Error Prevention System -->
+    <link rel="stylesheet" href="{{asset('assets_custom/css/error-prevention.css')}}?v={{config('app.version', '1.0.0')}}">
+    <script src="{{asset('assets_custom/js/error-prevention-init.js')}}?v={{config('app.version', '1.0.0')}}"></script>
+    <script src="{{asset('assets_custom/js/bootstrap-modal-fix.js')}}?v={{config('app.version', '1.0.0')}}"></script>
 
     @stack('styles')
 </head>
@@ -1272,7 +1287,7 @@
                                 </button>
                             </div>
                             <div class="col-12">
-                                <button onclick="clearAllNotificationsMobile()" class="btn btn-outline-danger w-100 p-3 mobile-feature-btn d-flex flex-column align-items-center">
+                                <button onclick="clearAllNotifications()" class="btn btn-outline-danger w-100 p-3 mobile-feature-btn d-flex flex-column align-items-center">
                                     <i class="bx bx-trash mb-1"></i>
                                     <div class="mobile-btn-content text-center">
                                         <strong class="small">Clear All</strong>
@@ -1307,7 +1322,7 @@
     <div class="modal fade" id="mobileMoreModal" tabindex="-1" aria-labelledby="mobileMoreModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-md modal-dialog-scrollable">
             <div class="modal-content mobile-modal-content">
-                <div class="modal-header text-white py-3 mobile-modal-header">
+                <div class="modal-header bg-secondary text-white py-3 mobile-modal-header">
                     <h5 class="modal-title" id="mobileMoreModalLabel">
                         <i class="bx bx-grid-alt me-2"></i>More Features
                     </h5>
@@ -2818,7 +2833,7 @@
         
         /* Compact stats cards */
         .modal-body .stat-card {
-            padding: 0.75rem !important;
+            padding: 0.75rem !important; 
         }
     }
 
@@ -3056,9 +3071,46 @@
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
+    <!-- Custom JS -->
+    <script src="{{asset('assets/js/custom.js')}}?v={{config('app.version', '1.0.0')}}"></script>
+
+    <!-- Mobile Functions - Clean & Organized -->
+    <script src="{{asset('assets_custom/js/mobile-functions.js')}}?v={{config('app.version', '1.0.0')}}"></script> 
+
     @stack('script')
-    
     <script>
+        // Enhanced error prevention for mobile layout
+        (function() {
+            'use strict';
+            
+            // Wrap all potentially problematic functions in try-catch
+            const originalAddEventListener = Element.prototype.addEventListener;
+            Element.prototype.addEventListener = function(type, listener, options) {
+                const wrappedListener = function(event) {
+                    try {
+                        return listener.call(this, event);
+                    } catch (error) {
+                        if (window.pvWarn) {
+                            window.pvWarn('Event listener error:', error.message);
+                        }
+                        return false;
+                    }
+                };
+                return originalAddEventListener.call(this, type, wrappedListener, options);
+            };
+            
+            // Prevent null property access errors
+            const safePropertyAccess = (obj, path) => {
+                try {
+                    return path.split('.').reduce((o, p) => o && o[p], obj);
+                } catch {
+                    return null;
+                }
+            };
+            
+            window.safePropertyAccess = safePropertyAccess;
+        })();
+        
         function confirmLogout() {
         try {
             // Check if SweetAlert is available
@@ -3092,246 +3144,13 @@
                 performLogout();
             }
         }
-    };
+    }
+    
     function performLogout() {
         console.log('performLogout called - attempting simple logout first');
         
         // Primary: Try simple logout (no CSRF, no middleware)
         window.location.href = "{{ route('simple.logout') }}";
-    }
-
-    // Mobile Clear All Notifications Function (for mobile modals)
-    function clearAllNotificationsMobile() {
-        if (typeof Swal === 'undefined') {
-            console.error('SweetAlert not available for mobile clear function');
-            if (confirm('Clear all notifications? This cannot be undone.')) {
-                // Fallback to direct API call
-                window.location.href = "{{ route('user.notifications.clear-all') }}";
-            }
-            return;
-        }
-        
-        Swal.fire({
-            title: 'Clear All Notifications?',
-            text: 'This action cannot be undone and will permanently delete all your notifications.',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#dc3545',
-            cancelButtonColor: '#6c757d',
-            confirmButtonText: '<i class="fe fe-trash me-1"></i>Yes, Clear All',
-            cancelButtonText: '<i class="fe fe-x me-1"></i>Cancel',
-            reverseButtons: true,
-            customClass: {
-                confirmButton: 'btn btn-danger',
-                cancelButton: 'btn btn-secondary'
-            },
-            buttonsStyling: false
-        }).then((result) => {
-            if (!result.isConfirmed) return;
-
-            const csrfToken = document.querySelector('meta[name="csrf-token"]');
-            if (!csrfToken) {
-                console.error('CSRF token not found');
-                Swal.fire({
-                    title: 'Error!',
-                    text: 'CSRF token not found. Please refresh the page.',
-                    icon: 'error',
-                    confirmButtonText: 'OK',
-                    customClass: {
-                        confirmButton: 'btn btn-primary'
-                    },
-                    buttonsStyling: false
-                });
-                return;
-            }
-
-            console.log('Mobile: Clearing all notifications...');
-
-            // Show processing state
-            Swal.fire({
-                title: 'Clearing Notifications...',
-                text: 'Please wait while we clear all your notifications.',
-                icon: 'info',
-                allowOutsideClick: false,
-                allowEscapeKey: false,
-                didOpen: () => {
-                    Swal.showLoading();
-                }
-            });
-
-            fetch('{{ route("user.notifications.clear-all") }}', {
-                method: 'DELETE',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': csrfToken.getAttribute('content'),
-                    'Accept': 'application/json'
-                }
-            })
-            .then(response => {
-                console.log('Mobile clear response status:', response.status);
-                
-                if (response.status === 404) {
-                    throw new Error('Clear all endpoint not found. Please contact support.');
-                } else if (response.status === 401) {
-                    throw new Error('Authentication required. Please log in again.');
-                } else if (response.status === 419) {
-                    throw new Error('Session expired. Please refresh the page and try again.');
-                } else if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                console.log('Mobile clear response:', data);
-                if (data.success) {
-                    Swal.fire({
-                        title: 'Success!',
-                        text: 'All notifications have been cleared.',
-                        icon: 'success',
-                        confirmButtonText: 'OK',
-                        customClass: {
-                            confirmButton: 'btn btn-success'
-                        },
-                        buttonsStyling: false
-                    }).then(() => {
-                        // Reload the page to show cleared notifications
-                        window.location.reload();
-                    });
-                } else {
-                    throw new Error(data.message || 'Failed to clear notifications');
-                }
-            })
-            .catch(error => {
-                console.error('Mobile clear error:', error);
-                Swal.fire({
-                    title: 'Error!',
-                    text: error.message || 'Failed to clear notifications. Please try again.',
-                    icon: 'error',
-                    confirmButtonText: 'OK',
-                    customClass: {
-                        confirmButton: 'btn btn-primary'
-                    },
-                    buttonsStyling: false
-                });
-            });
-        });
-    }
-
-    // Mobile Mark All Notifications Read Function (for mobile modals)
-    function markAllNotificationsRead() {
-        if (typeof Swal === 'undefined') {
-            console.error('SweetAlert not available for mobile mark read function');
-            if (confirm('Mark all notifications as read?')) {
-                // Fallback to page reload
-                window.location.reload();
-            }
-            return;
-        }
-        
-        Swal.fire({
-            title: 'Mark All as Read?',
-            text: 'This will mark all your notifications as read.',
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonColor: '#28a745',
-            cancelButtonColor: '#6c757d',
-            confirmButtonText: '<i class="fe fe-check me-1"></i>Yes, Mark All Read',
-            cancelButtonText: '<i class="fe fe-x me-1"></i>Cancel',
-            reverseButtons: true,
-            customClass: {
-                confirmButton: 'btn btn-success',
-                cancelButton: 'btn btn-secondary'
-            },
-            buttonsStyling: false
-        }).then((result) => {
-            if (!result.isConfirmed) return;
-
-            const csrfToken = document.querySelector('meta[name="csrf-token"]');
-            if (!csrfToken) {
-                console.error('CSRF token not found');
-                Swal.fire({
-                    title: 'Error!',
-                    text: 'CSRF token not found. Please refresh the page.',
-                    icon: 'error',
-                    confirmButtonText: 'OK',
-                    customClass: {
-                        confirmButton: 'btn btn-primary'
-                    },
-                    buttonsStyling: false
-                });
-                return;
-            }
-
-            console.log('Mobile: Marking all notifications as read...');
-
-            // Show processing state
-            Swal.fire({
-                title: 'Updating Notifications...',
-                text: 'Please wait while we mark all notifications as read.',
-                icon: 'info',
-                allowOutsideClick: false,
-                allowEscapeKey: false,
-                didOpen: () => {
-                    Swal.showLoading();
-                }
-            });
-
-            fetch('{{ route("user.notifications.read-all") }}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': csrfToken.getAttribute('content'),
-                    'Accept': 'application/json'
-                }
-            })
-            .then(response => {
-                console.log('Mobile mark read response status:', response.status);
-                
-                if (response.status === 404) {
-                    throw new Error('Mark all read endpoint not found. Please contact support.');
-                } else if (response.status === 401) {
-                    throw new Error('Authentication required. Please log in again.');
-                } else if (response.status === 419) {
-                    throw new Error('Session expired. Please refresh the page and try again.');
-                } else if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                console.log('Mobile mark read response:', data);
-                if (data.success) {
-                    Swal.fire({
-                        title: 'Success!',
-                        text: 'All notifications have been marked as read.',
-                        icon: 'success',
-                        confirmButtonText: 'OK',
-                        customClass: {
-                            confirmButton: 'btn btn-success'
-                        },
-                        buttonsStyling: false
-                    }).then(() => {
-                        // Reload the page to show updated notifications
-                        window.location.reload();
-                    });
-                } else {
-                    throw new Error(data.message || 'Failed to mark notifications as read');
-                }
-            })
-            .catch(error => {
-                console.error('Mobile mark read error:', error);
-                Swal.fire({
-                    title: 'Error!',
-                    text: error.message || 'Failed to mark notifications as read. Please try again.',
-                    icon: 'error',
-                    confirmButtonText: 'OK',
-                    customClass: {
-                        confirmButton: 'btn btn-primary'
-                    },
-                    buttonsStyling: false
-                });
-            });
-        });
     }
 
     // Debug mobile reload issues
@@ -3403,13 +3222,45 @@
                 console.error('❌ Bootstrap is NOT available');
             }
             
-            // Test if all modal elements exist
+            // Test if all modal elements exist and have clickable content
             const modalTypes = ['videos', 'wallet', 'grid', 'notifications', 'more', 'lottery', 'profile'];
             modalTypes.forEach(type => {
                 const modalId = `mobile${type.charAt(0).toUpperCase() + type.slice(1)}Modal`;
                 const modalElement = document.querySelector(`#${modalId}`);
-                console.log(`Modal ${modalId}:`, modalElement ? '✅ EXISTS' : '❌ MISSING');
+                const hasButtons = modalElement ? modalElement.querySelectorAll('a, button').length : 0;
+                console.log(`Modal ${modalId}:`, modalElement ? `✅ EXISTS (${hasButtons} buttons)` : '❌ MISSING');
+                
+                // If modal exists, ensure buttons work after cache clearing
+                if (modalElement && hasButtons > 0) {
+                    enhanceModalButtons(modalElement);
+                }
             });
+            
+            // Function to enhance modal buttons after cache clearing
+            function enhanceModalButtons(modal) {
+                const buttons = modal.querySelectorAll('a, button');
+                buttons.forEach(button => {
+                    // Add click event listener to ensure buttons work
+                    button.addEventListener('click', function(e) {
+                        const href = this.getAttribute('href');
+                        
+                        // Add visual feedback with null check
+                        if (this && this.style) {
+                            this.style.transform = 'scale(0.95)';
+                            setTimeout(() => {
+                                if (this && this.style) {
+                                    this.style.transform = '';
+                                }
+                            }, 150);
+                        }
+                        
+                        // Log for debugging
+                        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                            console.log('🔗 Modal button clicked:', href || this.textContent.trim());
+                        }
+                    });
+                });
+            }
             
             // Test navigation links
             const navLinks = document.querySelectorAll('.mobile-nav-link');
@@ -3434,14 +3285,10 @@
                 // Check if CSRF token exists
                 const csrfTokenElement = document.querySelector('meta[name="csrf-token"]');
                 if (!csrfTokenElement) {
-                    console.log('No CSRF token found, skipping notification update');
                     return; // Silently fail if no CSRF token
                 }
 
-                // Add debug logging for notification count requests
-                console.log('📊 Updating notification badges (mobile & desktop)...');
-
-                fetch('{{ route("user.notifications.count") }}', {
+                const requestOptions = {
                     method: 'GET',
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest',
@@ -3449,10 +3296,10 @@
                         'Accept': 'application/json',
                         'Content-Type': 'application/json'
                     }
-                })
+                };
+
+                fetch('{{ route("user.notifications.count") }}', requestOptions)
                 .then(response => {
-                    console.log('📊 Notification count response status:', response.status);
-                    
                     if (!response.ok) {
                         throw new Error(`HTTP error! status: ${response.status}`);
                     }
@@ -3460,7 +3307,6 @@
                     // Check if response is actually JSON
                     const contentType = response.headers.get('content-type');
                     if (!contentType || !contentType.includes('application/json')) {
-                        console.warn('⚠️ Notification count response is not JSON, content-type:', contentType);
                         throw new Error('Response is not JSON');
                     }
                     
@@ -3468,100 +3314,55 @@
                 })
                 .then(data => {
                     if (data && typeof data.count !== 'undefined') {
-                        console.log('📊 Notification count received:', data.count);
-                        
-                        // UPDATE DESKTOP ELEMENTS
-                        const desktopBadge = document.getElementById('notification-icon-badge');
-                        const desktopBellIcon = document.querySelector('.notifications-dropdown .header-link i, .notifications-dropdown .bx-bell');
-                        
-                        // UPDATE MOBILE ELEMENTS  
-                        const mobileBadges = document.querySelectorAll('.notifications-link .notification-dot');
-                        const mobileBellIcons = document.querySelectorAll('.notifications-link .bx-bell');
+                        const mobileBadge = document.querySelector('.notifications-link .notification-dot');
+                        const bellIcon = document.querySelector('.notifications-link .bx-bell');
                         
                         if (data.count > 0) {
-                            // UPDATE DESKTOP BADGE
-                            if (desktopBadge) {
-                                desktopBadge.textContent = data.count;
-                                desktopBadge.style.display = 'flex';
-                                console.log('✅ Desktop badge updated:', data.count);
+                            if (mobileBadge && mobileBadge.style) {
+                                mobileBadge.textContent = data.count;
+                                mobileBadge.style.display = 'flex';
                             } else {
-                                // Create desktop badge if it doesn't exist
-                                const desktopNotificationLink = document.querySelector('.notifications-dropdown .header-link');
-                                if (desktopNotificationLink) {
-                                    const newDesktopBadge = document.createElement('span');
-                                    newDesktopBadge.className = 'badge bg-primary rounded-pill header-icon-badge pulse pulse-primary';
-                                    newDesktopBadge.id = 'notification-icon-badge';
-                                    newDesktopBadge.textContent = data.count;
-                                    desktopNotificationLink.appendChild(newDesktopBadge);
-                                    console.log('✅ Desktop badge created:', data.count);
+                                // Create badge if it doesn't exist
+                                const wrapper = document.querySelector('.notifications-link .nav-icon-wrapper');
+                                if (wrapper) {
+                                    const newBadge = document.createElement('span');
+                                    newBadge.className = 'notification-dot';
+                                    newBadge.textContent = data.count;
+                                    wrapper.appendChild(newBadge);
                                 }
                             }
                             
-                            // UPDATE MOBILE BADGES
-                            mobileBadges.forEach((badge, index) => {
-                                badge.textContent = data.count;
-                                badge.style.display = 'flex';
-                                console.log(`✅ Mobile badge ${index + 1} updated:`, data.count);
-                            });
-                            
-                            // If no mobile badges exist, create them
-                            if (mobileBadges.length === 0) {
-                                const mobileWrappers = document.querySelectorAll('.notifications-link .nav-icon-wrapper');
-                                mobileWrappers.forEach((wrapper, index) => {
-                                    const newMobileBadge = document.createElement('span');
-                                    newMobileBadge.className = 'notification-dot';
-                                    newMobileBadge.textContent = data.count;
-                                    wrapper.appendChild(newMobileBadge);
-                                    console.log(`✅ Mobile badge ${index + 1} created:`, data.count);
-                                });
-                            }
-                            
-                            // ADD PULSE ANIMATION TO BELL ICONS
-                            if (desktopBellIcon) {
-                                desktopBellIcon.classList.add('pulse-animation');
-                            }
-                            mobileBellIcons.forEach(bellIcon => {
+                            // Add pulse animation to bell icon
+                            if (bellIcon && bellIcon.classList) {
                                 bellIcon.classList.add('pulse-animation');
-                            });
-                            
+                            }
                         } else {
-                            // HIDE ALL BADGES WHEN COUNT IS 0
-                            if (desktopBadge) {
-                                desktopBadge.style.display = 'none';
-                                console.log('✅ Desktop badge hidden');
+                            if (mobileBadge && mobileBadge.style) {
+                                mobileBadge.style.display = 'none';
                             }
-                            
-                            mobileBadges.forEach((badge, index) => {
-                                badge.style.display = 'none';
-                                console.log(`✅ Mobile badge ${index + 1} hidden`);
-                            });
-                            
-                            // REMOVE PULSE ANIMATION FROM BELL ICONS
-                            if (desktopBellIcon) {
-                                desktopBellIcon.classList.remove('pulse-animation');
-                            }
-                            mobileBellIcons.forEach(bellIcon => {
+                            // Remove pulse animation from bell icon
+                            if (bellIcon && bellIcon.classList) {
                                 bellIcon.classList.remove('pulse-animation');
-                            });
+                            }
                         }
                     }
                 })
                 .catch(error => {
                     // Only log errors in development
                     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-                        console.log('Notification update error:', error);
+                        console.log('Mobile notification update error:', error);
                     }
                     // Silently fail in production to prevent console spam
                 });
             } catch (error) {
                 // Only log errors in development
                 if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-                    console.log('Notification update initialization error:', error);
+                    console.log('Mobile notification update initialization error:', error);
                 }
             }
         }
 
-        // Update notification badge every 30 seconds
+        // Update mobile notification badge every 30 seconds
         setInterval(updateMobileNotificationBadge, 30000);
 
         // Also update when page becomes visible again (user returns to tab)
@@ -3572,17 +3373,463 @@
         });
 
         // Initial update after page load
-        setTimeout(updateMobileNotificationBadge, 2000); // Wait 2 seconds after page load
+        setTimeout(updateMobileNotificationBadge, 500); // Wait 0.5 seconds after page load
         @endauth
     });
+
+    // Mobile Modal Functions (with enhanced error handling and debouncing)
+    let modalOpeningInProgress = false;
+    let lastModalOpened = null;
+    let modalDebounceTimeout = null;
+    
+    function openMobileModal(modalName) {
+        try {
+            // Clear any existing debounce timeout
+            if (modalDebounceTimeout) {
+                clearTimeout(modalDebounceTimeout);
+            }
+            
+            // Debounce rapid clicks
+            modalDebounceTimeout = setTimeout(() => {
+                performModalOpen(modalName);
+            }, 100);
+            
+        } catch (error) {
+            console.warn('openMobileModal error:', error.message);
+            modalOpeningInProgress = false;
+        }
+    }
+    
+    function performModalOpen(modalName) {
+        try {
+            // Prevent multiple rapid clicks
+            if (modalOpeningInProgress) {
+                console.log('🚫 Modal opening already in progress, ignoring...');
+                return;
+            }
+            
+            modalOpeningInProgress = true;
+            console.log('📱 Opening mobile modal:', modalName);
+            
+            const modalId = `mobile${modalName.charAt(0).toUpperCase() + modalName.slice(1)}Modal`;
+            const modalElement = document.getElementById(modalId);
+            
+            if (!modalElement) {
+                console.warn(`Modal element not found: ${modalId}`);
+                modalOpeningInProgress = false;
+                return;
+            }
+            
+            // If same modal is already open, close it instead
+            if (lastModalOpened === modalId && modalElement.classList.contains('show')) {
+                console.log('📱 Modal already open, closing:', modalId);
+                
+                // Add a small delay to ensure UI is stable before closing
+                setTimeout(() => {
+                    closeModal(modalElement);
+                }, 50);
+                
+                modalOpeningInProgress = false;
+                return;
+            }
+            
+            // Check if Bootstrap is loaded
+            if (!window.bootstrap || !window.bootstrap.Modal) {
+                console.warn('Bootstrap Modal not available');
+                // Fallback: show modal with CSS
+                showModalFallback(modalElement, modalId);
+                modalOpeningInProgress = false;
+                return;
+            }
+            
+            // Close any existing modals first
+            closeAllModals();
+            
+            // Small delay to ensure previous modal is closed
+            setTimeout(() => {
+                try {
+                    // Double-check that the modal element still exists and is ready
+                    if (!modalElement || !modalElement.parentNode || !document.contains(modalElement)) {
+                        console.warn('Modal element no longer available');
+                        modalOpeningInProgress = false;
+                        return;
+                    }
+                    
+                    // Clean up any existing Bootstrap modal instances first
+                    safeBootstrapModal(modalElement, 'dispose')
+                        .catch(() => {}); // Silent fail is ok for dispose
+                    
+                    // Use the safety wrapper to show the modal
+                    safeBootstrapModal(modalElement, 'show')
+                        .then((modalInstance) => {
+                            console.log('✅ Modal opened successfully:', modalId);
+                            lastModalOpened = modalId;
+                            
+                            // Ensure all buttons in the modal are clickable (only once)
+                            if (!modalElement._buttonsInitialized) {
+                                reinitializeModalButtons(modalElement);
+                                modalElement._buttonsInitialized = true;
+                            }
+                            
+                            modalOpeningInProgress = false;
+                            
+                            // Add event listeners for cleanup
+                            const hiddenHandler = function(e) {
+                                try {
+                                    console.log('📱 Modal closed:', modalId);
+                                    modalElement._buttonsInitialized = false;
+                                    lastModalOpened = null;
+                                    modalOpeningInProgress = false;
+                                    modalElement.removeEventListener('hidden.bs.modal', hiddenHandler);
+                                } catch (hiddenError) {
+                                    console.warn('Error in modal hidden handler:', hiddenError);
+                                    modalOpeningInProgress = false;
+                                    lastModalOpened = null;
+                                }
+                            };
+                            
+                            modalElement.addEventListener('hidden.bs.modal', hiddenHandler);
+                        })
+                        .catch((error) => {
+                            console.warn('Error opening modal with Bootstrap:', error.message);
+                            showModalFallback(modalElement, modalId);
+                            modalOpeningInProgress = false;
+                        });
+                    
+                } catch (error) {
+                    console.warn('Error in modal opening process:', error.message);
+                    showModalFallback(modalElement, modalId);
+                    modalOpeningInProgress = false;
+                }
+            }, 200); // Increased delay to 200ms for better stability
+            
+        } catch (error) {
+            console.warn('performModalOpen error:', error.message);
+            modalOpeningInProgress = false;
+        }
+    }
+    
+    // Bootstrap Modal Safety Wrapper - ENHANCED ERROR HANDLING
+    function safeBootstrapModal(modalElement, action, options = {}) {
+        return new Promise((resolve, reject) => {
+            try {
+                // Pre-flight checks
+                if (!modalElement || !document.contains(modalElement)) {
+                    throw new Error('Modal element is invalid or not in DOM');
+                }
+                
+                if (typeof bootstrap === 'undefined' || !bootstrap.Modal) {
+                    throw new Error('Bootstrap Modal is not available');
+                }
+                
+                // Validate modal structure
+                const modalDialog = modalElement.querySelector('.modal-dialog');
+                const modalContent = modalElement.querySelector('.modal-content');
+                
+                if (!modalDialog || !modalContent) {
+                    throw new Error('Modal structure is incomplete - missing dialog or content');
+                }
+                
+                // Get or create Bootstrap modal instance safely
+                let modalInstance = null;
+                
+                try {
+                    modalInstance = bootstrap.Modal.getInstance(modalElement);
+                } catch (instanceError) {
+                    console.warn('Could not get existing instance:', instanceError.message);
+                }
+                
+                if (!modalInstance && action !== 'dispose') {
+                    try {
+                        modalInstance = new bootstrap.Modal(modalElement, {
+                            backdrop: true,
+                            keyboard: true,
+                            focus: true,
+                            ...options
+                        });
+                    } catch (createError) {
+                        throw new Error(`Failed to create modal instance: ${createError.message}`);
+                    }
+                }
+                
+                // Execute the action safely
+                switch (action) {
+                    case 'show':
+                        if (modalInstance && typeof modalInstance.show === 'function') {
+                            modalInstance.show();
+                            resolve(modalInstance);
+                        } else {
+                            throw new Error('Modal instance does not have show method');
+                        }
+                        break;
+                        
+                    case 'hide':
+                        if (modalInstance && typeof modalInstance.hide === 'function') {
+                            // Add one-time event listener for completion
+                            const onHidden = () => {
+                                modalElement.removeEventListener('hidden.bs.modal', onHidden);
+                                resolve(modalInstance);
+                            };
+                            modalElement.addEventListener('hidden.bs.modal', onHidden);
+                            
+                            modalInstance.hide();
+                        } else {
+                            throw new Error('Modal instance does not have hide method');
+                        }
+                        break;
+                        
+                    case 'dispose':
+                        if (modalInstance && typeof modalInstance.dispose === 'function') {
+                            modalInstance.dispose();
+                            resolve(true);
+                        } else {
+                            resolve(true); // No instance to dispose
+                        }
+                        break;
+                        
+                    default:
+                        throw new Error(`Unknown modal action: ${action}`);
+                }
+                
+            } catch (error) {
+                console.error(`Bootstrap Modal ${action} failed:`, error.message);
+                reject(error);
+            }
+        });
+    }
+        const existingModals = document.querySelectorAll('.modal.show');
+        existingModals.forEach(modal => {
+            closeModal(modal);
+        });
+    }
+    
+    function closeModal(modalElement) {
+        try {
+            console.log('🔄 Attempting to close modal:', modalElement?.id || 'unknown');
+            
+            // Validate DOM element exists and is accessible
+            if (!modalElement || !modalElement.id || !document.contains(modalElement)) {
+                console.warn('Modal element is invalid or not in DOM');
+                modalOpeningInProgress = false;
+                return;
+            }
+            
+            // Use the safety wrapper for Bootstrap modal operations
+            safeBootstrapModal(modalElement, 'hide')
+                .then(() => {
+                    console.log('📱 Modal closed successfully with Bootstrap:', modalElement.id);
+                    
+                    // Clean up modal state
+                    lastModalOpened = null;
+                    modalOpeningInProgress = false;
+                    modalElement._buttonsInitialized = false;
+                })
+                .catch((error) => {
+                    console.warn('Bootstrap close failed, using fallback:', error.message);
+                    fallbackCloseModal(modalElement);
+                });
+                
+        } catch (e) {
+            console.warn('Error in closeModal:', e.message);
+            fallbackCloseModal(modalElement);
+        }
+    }
+    
+    function fallbackCloseModal(modalElement) {
+        try {
+            console.log('📱 Using fallback modal close for:', modalElement.id);
+            
+            // Validate DOM element before proceeding
+            if (!modalElement || !document.contains(modalElement)) {
+                console.warn('Modal element invalid for fallback close');
+                modalOpeningInProgress = false;
+                return;
+            }
+            
+            // Safely hide the modal with DOM validation
+            if (modalElement.style) {
+                modalElement.style.display = 'none';
+            }
+            
+            if (modalElement.classList) {
+                modalElement.classList.remove('show');
+            }
+            
+            if (modalElement.setAttribute) {
+                modalElement.setAttribute('aria-hidden', 'true');
+                modalElement.removeAttribute('aria-modal');
+            }
+            
+            // Remove modal-open class from body
+            if (document.body.classList) {
+                document.body.classList.remove('modal-open');
+            }
+            
+            // Remove any backdrop manually with validation
+            const backdrops = document.querySelectorAll('.modal-backdrop');
+            backdrops.forEach(backdrop => {
+                try {
+                    if (backdrop && backdrop.parentNode) {
+                        backdrop.remove();
+                    }
+                } catch (backdropError) {
+                    console.warn('Error removing backdrop:', backdropError.message);
+                }
+            });
+            
+            // Reset modal state safely
+            if (modalElement) {
+                modalElement._buttonsInitialized = false;
+            }
+            lastModalOpened = null;
+            modalOpeningInProgress = false;
+            
+            // Trigger hidden event manually with validation
+            try {
+                if (modalElement.dispatchEvent) {
+                    const hiddenEvent = new Event('hidden.bs.modal');
+                    modalElement.dispatchEvent(hiddenEvent);
+                }
+            } catch (eventError) {
+                console.warn('Error dispatching hidden event:', eventError.message);
+            }
+            
+            console.log('📱 Modal closed with fallback method');
+            
+        } catch (fallbackError) {
+            console.warn('Fallback modal close also failed:', fallbackError);
+            // Ultimate fallback - just reset states
+            modalOpeningInProgress = false;
+            lastModalOpened = null;
+            
+            // Force remove modal-open from body as last resort
+            try {
+                document.body.className = document.body.className.replace(/\bmodal-open\b/g, '');
+            } catch (e) {
+                // Silent fail
+            }
+        }
+    }
+    
+    function showModalFallback(modalElement, modalId) {
+        if (!modalElement) {
+            console.warn('Cannot show modal fallback: modalElement is null');
+            return;
+        }
+        
+        if (modalElement.style) {
+            modalElement.style.display = 'block';
+        }
+        
+        if (modalElement.classList) {
+            modalElement.classList.add('show');
+        }
+        
+        if (document.body && document.body.classList) {
+            document.body.classList.add('modal-open');
+        }
+        
+        if (!modalElement._buttonsInitialized) {
+            reinitializeModalButtons(modalElement);
+            modalElement._buttonsInitialized = true;
+        }
+        
+        lastModalOpened = modalId;
+        
+        // Add click outside to close functionality
+        const backdrop = document.createElement('div');
+        backdrop.className = 'modal-backdrop fade show';
+        backdrop.onclick = () => closeModal(modalElement);
+        document.body.appendChild(backdrop);
+    }
+    
+    function cleanupModalEventListeners(modalElement) {
+        if (modalElement._shownHandler) {
+            modalElement.removeEventListener('shown.bs.modal', modalElement._shownHandler);
+            modalElement._shownHandler = null;
+        }
+        if (modalElement._hiddenHandler) {
+            modalElement.removeEventListener('hidden.bs.modal', modalElement._hiddenHandler);
+            modalElement._hiddenHandler = null;
+        }
+    }
+    
+    // Function to reinitialize modal button event handlers (prevent duplicates)
+    function reinitializeModalButtons(modalElement) {
+        try {
+            console.log('🔄 Reinitializing modal buttons for:', modalElement.id);
+            
+            // Find all clickable elements in the modal
+            const clickableElements = modalElement.querySelectorAll('a, button, [onclick]');
+            
+            clickableElements.forEach((element, index) => {
+                // Skip if already initialized to prevent duplicates
+                if (element._modalInitialized) {
+                    return;
+                }
+                
+                // Check if element has href or onclick
+                const href = element.getAttribute('href');
+                const onclick = element.getAttribute('onclick');
+                
+                if (href && href !== 'javascript:void(0);' && href !== '#') {
+                    // For links with real URLs, ensure they work
+                    const linkHandler = function(e) {
+                        // Allow default behavior for real links
+                        console.log('✅ Link clicked:', href);
+                    };
+                    element.addEventListener('click', linkHandler);
+                    element._linkHandler = linkHandler;
+                }
+                
+                if (onclick) {
+                    // For elements with onclick, ensure they work
+                    const onclickHandler = function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        try {
+                            eval(onclick);
+                        } catch (err) {
+                            console.warn('Onclick execution failed:', err);
+                        }
+                    };
+                    element.addEventListener('click', onclickHandler);
+                    element._onclickHandler = onclickHandler;
+                }
+                
+                // Add visual feedback for better UX (only once)
+                const feedbackHandler = function(e) {
+                    if (this && this.style) {
+                        this.style.transform = 'scale(0.95)';
+                        setTimeout(() => {
+                            if (this && this.style) {
+                                this.style.transform = '';
+                            }
+                        }, 150);
+                    }
+                };
+                element.addEventListener('click', feedbackHandler);
+                element._feedbackHandler = feedbackHandler;
+                
+                // Mark as initialized
+                element._modalInitialized = true;
+            });
+            
+            console.log(`✅ Reinitializated ${clickableElements.length} clickable elements`);
+            
+        } catch (error) {
+            console.warn('Modal button reinitializtion failed:', error);
+        }
+    }
+
+    // Make functions globally available
+    window.openMobileModal = openMobileModal;
+    window.confirmLogout = confirmLogout;
+    
     </script>
     <!-- Loader Element for custom.js compatibility -->
     <div id="loader" class="d-none"></div>
     <div class="loader-overlay" style="display: none;"></div>
     <div class="loading-spinner" style="display: none;"></div>
-    
-    <!-- Mobile specific JavaScript files - loaded at bottom for proper DOM handling -->
-    <script src="{{ asset('assets/js/custom.js') }}" defer></script>
-    <script src="{{ asset('assets_custom/js/mobile-functions.js') }}" defer></script>
 </body>
 </html>

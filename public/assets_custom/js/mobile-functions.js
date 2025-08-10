@@ -1,5 +1,8 @@
 /**
- * Mobile Layout JavaScript Functions
+ * Mobile Layout JavaScript         if (window.pvWarn) {
+            window.pvWarn('Query selector all failed:', selector, error);
+        }
+        return [];nctions
  * Well-organized and optimized for mobile interface
  * Author: PayPerViews Mobile Team
  * Version: 2.0
@@ -16,7 +19,9 @@ function safeQuerySelector(selector) {
     try {
         return document.querySelector(selector);
     } catch (error) {
-        console.warn('Query selector failed:', selector, error);
+        if (window.pvWarn) {
+            window.pvWarn('Query selector failed:', selector, error);
+        }
         return null;
     }
 }
@@ -28,7 +33,7 @@ function safeQuerySelectorAll(selector) {
     try {
         return document.querySelectorAll(selector);
     } catch (error) {
-        console.warn('Query selector all failed:', selector, error);
+        //console.warn('Query selector all failed:', selector, error);
         return [];
     }
 }
@@ -73,7 +78,7 @@ window.toggleMobileTheme = function() {
         const themeIcon = safeQuerySelector('.theme-icon');
         
         if (!html) {
-            console.error('Document element not found');
+            //console.error('Document element not found');
             return;
         }
         
@@ -94,7 +99,7 @@ window.toggleMobileTheme = function() {
         try {
             localStorage.setItem('theme-mode', newTheme);
         } catch (storageError) {
-            console.warn('Could not save theme preference:', storageError);
+            //console.warn('Could not save theme preference:', storageError);
         }
         
         // Add haptic feedback if available
@@ -102,10 +107,10 @@ window.toggleMobileTheme = function() {
             navigator.vibrate(50);
         }
         
-        console.log('Theme switched to:', newTheme);
+        //console.log('Theme switched to:', newTheme);
         
     } catch (error) {
-        console.error('Error in toggleMobileTheme:', error);
+        //console.error('Error in toggleMobileTheme:', error);
     }
 };
 
@@ -128,7 +133,7 @@ function initializeTheme() {
                 : 'bx bx-moon theme-icon';
         }
     } catch (error) {
-        console.warn('Error initializing theme:', error);
+        //console.warn('Error initializing theme:', error);
     }
 }
 
@@ -142,7 +147,7 @@ function initializeTheme() {
 window.openMobileModal = function(type) {
     try {
         if (!type) {
-            console.error('Modal type is required');
+            //console.error('Modal type is required');
             return;
         }
         
@@ -150,13 +155,13 @@ window.openMobileModal = function(type) {
         const modalElement = safeQuerySelector(`#${modalId}`);
         
         if (!modalElement) {
-            console.warn('Modal not found:', modalId);
+            //console.warn('Modal not found:', modalId);
             return;
         }
         
         // Check if Bootstrap is available
         if (!isBootstrapAvailable()) {
-            console.error('Bootstrap Modal not available');
+            //console.error('Bootstrap Modal not available');
             showModalFallback(modalElement);
             return;
         }
@@ -167,11 +172,11 @@ window.openMobileModal = function(type) {
                                 modalElement.getAttribute('aria-modal') === 'true' ||
                                 modalElement.style.display === 'block';
         
-        console.log(`Modal ${modalId} - Currently shown: ${isCurrentlyShown}, Instance exists: ${!!currentModalInstance}`);
+        // console.log(`Modal ${modalId} - Currently shown: ${isCurrentlyShown}, Instance exists: ${!!currentModalInstance}`);
         
         // If modal is open, close it (toggle behavior)
         if (isCurrentlyShown || currentModalInstance) {
-            console.log(`Closing modal ${modalId}`);
+            // console.log(`Closing modal ${modalId}`);
             closeModal(modalElement, currentModalInstance);
             return;
         }
@@ -186,7 +191,7 @@ window.openMobileModal = function(type) {
         }, 150); // Increased timeout for better cleanup
         
     } catch (error) {
-        console.error('Error in openMobileModal:', error);
+        //console.error('Error in openMobileModal:', error);
     }
 };
 
@@ -195,14 +200,25 @@ window.openMobileModal = function(type) {
  */
 function closeModal(modalElement, modalInstance) {
     try {
-        console.log('Closing modal:', modalElement?.id || 'unknown');
+        // console.log('Closing modal:', modalElement?.id || 'unknown');
         
         // First, hide using Bootstrap instance if it exists
         if (modalInstance) {
             modalInstance.hide();
-            // Dispose the instance to clean up event listeners
+            // Dispose the instance to clean up event listeners with null check
             setTimeout(() => {
-                modalInstance.dispose();
+                try {
+                    // Double-check if instance still exists and is valid
+                    const currentInstance = bootstrap.Modal.getInstance(modalElement);
+                    if (currentInstance && typeof currentInstance.dispose === 'function') {
+                        currentInstance.dispose();
+                    }
+                } catch (disposeError) {
+                    // Silent handling - this is expected when modal is already disposed
+                    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                        //console.warn('Modal dispose error (safely handled):', disposeError.message);
+                    }
+                }
             }, 300);
         }
         
@@ -211,13 +227,14 @@ function closeModal(modalElement, modalInstance) {
             // Remove all modal-related classes and attributes
             modalElement.classList.remove('show');
             modalElement.classList.remove('fade');
-            modalElement.style.display = 'none';
+            if (modalElement.style) {
+                modalElement.style.display = 'none';
+                // Reset any inline styles that might interfere
+                modalElement.style.paddingRight = '';
+            }
             modalElement.setAttribute('aria-hidden', 'true');
             modalElement.removeAttribute('aria-modal');
             modalElement.removeAttribute('role');
-            
-            // Reset any inline styles that might interfere
-            modalElement.style.paddingRight = '';
         }
         
         // Remove body classes that modal adds
@@ -230,10 +247,13 @@ function closeModal(modalElement, modalInstance) {
             cleanupModalBackdrops();
         }, 200);
         
-        console.log('Modal closed and cleaned up');
+        // console.log('Modal closed and cleaned up');
         
     } catch (error) {
-        console.error('Error closing modal:', error);
+        if (window.pvError) {
+            window.pvError('Error closing modal:', error);
+        }
+        
         // Force cleanup even if there's an error
         setTimeout(() => {
             cleanupModalBackdrops();
@@ -256,7 +276,7 @@ function closeAllModals() {
                 try {
                     instance.hide();
                 } catch (error) {
-                    console.warn('Error hiding modal instance:', error);
+                    //console.warn('Error hiding modal instance:', error);
                 }
             }
             
@@ -269,7 +289,7 @@ function closeAllModals() {
             }
         });
     } catch (error) {
-        console.error('Error closing all modals:', error);
+        //console.error('Error closing all modals:', error);
     }
 }
 
@@ -278,11 +298,13 @@ function closeAllModals() {
  */
 function openModal(modalElement, type) {
     try {
-        console.log('Opening modal:', modalElement.id, 'Type:', type);
+        // console.log('Opening modal:', modalElement.id, 'Type:', type);
         
         // Ensure modal is completely reset first
         modalElement.classList.remove('show');
-        modalElement.style.display = 'none';
+        if (modalElement.style) {
+            modalElement.style.display = 'none';
+        }
         modalElement.setAttribute('aria-hidden', 'true');
         modalElement.removeAttribute('aria-modal');
         modalElement.removeAttribute('role');
@@ -290,8 +312,14 @@ function openModal(modalElement, type) {
         // Destroy existing instance completely
         const existingInstance = bootstrap.Modal.getInstance(modalElement);
         if (existingInstance) {
-            console.log('Disposing existing modal instance');
-            existingInstance.dispose();
+            //console.log('Disposing existing modal instance');
+            try {
+                if (typeof existingInstance.dispose === 'function') {
+                    existingInstance.dispose();
+                }
+            } catch (disposeError) {
+                //console.warn('Existing instance dispose error (safely handled):', disposeError.message);
+            }
         }
         
         // Wait a moment before creating new instance
@@ -306,13 +334,13 @@ function openModal(modalElement, type) {
                 
                 // Add event listener for when modal is fully shown
                 modalElement.addEventListener('shown.bs.modal', function onShown() {
-                    console.log('Modal fully opened:', type);
+                    //console.log('Modal fully opened:', type);
                     modalElement.removeEventListener('shown.bs.modal', onShown);
                 });
                 
                 // Add event listener for when modal is fully hidden
                 modalElement.addEventListener('hidden.bs.modal', function onHidden() {
-                    console.log('Modal fully closed:', type);
+                    //console.log('Modal fully closed:', type);
                     // Perform additional cleanup
                     setTimeout(() => {
                         cleanupModalBackdrops();
@@ -338,16 +366,16 @@ function openModal(modalElement, type) {
                     navigator.vibrate(15);
                 }
                 
-                console.log('Modal opening initiated:', type);
+                // console.log('Modal opening initiated:', type);
                 
             } catch (innerError) {
-                console.error('Error creating new modal instance:', innerError);
+                //console.error('Error creating new modal instance:', innerError);
                 showModalFallback(modalElement);
             }
         }, 50); // Small delay to ensure cleanup is complete
         
     } catch (error) {
-        console.error('Error in openModal:', error);
+        //console.error('Error in openModal:', error);
         showModalFallback(modalElement);
     }
 }
@@ -359,7 +387,9 @@ function showModalFallback(modalElement) {
     try {
         if (modalElement) {
             modalElement.classList.add('show');
-            modalElement.style.display = 'block';
+            if (modalElement.style) {
+                modalElement.style.display = 'block';
+            }
             modalElement.setAttribute('aria-modal', 'true');
             modalElement.removeAttribute('aria-hidden');
             
@@ -368,7 +398,9 @@ function showModalFallback(modalElement) {
             backdrop.className = 'modal-backdrop fade show';
             backdrop.onclick = () => {
                 modalElement.classList.remove('show');
-                modalElement.style.display = 'none';
+                if (modalElement.style) {
+                    modalElement.style.display = 'none';
+                }
                 backdrop.remove();
             };
             document.body.appendChild(backdrop);
@@ -563,7 +595,7 @@ window.updateWalletBalance = function() {
         const balanceIndicators = safeQuerySelectorAll('.balance-indicator');
         balanceIndicators.forEach(indicator => {
             // Add loading state
-            if (indicator.textContent) {
+            if (indicator.textContent && indicator.style) {
                 indicator.style.opacity = '0.6';
             }
         });
@@ -571,7 +603,9 @@ window.updateWalletBalance = function() {
         // Simulate balance refresh (replace with actual API call)
         setTimeout(() => {
             balanceIndicators.forEach(indicator => {
-                indicator.style.opacity = '1';
+                if (indicator.style) {
+                    indicator.style.opacity = '1';
+                }
             });
         }, 1000);
         
@@ -591,7 +625,7 @@ function initializeMobileFunctions() {
     try {
         // Only log in development
         if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-            console.log('Initializing mobile functions...');
+            //console.log('Initializing mobile functions...');
         }
         
         // Initialize theme
@@ -612,18 +646,18 @@ function initializeMobileFunctions() {
         
         // Log successful initialization (dev only)
         if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-            console.log('Mobile functions initialized successfully:', {
-                openMobileModal: typeof window.openMobileModal,
-                toggleMobileTheme: typeof window.toggleMobileTheme,
-                confirmLogout: typeof window.confirmLogout,
-                markAllNotificationsRead: typeof window.markAllNotificationsRead,
-                clearAllNotifications: typeof window.clearAllNotifications,
-                updateWalletBalance: typeof window.updateWalletBalance
-            });
+            // console.log('Mobile functions initialized successfully:', {
+            //     openMobileModal: typeof window.openMobileModal,
+            //     toggleMobileTheme: typeof window.toggleMobileTheme,
+            //     confirmLogout: typeof window.confirmLogout,
+            //     markAllNotificationsRead: typeof window.markAllNotificationsRead,
+            //     clearAllNotifications: typeof window.clearAllNotifications,
+            //     updateWalletBalance: typeof window.updateWalletBalance
+            // });
         }
         
     } catch (error) {
-        console.error('Error initializing mobile functions:', error);
+        //console.error('Error initializing mobile functions:', error);
     }
 }
 
@@ -658,4 +692,4 @@ window.MobileFunctions = {
     reinitialize: initializeMobileFunctions
 };
 
-console.log('Mobile Functions v2.0 loaded successfully');
+//console.log('Mobile Functions v2.0 loaded successfully');

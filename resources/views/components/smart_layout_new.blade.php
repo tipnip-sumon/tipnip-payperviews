@@ -43,7 +43,7 @@
             'user_agent' => $userAgent,
             'is_mobile' => $isMobile,
             'device_type' => $deviceType,
-            'screen_width' => $screenWidth, 
+            'screen_width' => $screenWidth,
         ]);
     }
 @endphp

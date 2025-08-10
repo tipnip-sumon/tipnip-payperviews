@@ -190,12 +190,7 @@
         console.groupEnd();
     };
 
-    // Log initialization
-    console.log('Global JavaScript error handler initialized', {
-        suppressPatterns: suppressPatterns.length,
-        criticalPatterns: criticalPatterns.length,
-        timestamp: new Date().toISOString()
-    });
+    // Global error handler initialized (silent mode)
 
     // Periodic error stats logging (every 5 minutes in development)
     if (window.location.hostname === 'localhost' || window.location.hostname.includes('dev')) {
