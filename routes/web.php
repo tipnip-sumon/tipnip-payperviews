@@ -753,6 +753,7 @@ Route::controller(App\Http\Controllers\User\WithdrawController::class)->middlewa
     Route::get('/user/withdraw/history','history')->name('user.withdraw.history');
     Route::get('/user/withdraw/wallet','walletIndex')->name('user.withdraw.wallet');
     Route::post('/user/withdraw/wallet','walletWithdraw')->name('user.withdraw.wallet.submit');
+    Route::post('/user/withdraw/wallet/send-otp','sendWalletWithdrawOtp')->name('user.withdraw.wallet.send-otp');
     Route::get('/user/withdraw/wallet/history','walletHistory')->name('user.withdraw.wallet.history');
 });
 
