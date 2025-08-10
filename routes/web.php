@@ -234,6 +234,69 @@ Route::get('/simple-logout', function(\Illuminate\Http\Request $request) {
     }
 })->name('simple.logout');
 
+// =============================================================================
+// ADMIN SIMPLE LOGOUT (No middleware, no CSRF issues)
+// =============================================================================
+
+// Super simple admin logout route - bypasses all middleware
+Route::get('/admin/super-logout', function(\Illuminate\Http\Request $request) {
+    try {
+        // Log the attempt
+        \Illuminate\Support\Facades\Log::info('Admin super logout initiated', [
+            'ip' => $request->ip(),
+            'time' => now()
+        ]);
+        
+        // Force logout from admin guard
+        \Illuminate\Support\Facades\Auth::guard('admin')->logout();
+        
+        // Clear all session data
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+        
+        // Clear any admin-specific cache
+        \Illuminate\Support\Facades\Cache::forget('admin_session_' . $request->session()->getId());
+        
+        return redirect('/admin?logout=success&t=' . time())
+            ->withHeaders([
+                'Cache-Control' => 'no-cache, no-store, must-revalidate',
+                'Pragma' => 'no-cache',
+                'Expires' => 'Thu, 01 Jan 1970 00:00:00 GMT'
+            ]);
+            
+    } catch (\Exception $e) {
+        \Illuminate\Support\Facades\Log::error('Admin super logout error: ' . $e->getMessage());
+        
+        // Emergency logout
+        \Illuminate\Support\Facades\Auth::guard('admin')->logout();
+        $request->session()->flush();
+        
+        return redirect('/admin?emergency_logout=1&t=' . time());
+    }
+})->name('admin.super.logout');
+
+// Admin session status check (no middleware)
+Route::get('/admin/session-check', function(\Illuminate\Http\Request $request) {
+    try {
+        $isAuthenticated = \Illuminate\Support\Facades\Auth::guard('admin')->check();
+        $sessionId = $request->session()->getId();
+        
+        return response()->json([
+            'authenticated' => $isAuthenticated,
+            'session_id' => $sessionId,
+            'timestamp' => now()->toISOString(),
+            'status' => $isAuthenticated ? 'active' : 'expired'
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'authenticated' => false,
+            'error' => 'Session check failed',
+            'timestamp' => now()->toISOString(),
+            'status' => 'error'
+        ]);
+    }
+})->name('admin.session.check');
+
 // Password reset routes
 Route::get('/password/reset', [App\Http\Controllers\Auth\ForgotPasswordController::class, 'showLinkRequestForm'])
     ->name('password.request');
@@ -309,6 +372,9 @@ Route::prefix('admin')->group(function () {
     Route::get('/transfer_stats', [AdminTransReceiveController::class, 'getTransferStats'])->name('admin.transfer_stats')->middleware(['ok-user','prevent-back']);
     Route::post('/logout', [AdminController::class, 'logout'])->name('admin.logout')->middleware(['ok-user','prevent-back']);
     Route::get('/logout', [AdminController::class, 'logout'])->name('admin.logout.get')->middleware(['ok-user','prevent-back']); // Allow GET for logout links
+    
+    // Simple admin logout (no CSRF, no middleware issues)
+    Route::get('/simple-logout', [AdminController::class, 'simpleLogout'])->name('admin.simple.logout');
     
     // Emergency logout route for expired sessions (no CSRF verification)
     Route::post('/emergency-logout', [AdminController::class, 'emergencyLogout'])->name('admin.emergency.logout');

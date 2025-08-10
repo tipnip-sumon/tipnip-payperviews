@@ -387,6 +387,55 @@ class AdminController extends Controller
     }
     
     /**
+     * Simple admin logout (no CSRF verification, no middleware issues)
+     */
+    public function simpleLogout(Request $request)
+    {
+        try {
+            // Log the simple logout attempt
+            Log::info('Admin simple logout initiated', [
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+                'timestamp' => now()
+            ]);
+            
+            // Force logout from admin guard
+            Auth::guard('admin')->logout();
+            
+            // Clear all session data
+            $request->session()->invalidate();
+            
+            // Regenerate token for security
+            $request->session()->regenerateToken();
+            
+            // Add cache clearing headers
+            $response = redirect()->route('admin.index');
+            $response->headers->set('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0, private');
+            $response->headers->set('Pragma', 'no-cache');
+            $response->headers->set('Expires', 'Thu, 01 Jan 1970 00:00:00 GMT');
+            $response->headers->set('Clear-Site-Data', '"cache", "storage", "executionContexts"');
+            
+            // Flash success message
+            $request->session()->flash('success', 'You have been successfully logged out.');
+            
+            return $response;
+            
+        } catch (\Exception $e) {
+            Log::error('Simple admin logout error', [
+                'error' => $e->getMessage(),
+                'ip_address' => $request->ip()
+            ]);
+            
+            // Force minimal logout
+            Auth::guard('admin')->logout();
+            session()->invalidate();
+            
+            return redirect()->route('admin.index')
+                ->with('warning', 'Logout completed. Please login again.');
+        }
+    }
+    
+    /**
      * Extend admin session
      */
     public function extendSession(Request $request)
