@@ -439,12 +439,23 @@ $(document).ready(function() {
     console.log('jQuery loaded and ready!'); // Debug log
     console.log('Send OTP button exists:', $('#send-wallet-otp-btn').length > 0); // Debug log
     
+    // Flag to control form submission
+    let allowFormSubmission = false;
+    
     // Prevent unwanted form submissions (only allow via AJAX or explicit submit handlers)
     $('#withdrawForm').on('submit', function(e) {
-        e.preventDefault();
-        console.log('Form submit intercepted'); // Debug log
-        return false;
+        if (!allowFormSubmission) {
+            e.preventDefault();
+            console.log('Form submit intercepted'); // Debug log
+            return false;
+        }
+        console.log('Form submission allowed'); // Debug log
     });
+    
+    // Function to allow form submission
+    window.allowWithdrawalFormSubmission = function() {
+        allowFormSubmission = true;
+    };
     
     // Initialize withdrawal page functionality
     initializeWithdrawalPage();
@@ -594,8 +605,9 @@ $(document).ready(function() {
             }).then((result) => {
                 if (result.isConfirmed) {
                     $('#walletWithdrawBtn').html('<i class="ri-loader-4-line me-2 spin"></i>Verifying OTP...').prop('disabled', true);
-                    // Actually submit the form
-                    $form.off('submit').submit();
+                    // Allow form submission and submit
+                    window.allowWithdrawalFormSubmission();
+                    $form[0].submit();
                 }
             });
         } else {
