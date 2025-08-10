@@ -509,8 +509,17 @@ $(document).ready(function() {
         $btn.prop('disabled', true);
         $spinner.show();
         $text.text('Sending...');
+        
+        console.log('=== About to send AJAX request ===');
+        console.log('Button disabled:', $btn.prop('disabled'));
+        console.log('Spinner visible:', $spinner.is(':visible'));
 
         // Send AJAX request
+        console.log('=== AJAX Request Debug ===');
+        console.log('URL:', '{{ route("user.withdraw.wallet.send-otp") }}');
+        console.log('Form data:', formData);
+        console.log('CSRF Token:', $('meta[name="csrf-token"]').attr('content'));
+        
         $.ajax({
             url: '{{ route("user.withdraw.wallet.send-otp") }}',
             method: 'POST',
@@ -519,6 +528,9 @@ $(document).ready(function() {
                 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
             },
             success: function(response) {
+                console.log('=== AJAX Success Debug ===');
+                console.log('Response:', response);
+                
                 if (response.success) {
                     // Store expiry time for countdown
                     if (response.expires_at) {
@@ -539,7 +551,13 @@ $(document).ready(function() {
                 }
             },
             error: function(xhr) {
-                console.error('AJAX Error:', xhr);
+                console.error('=== AJAX Error Debug ===');
+                console.error('Status:', xhr.status);
+                console.error('Status Text:', xhr.statusText);
+                console.error('Response Text:', xhr.responseText);
+                console.error('Response JSON:', xhr.responseJSON);
+                console.error('Full XHR object:', xhr);
+                
                 let message = 'Failed to send verification code. Please try again.';
                 
                 if (xhr.responseJSON) {

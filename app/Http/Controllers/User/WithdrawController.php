@@ -717,6 +717,14 @@ class WithdrawController extends Controller
      */
     public function sendWalletWithdrawOtp(Request $request)
     {
+        // Add immediate debug logging before any processing
+        Log::info('=== ROUTE HIT: sendWalletWithdrawOtp ===', [
+            'timestamp' => now()->format('Y-m-d H:i:s'),
+            'method' => $request->method(),
+            'ip' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+        ]);
+        
         try {
             Log::info('=== sendWalletWithdrawOtp method called ===', [
                 'user_id' => Auth::id(),
