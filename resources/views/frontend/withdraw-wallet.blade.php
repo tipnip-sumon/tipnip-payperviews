@@ -325,10 +325,26 @@
                                                         <i class="ri-mail-check-line me-1"></i>
                                                         Verification code sent to your email. Please check your inbox.
                                                     </small>
+                                                    <small class="text-warning d-block mt-1">
+                                                        <i class="ri-time-line me-1"></i>
+                                                        <span id="otp-timer">Code expires in 10:00 minutes</span>
+                                                    </small>
                                                     @error('otp')
                                                         <div class="invalid-feedback">{{ $message }}</div>
                                                     @enderror
                                                 </div>
+                                                
+                                                <!-- Resend OTP Button -->
+                                                <div class="text-center mb-3">
+                                                    <button class="btn btn-outline-info btn-sm" type="button" id="resend-wallet-otp-btn">
+                                                        <span id="resend-wallet-otp-spinner" class="spinner-border spinner-border-sm me-2" style="display: none;"></span>
+                                                        <span id="resend-wallet-otp-text">
+                                                            <i class="ri-refresh-line me-1"></i>Resend Code
+                                                        </span>
+                                                    </button>
+                                                    <small class="text-muted d-block mt-1">Didn't receive the code?</small>
+                                                </div>
+                                                
                                                 <button class="btn btn-primary btn-lg w-100" type="button" id="walletWithdrawBtn">
                                                     <i class="ri-shield-check-line me-2"></i>Verify Code & Withdraw
                                                 </button>
@@ -520,7 +536,7 @@ $(document).ready(function() {
                 if (response.success) {
                     Swal.fire({
                         title: 'Code Sent!',
-                        text: response.message,
+                        html: `${response.message}<br><br><small class="text-warning"><i class="ri-time-line"></i> This code will expire in 10 minutes</small>`,
                         icon: 'success',
                         confirmButtonText: 'OK'
                     }).then(() => {
@@ -557,6 +573,111 @@ $(document).ready(function() {
                 $btn.prop('disabled', false);
                 $spinner.hide();
                 $text.text('Send Verification Code');
+            }
+        });
+    });
+    
+    // Handle Resend OTP Button Click
+    $(document).on('click', '#resend-wallet-otp-btn', function(e) {
+        e.preventDefault();
+        console.log('Resend OTP button clicked!'); // Debug log
+        
+        const $btn = $(this);
+        const $spinner = $('#resend-wallet-otp-spinner');
+        const $text = $('#resend-wallet-otp-text');
+        
+        // Check if button is in cooldown
+        if ($btn.hasClass('disabled') || $btn.prop('disabled')) {
+            return false;
+        }
+        
+        // Collect form data (same as Send OTP)
+        const formData = {
+            amount: $('#amount').val(),
+            method_id: $('#withdraw_method').val(),
+            account_details: $('#account_details').val(),
+            password: $('#password').val(),
+            _token: $('meta[name="csrf-token"]').attr('content')
+        };
+        
+        // Validate form data
+        if (!formData.amount || !formData.method_id || !formData.account_details || !formData.password) {
+            Swal.fire({
+                title: 'Missing Information!',
+                text: 'Please fill in all required fields before resending OTP',
+                icon: 'warning',
+                confirmButtonText: 'OK'
+            });
+            return false;
+        }
+
+        // Show loading state
+        $btn.prop('disabled', true);
+        $spinner.show();
+        $text.html('<i class="ri-refresh-line me-1"></i>Resending...');
+
+        // Send AJAX request
+        $.ajax({
+            url: '{{ route("user.withdraw.wallet.send-otp") }}',
+            method: 'POST',
+            data: formData,
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            },
+            success: function(response) {
+                if (response.success) {
+                    Swal.fire({
+                        title: 'Code Resent!',
+                        html: `${response.message}<br><br><small class="text-warning"><i class="ri-time-line"></i> This code will expire in 10 minutes</small>`,
+                        icon: 'success',
+                        confirmButtonText: 'OK'
+                    }).then(() => {
+                        // Restart countdown timer
+                        location.reload();
+                    });
+                } else {
+                    throw new Error(response.message || 'Failed to resend OTP');
+                }
+            },
+            error: function(xhr) {
+                console.error('Resend AJAX Error:', xhr);
+                let message = 'Failed to resend verification code. Please try again.';
+                
+                if (xhr.responseJSON) {
+                    if (xhr.responseJSON.message) {
+                        message = xhr.responseJSON.message;
+                    } else if (xhr.responseJSON.errors) {
+                        const errors = Object.values(xhr.responseJSON.errors).flat();
+                        message = 'Validation errors: ' + errors.join(', ');
+                    }
+                }
+                
+                Swal.fire({
+                    title: 'Error!',
+                    text: message,
+                    icon: 'error',
+                    confirmButtonText: 'OK'
+                });
+            },
+            complete: function() {
+                // Reset button state with cooldown
+                $btn.prop('disabled', false);
+                $spinner.hide();
+                $text.html('<i class="ri-refresh-line me-1"></i>Resend Code');
+                
+                // Add 30-second cooldown to prevent spam
+                $btn.addClass('disabled').prop('disabled', true);
+                let cooldown = 30;
+                const cooldownTimer = setInterval(() => {
+                    $text.html(`<i class="ri-time-line me-1"></i>Wait ${cooldown}s`);
+                    cooldown--;
+                    
+                    if (cooldown < 0) {
+                        clearInterval(cooldownTimer);
+                        $btn.removeClass('disabled').prop('disabled', false);
+                        $text.html('<i class="ri-refresh-line me-1"></i>Resend Code');
+                    }
+                }, 1000);
             }
         });
     });
@@ -1108,6 +1229,56 @@ function initializeWithdrawalPage() {
             }
         });
     }
+    
+    // OTP Countdown Timer
+    function startOtpCountdown() {
+        const timerElement = document.getElementById('otp-timer');
+        const resendBtn = document.getElementById('resend-wallet-otp-btn');
+        if (!timerElement) return;
+        
+        let timeLeft = 10 * 60; // 10 minutes in seconds
+        
+        const timer = setInterval(function() {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            
+            if (timeLeft > 0) {
+                timerElement.textContent = `Code expires in ${minutes}:${seconds.toString().padStart(2, '0')} minutes`;
+            } else {
+                clearInterval(timer);
+                timerElement.innerHTML = '<span class="text-danger">Code has expired!</span>';
+                
+                // Highlight resend button
+                if (resendBtn) {
+                    resendBtn.classList.remove('btn-outline-info');
+                    resendBtn.classList.add('btn-warning');
+                    resendBtn.innerHTML = `
+                        <span id="resend-wallet-otp-spinner" class="spinner-border spinner-border-sm me-2" style="display: none;"></span>
+                        <span id="resend-wallet-otp-text">
+                            <i class="ri-refresh-line me-1"></i>Get New Code
+                        </span>
+                    `;
+                }
+                
+                // Show alert
+                Swal.fire({
+                    title: 'Code Expired!',
+                    text: 'Your verification code has expired. Please click "Get New Code" to receive a fresh code.',
+                    icon: 'warning',
+                    confirmButtonText: 'OK'
+                });
+            }
+            
+            timeLeft--;
+        }, 1000);
+    }
+    
+    // Start countdown if OTP timer exists
+    $(document).ready(function() {
+        if ($('#otp-timer').length > 0) {
+            startOtpCountdown();
+        }
+    });
 }
 </script>
 @endpush

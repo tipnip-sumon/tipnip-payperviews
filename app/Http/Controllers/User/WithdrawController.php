@@ -376,7 +376,9 @@ class WithdrawController extends Controller
             $otpExpiry = session('wallet_withdrawal_otp_expiry');
             
             if (!$sessionOtp || !$otpExpiry || now() > $otpExpiry) {
-                return redirect()->back()->with('error', 'Verification code has expired. Please request a new one.')->withInput();
+                // Clear expired session data
+                session()->forget(['wallet_withdrawal_otp', 'wallet_withdrawal_otp_expiry', 'wallet_otp_required']);
+                return redirect()->back()->with('error', 'Verification code has expired or is invalid. Please click "Send Verification Code" to get a new one.')->withInput();
             }
             
             if ($request->otp !== $sessionOtp) {
@@ -732,8 +734,8 @@ class WithdrawController extends Controller
             $otp = sprintf('%06d', random_int(0, 999999));
             
             session([
-                'wallet_otp_code' => $otp,
-                'wallet_otp_expires' => now()->addMinutes(10),
+                'wallet_withdrawal_otp' => $otp,
+                'wallet_withdrawal_otp_expiry' => now()->addMinutes(10),
                 'wallet_otp_required' => true
             ]);
 
