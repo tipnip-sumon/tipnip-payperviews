@@ -732,8 +732,8 @@ class WithdrawController extends Controller
             $otp = sprintf('%06d', random_int(0, 999999));
             
             session([
-                'wallet_otp_code' => $otp,
-                'wallet_otp_expires' => now()->addMinutes(10),
+                'wallet_withdrawal_otp' => $otp,
+                'wallet_withdrawal_otp_expiry' => now()->addMinutes(10),
                 'wallet_otp_required' => true
             ]);
 
