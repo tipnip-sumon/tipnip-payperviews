@@ -12,6 +12,13 @@
     $withdrawMethods = $withdrawMethods ?? collect([]);
     $isWalletOtpSession = $isWalletOtpSession ?? false;
     $walletStoredData = $walletStoredData ?? null;
+    $withdrawalStats = $withdrawalStats ?? [
+        'total_wallet_withdrawals' => 0,
+        'total_wallet_withdrawn' => 0,
+        'pending_wallet_withdrawals' => 0,
+        'pending_wallet_amount' => 0
+    ];
+    $recentWithdrawals = $recentWithdrawals ?? collect([]);
 @endphp
 <div class="container-fluid">
     <!-- Page Header -->
