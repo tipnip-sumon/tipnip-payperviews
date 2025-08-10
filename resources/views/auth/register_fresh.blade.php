@@ -53,6 +53,31 @@
         margin-bottom: 30px;
     }
 
+    .back-to-home {
+        position: absolute;
+        top: -15px;
+        left: -15px;
+        background: rgba(255, 255, 255, 0.2);
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        color: #667eea;
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        backdrop-filter: blur(10px);
+    }
+
+    .back-to-home:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+        color: #764ba2;
+    }
+
     .register-title {
         color: #333;
         font-size: 28px;
@@ -135,11 +160,16 @@
     .password-toggle {
         position: absolute;
         right: 15px;
-        top: 50%;
-        transform: translateY(-50%);
+        top: 45px;
         cursor: pointer;
-        color: #666;
-        font-size: 18px;
+        color: #999;
+        font-size: 16px;
+        transition: color 0.3s ease;
+        z-index: 5;
+    }
+
+    .password-toggle:hover {
+        color: #667eea;
     }
 
     .checkbox-container {
@@ -292,6 +322,11 @@
 <body>
 <div class="register-container">
     <div class="register-card">
+        <!-- Back to Home Button -->
+        <a href="{{ url('/') }}" class="back-to-home" title="Back to Home">
+            <i class="fas fa-arrow-left"></i>
+        </a>
+        
         <div class="register-header">
             <h1 class="register-title">Create Account</h1>
             <p class="register-subtitle">Join PayPerViews and start earning</p>
