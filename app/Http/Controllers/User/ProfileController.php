@@ -321,7 +321,8 @@ class ProfileController extends Controller
 
         try {
             // Generate OTP for current email verification (Step 1)
-            $currentEmailOtp = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+            //$currentEmailOtp = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+            $currentEmailOtp = random_int(100000, 999999);
             
             // Store pending change data
             $user->pending_email_change = $request->new_email;
@@ -715,15 +716,16 @@ class ProfileController extends Controller
             $subject = 'Email Change Security Verification - ' . config('app.name');
             $emailBody = $this->createCurrentEmailOtpContent($user, $otp, $newEmail);
             
-            // Try to send email
+            // Use the same proven approach as WithdrawController
             $emailSent = false;
             try {
                 Mail::html($emailBody, function($message) use ($email, $subject) {
                     $message->to($email)->subject($subject);
                 });
                 $emailSent = true;
+                Log::info('Email change verification sent successfully to: ' . $email);
             } catch (\Exception $e) {
-                Log::error('Mail::html failed, trying with send method: ' . $e->getMessage());
+                Log::error('Mail::html failed for email change verification, trying with send method: ' . $e->getMessage());
                 
                 // Fallback to view-based email
                 try {
@@ -735,13 +737,15 @@ class ProfileController extends Controller
                         $message->to($email)->subject($subject);
                     });
                     $emailSent = true;
+                    Log::info('Email change verification sent via fallback method to: ' . $email);
                 } catch (\Exception $e2) {
-                    Log::error('Mail::send also failed: ' . $e2->getMessage());
+                    Log::error('Mail::send also failed for email change verification: ' . $e2->getMessage());
                     $emailSent = false;
                 }
             }
             
             if (!$emailSent) {
+                Log::error('Both email methods failed for email change verification to: ' . $email);
                 throw new \Exception('Email delivery failed - both primary and fallback methods unsuccessful.');
             }
             
@@ -761,19 +765,42 @@ class ProfileController extends Controller
             $verificationUrl = route('email.verify.new', ['token' => $token]);
             $emailBody = $this->createNewEmailVerificationContent($user, $verificationUrl);
             
-            // Try to send email
+            // Use the same proven approach as WithdrawController
             $emailSent = false;
             try {
                 Mail::html($emailBody, function($message) use ($email, $subject) {
                     $message->to($email)->subject($subject);
                 });
                 $emailSent = true;
+                Log::info('New email verification sent successfully to: ' . $email);
             } catch (\Exception $e) {
                 Log::error('Mail::html failed for new email verification: ' . $e->getMessage());
-                $emailSent = false;
+                
+                // Try a simplified email as fallback
+                try {
+                    $simpleBody = "
+                    <h2>Verify Your New Email Address</h2>
+                    <p>Hello " . ($user->name ?? $user->username) . ",</p>
+                    <p>Please click the link below to verify your new email address:</p>
+                    <p><a href='{$verificationUrl}' style='background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;'>Verify Email Address</a></p>
+                    <p>Or copy and paste this URL: {$verificationUrl}</p>
+                    <p>This link is valid for 24 hours.</p>
+                    <p>Best regards,<br>" . config('app.name') . "</p>
+                    ";
+                    
+                    Mail::html($simpleBody, function($message) use ($email, $subject) {
+                        $message->to($email)->subject($subject);
+                    });
+                    $emailSent = true;
+                    Log::info('New email verification sent via fallback method to: ' . $email);
+                } catch (\Exception $e2) {
+                    Log::error('New email verification fallback also failed: ' . $e2->getMessage());
+                    $emailSent = false;
+                }
             }
             
             if (!$emailSent) {
+                Log::error('Both email methods failed for new email verification to: ' . $email);
                 throw new \Exception('Email delivery failed to new email address.');
             }
             
