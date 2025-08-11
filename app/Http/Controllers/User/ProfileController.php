@@ -597,10 +597,14 @@ class ProfileController extends Controller
     private function sendEmailChangeVerification($email, $code, $user)
     {
         $subject = 'Email Change Verification - ' . config('app.name');
-        $emailBody = $this->createChangeVerificationEmail($user, $code, 'Email Change', $email);
         
         try {
-            Mail::html($emailBody, function($message) use ($email, $subject) {
+            // Use the same pattern as WithdrawController for reliable email sending
+            Mail::send('emails.verification-code', [
+                'user' => $user,
+                'code' => $code,
+                'type' => 'Email Change Verification'
+            ], function ($message) use ($email, $subject) {
                 $message->to($email)->subject($subject);
             });
         } catch (\Exception $e) {
@@ -614,10 +618,14 @@ class ProfileController extends Controller
     private function sendUsernameChangeVerification($email, $code, $user, $newUsername)
     {
         $subject = 'Username Change Verification - ' . config('app.name');
-        $emailBody = $this->createChangeVerificationEmail($user, $code, 'Username Change', $newUsername);
         
         try {
-            Mail::html($emailBody, function($message) use ($email, $subject) {
+            // Use the same pattern as WithdrawController for reliable email sending
+            Mail::send('emails.verification-code', [
+                'user' => $user,
+                'code' => $code,
+                'type' => 'Username Change Verification'
+            ], function ($message) use ($email, $subject) {
                 $message->to($email)->subject($subject);
             });
         } catch (\Exception $e) {
@@ -625,73 +633,4 @@ class ProfileController extends Controller
         }
     }
 
-    /**
-     * Create verification email content
-     */
-    private function createChangeVerificationEmail($user, $code, $type, $newValue)
-    {
-        $appName = config('app.name');
-        $userName = $user->name ?? $user->username;
-        
-        return "
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset='UTF-8'>
-            <title>{$type} Verification - {$appName}</title>
-            <style>
-                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 20px; background: #f4f4f4; }
-                .container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-                .header { text-align: center; margin-bottom: 30px; }
-                .logo { font-size: 24px; font-weight: bold; color: #007bff; }
-                .otp-code { background: #007bff; color: white; font-size: 28px; font-weight: bold; padding: 15px 30px; border-radius: 8px; text-align: center; margin: 20px 0; letter-spacing: 3px; }
-                .warning { background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 15px; border-radius: 5px; margin: 20px 0; }
-                .info { background: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; padding: 15px; border-radius: 5px; margin: 20px 0; }
-                .footer { text-align: center; margin-top: 30px; font-size: 12px; color: #666; }
-            </style>
-        </head>
-        <body>
-            <div class='container'>
-                <div class='header'>
-                    <div class='logo'>{$appName}</div>
-                    <h2>{$type} Verification</h2>
-                </div>
-                
-                <p>Hello {$userName},</p>
-                
-                <p>You have requested to change your " . strtolower(str_replace(' Change', '', $type)) . " to: <strong>{$newValue}</strong></p>
-                
-                <p>Please use the code below to verify and complete this change:</p>
-                
-                <div class='otp-code'>{$code}</div>
-                
-                <div class='info'>
-                    <strong>Change Details:</strong>
-                    <ul>
-                        <li>Type: {$type}</li>
-                        <li>New Value: {$newValue}</li>
-                        <li>Fee: $" . ($type === 'Email Change' ? '2.00' : '5.00') . "</li>
-                        <li>Requested: " . now()->format('M d, Y h:i A') . "</li>
-                    </ul>
-                </div>
-                
-                <div class='warning'>
-                    <strong>Important:</strong>
-                    <ul>
-                        <li>This code is valid for 30 minutes only</li>
-                        <li>The fee will be deducted upon successful verification</li>
-                        <li>Never share this code with anyone</li>
-                        <li>If you didn't request this change, please ignore this email</li>
-                    </ul>
-                </div>
-                
-                <div class='footer'>
-                    <p>This is an automated message from {$appName}. Please do not reply to this email.</p>
-                    <p>Generated at: " . now()->format('M d, Y h:i A') . "</p>
-                </div>
-            </div>
-        </body>
-        </html>
-        ";
-    }
 }
