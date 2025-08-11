@@ -207,6 +207,24 @@
         text-decoration: underline;
     }
 
+    .forgot-password-link #refreshTokenLink {
+        transition: all 0.3s ease;
+    }
+
+    .forgot-password-link #refreshTokenLink:hover {
+        color: #3085d6 !important;
+        text-decoration: underline;
+    }
+
+    .forgot-password-link #refreshTokenLink i {
+        margin-right: 4px;
+        transition: transform 0.3s ease;
+    }
+
+    .forgot-password-link #refreshTokenLink:hover i {
+        transform: rotate(180deg);
+    }
+
     .register-link {
         text-align: center;
         margin-top: 25px;
@@ -404,6 +422,10 @@
             <!-- Forgot Password Link -->
             <div class="forgot-password-link">
                 <a href="{{ route('password.request') }}" id="forgotPasswordLink">Forgot your password?</a>
+                <span style="margin: 0 10px; color: #ccc;">|</span>
+                <a href="#" id="refreshTokenLink" style="color: #6c757d; font-size: 13px;" onclick="manualTokenRefresh(event)">
+                    <i class="fas fa-sync-alt"></i> Refresh Security Token
+                </a>
             </div>
 
             <!-- Display Server Errors -->
@@ -579,6 +601,94 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    // CSRF Token Refresh Function
+    async function refreshCSRFToken() {
+        try {
+            const response = await fetch('/login', {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+            
+            if (response.ok) {
+                const html = await response.text();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const newToken = doc.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
+                               doc.querySelector('input[name="_token"]')?.value;
+                
+                if (newToken) {
+                    // Update meta tag
+                    const metaTag = document.querySelector('meta[name="csrf-token"]');
+                    if (metaTag) {
+                        metaTag.setAttribute('content', newToken);
+                    }
+                    
+                    // Update form token
+                    const tokenInput = document.querySelector('input[name="_token"]');
+                    if (tokenInput) {
+                        tokenInput.value = newToken;
+                    }
+                    
+                    console.log('CSRF token refreshed successfully');
+                    return newToken;
+                }
+            }
+            throw new Error('Failed to get new token');
+        } catch (error) {
+            console.error('CSRF token refresh failed:', error);
+            throw error;
+        }
+    }
+
+    // Show CSRF Token Refresh Alert
+    function showCSRFRefreshAlert() {
+        return Swal.fire({
+            title: 'Session Expired',
+            html: `
+                <div style="text-align: left; font-size: 14px;">
+                    <p><i class="fas fa-clock" style="color: #f39c12;"></i> Your session has expired for security reasons.</p>
+                    <p>Click <strong>"Refresh Token"</strong> to get a new security token and try logging in again.</p>
+                    <p style="margin-top: 15px; color: #666;">This helps keep your account secure.</p>
+                </div>
+            `,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: '<i class="fas fa-sync-alt"></i> Refresh Token',
+            cancelButtonText: '<i class="fas fa-redo"></i> Reload Page',
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#6c757d',
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            showLoaderOnConfirm: true,
+            preConfirm: async () => {
+                try {
+                    await refreshCSRFToken();
+                    return true;
+                } catch (error) {
+                    Swal.showValidationMessage('Failed to refresh token. Please reload the page.');
+                    return false;
+                }
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                Swal.fire({
+                    title: 'Token Refreshed!',
+                    text: 'Security token updated successfully. You can now try logging in again.',
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+                return 'refreshed';
+            } else if (result.isDismissed) {
+                // User chose to reload page
+                window.location.reload();
+                return 'reloaded';
+            }
+        });
+    }
+
     // Cookie helper functions
     function setCookie(name, value, days) {
         const date = new Date();
@@ -680,6 +790,52 @@ document.addEventListener('DOMContentLoaded', function() {
             resendBtn.innerHTML = originalText;
         }
     }
+
+    // Manual CSRF Token Refresh (for proactive refresh)
+    window.manualTokenRefresh = async function(event) {
+        if (event) event.preventDefault();
+        
+        Swal.fire({
+            title: 'Refresh Security Token?',
+            html: `
+                <div style="text-align: left; font-size: 14px;">
+                    <p><i class="fas fa-shield-alt" style="color: #3085d6;"></i> This will refresh your security token to prevent session timeouts.</p>
+                    <p>Recommended if you've been on this page for a while or experiencing login issues.</p>
+                </div>
+            `,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: '<i class="fas fa-sync-alt"></i> Refresh Now',
+            cancelButtonText: 'Cancel',
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#6c757d',
+            showLoaderOnConfirm: true,
+            preConfirm: async () => {
+                try {
+                    await refreshCSRFToken();
+                    return true;
+                } catch (error) {
+                    Swal.showValidationMessage('Failed to refresh token. Please try again.');
+                    return false;
+                }
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                Swal.fire({
+                    title: 'Token Refreshed!',
+                    text: 'Your security token has been updated successfully.',
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+                
+                showValidation('username', 'Security token refreshed successfully', 'success');
+                setTimeout(() => {
+                    hideValidation('username');
+                }, 3000);
+            }
+        });
+    };
 
     // Test forgot password system
     forgotPasswordLink.addEventListener('click', function(e) {
@@ -951,63 +1107,76 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 
             } else if (response.status === 419) {
-                // CSRF token expired or missing - try simple login method
-                console.log('CSRF error (419), trying simple login method...');
-                try {
-                    const simpleFormData = new FormData(form);
-                    // Remove CSRF token as simple login doesn't need it
-                    simpleFormData.delete('_token');
-                    
-                    const simpleResponse = await fetch('/simple-login', {
-                        method: 'POST',
-                        body: simpleFormData,
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest'
-                        }
-                    });
-                    
-                    if (simpleResponse.ok) {
-                        const simpleData = await simpleResponse.json();
+                // CSRF token expired or missing - show refresh token alert
+                console.log('CSRF error (419), showing token refresh alert...');
+                
+                const refreshResult = await showCSRFRefreshAlert();
+                
+                if (refreshResult === 'refreshed') {
+                    // Token refreshed successfully, let user try again manually
+                    showValidation('username', 'Security token refreshed. Please try logging in again.', 'success');
+                } else if (refreshResult === 'reloaded') {
+                    // Page will reload, no need to do anything
+                    return;
+                } else {
+                    // Fallback to simple login if refresh failed
+                    console.log('Token refresh failed, trying simple login method...');
+                    try {
+                        const simpleFormData = new FormData(form);
+                        // Remove CSRF token as simple login doesn't need it
+                        simpleFormData.delete('_token');
                         
-                        if (simpleData.success) {
-                            Swal.fire({
-                                title: 'Login Successful!',
-                                text: 'Welcome back! Redirecting to your dashboard...',
-                                icon: 'success',
-                                timer: 2000,
-                                showConfirmButton: false,
-                                allowOutsideClick: false
-                            }).then(() => {
-                                window.location.href = simpleData.redirect || '/user/dashboard';
-                            });
-                        } else {
-                            // Handle simple login errors
-                            if (simpleData.error_type === 'email_not_verified') {
-                                showEmailVerificationError(simpleData.email);
-                            } else {
-                                showValidation('password', simpleData.message || 'Login failed', 'error');
-                                Swal.fire({
-                                    title: 'Login Failed!',
-                                    text: simpleData.message || 'Login failed. Please try again.',
-                                    icon: 'error',
-                                    confirmButtonText: 'Try Again'
-                                });
+                        const simpleResponse = await fetch('/simple-login', {
+                            method: 'POST',
+                            body: simpleFormData,
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest'
                             }
+                        });
+                        
+                        if (simpleResponse.ok) {
+                            const simpleData = await simpleResponse.json();
+                            
+                            if (simpleData.success) {
+                                Swal.fire({
+                                    title: 'Login Successful!',
+                                    text: 'Welcome back! Redirecting to your dashboard...',
+                                    icon: 'success',
+                                    timer: 2000,
+                                    showConfirmButton: false,
+                                    allowOutsideClick: false
+                                }).then(() => {
+                                    window.location.href = simpleData.redirect || '/user/dashboard';
+                                });
+                            } else {
+                                // Handle simple login errors
+                                if (simpleData.error_type === 'email_not_verified') {
+                                    showEmailVerificationAlert(simpleData.email);
+                                } else {
+                                    showValidation('password', simpleData.message || 'Login failed', 'error');
+                                    Swal.fire({
+                                        title: 'Login Failed!',
+                                        text: simpleData.message || 'Login failed. Please try again.',
+                                        icon: 'error',
+                                        confirmButtonText: 'Try Again'
+                                    });
+                                }
+                            }
+                        } else {
+                            throw new Error('Simple login failed');
                         }
-                    } else {
-                        throw new Error('Simple login failed');
+                    } catch (simpleError) {
+                        console.error('Simple login error:', simpleError);
+                        Swal.fire({
+                            title: 'Login Error!',
+                            text: 'There was a problem logging you in. Please refresh the page and try again.',
+                            icon: 'error',
+                            confirmButtonText: 'Refresh Page',
+                            allowOutsideClick: false
+                        }).then(() => {
+                            window.location.reload();
+                        });
                     }
-                } catch (simpleError) {
-                    console.error('Simple login error:', simpleError);
-                    Swal.fire({
-                        title: 'Login Error!',
-                        text: 'There was a problem logging you in. Please refresh the page and try again.',
-                        icon: 'error',
-                        confirmButtonText: 'Refresh Page',
-                        allowOutsideClick: false
-                    }).then(() => {
-                        window.location.reload();
-                    });
                 }
                 
             } else if (response.status === 500) {
