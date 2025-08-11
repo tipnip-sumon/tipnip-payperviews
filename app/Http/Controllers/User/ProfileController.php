@@ -333,8 +333,28 @@ class ProfileController extends Controller
             return back()->with('success', 'Verification code sent to your new email address. Please check ' . $request->new_email . ' and enter the code to complete the change. Fee of $' . number_format($emailChangeFee, 2) . ' will be deducted upon verification.');
             
         } catch (\Exception $e) {
+            // Clear pending change data since email failed
+            $user->pending_email_change = null;
+            $user->email_change_token = null;
+            $user->email_change_requested_at = null;
+            $user->save();
+            
             Log::error('Email change request error: ' . $e->getMessage());
-            return back()->with('error', 'Failed to send verification email. Please try again.');
+            
+            // Check if it's an email-specific error
+            $errorMessage = 'Unable to send verification email to ' . $request->new_email . '. ';
+            
+            if (str_contains($e->getMessage(), 'Connection') || str_contains($e->getMessage(), 'timeout')) {
+                $errorMessage .= 'Email server connection failed. Please check your internet connection and try again.';
+            } elseif (str_contains($e->getMessage(), 'authentication') || str_contains($e->getMessage(), 'login')) {
+                $errorMessage .= 'Email authentication failed. Please contact support for assistance.';
+            } elseif (str_contains($e->getMessage(), 'invalid') || str_contains($e->getMessage(), 'rejected')) {
+                $errorMessage .= 'Email address appears to be invalid or rejected by the email server.';
+            } else {
+                $errorMessage .= 'Email service is temporarily unavailable. Please try again in a few minutes or contact support if the problem persists.';
+            }
+            
+            return back()->with('error', $errorMessage);
         }
     }
 
@@ -474,8 +494,28 @@ class ProfileController extends Controller
             return back()->with('success', 'Verification code sent to your email address. Please check your email and enter the code to complete the username change. Fee of $' . number_format($usernameChangeFee, 2) . ' will be deducted upon verification.');
             
         } catch (\Exception $e) {
+            // Clear pending change data since email failed
+            $user->pending_username_change = null;
+            $user->username_change_token = null;
+            $user->username_change_requested_at = null;
+            $user->save();
+            
             Log::error('Username change request error: ' . $e->getMessage());
-            return back()->with('error', 'Failed to send verification email. Please try again.');
+            
+            // Check if it's an email-specific error
+            $errorMessage = 'Unable to send verification email to ' . $user->email . '. ';
+            
+            if (str_contains($e->getMessage(), 'Connection') || str_contains($e->getMessage(), 'timeout')) {
+                $errorMessage .= 'Email server connection failed. Please check your internet connection and try again.';
+            } elseif (str_contains($e->getMessage(), 'authentication') || str_contains($e->getMessage(), 'login')) {
+                $errorMessage .= 'Email authentication failed. Please contact support for assistance.';
+            } elseif (str_contains($e->getMessage(), 'invalid') || str_contains($e->getMessage(), 'rejected')) {
+                $errorMessage .= 'Email address appears to be invalid or rejected by the email server.';
+            } else {
+                $errorMessage .= 'Email service is temporarily unavailable. Please try again in a few minutes or contact support if the problem persists.';
+            }
+            
+            return back()->with('error', $errorMessage);
         }
     }
 
@@ -630,12 +670,22 @@ class ProfileController extends Controller
             }
             
             if (!$emailSent) {
-                throw new \Exception('All email sending methods failed');
+                throw new \Exception('Email delivery failed - both primary and fallback methods unsuccessful. Please check email configuration.');
             }
             
         } catch (\Exception $e) {
             Log::error('Email change verification sending failed: ' . $e->getMessage());
-            throw new \Exception('Failed to send verification email: ' . $e->getMessage());
+            
+            // Provide more specific error details
+            if (str_contains($e->getMessage(), 'Connection') || str_contains($e->getMessage(), 'timeout')) {
+                throw new \Exception('Email server connection timeout. Please check your internet connection.');
+            } elseif (str_contains($e->getMessage(), 'authentication') || str_contains($e->getMessage(), 'login')) {
+                throw new \Exception('Email authentication failed. Server configuration issue.');
+            } elseif (str_contains($e->getMessage(), 'invalid') || str_contains($e->getMessage(), 'rejected')) {
+                throw new \Exception('Email address rejected by server. Please verify the email address.');
+            } else {
+                throw new \Exception('Email service temporarily unavailable: ' . $e->getMessage());
+            }
         }
     }
 
@@ -678,12 +728,22 @@ class ProfileController extends Controller
             }
             
             if (!$emailSent) {
-                throw new \Exception('All email sending methods failed');
+                throw new \Exception('Email delivery failed - both primary and fallback methods unsuccessful. Please check email configuration.');
             }
             
         } catch (\Exception $e) {
             Log::error('Username change verification sending failed: ' . $e->getMessage());
-            throw new \Exception('Failed to send verification email: ' . $e->getMessage());
+            
+            // Provide more specific error details
+            if (str_contains($e->getMessage(), 'Connection') || str_contains($e->getMessage(), 'timeout')) {
+                throw new \Exception('Email server connection timeout. Please check your internet connection.');
+            } elseif (str_contains($e->getMessage(), 'authentication') || str_contains($e->getMessage(), 'login')) {
+                throw new \Exception('Email authentication failed. Server configuration issue.');
+            } elseif (str_contains($e->getMessage(), 'invalid') || str_contains($e->getMessage(), 'rejected')) {
+                throw new \Exception('Email address rejected by server. Please verify the email address.');
+            } else {
+                throw new \Exception('Email service temporarily unavailable: ' . $e->getMessage());
+            }
         }
     }
 
