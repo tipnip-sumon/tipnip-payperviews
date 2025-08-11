@@ -206,7 +206,7 @@
       'Vite' => 'Illuminate\\Support\\Facades\\Vite',
     ),
     'version' => '1.0.0',
-    'cache_version' => 1754855129,
+    'cache_version' => 1754915276,
   ),
   'auth' => 
   array (

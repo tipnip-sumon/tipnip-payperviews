@@ -228,9 +228,10 @@ class WithdrawController extends Controller
                 ]);
             } else {
                 // Email failed, clear OTP and return error
-                $user->ver_code = null;
-                $user->ver_code_send_at = null;
-                $user->save();
+                $freshUser = User::find($user->id);
+                $freshUser->ver_code = null;
+                $freshUser->ver_code_send_at = null;
+                $freshUser->save();
                 session()->forget(['deposit_withdrawal_data', 'show_deposit_otp_form']);
                 
                 return back()->withInput()->with('swal_error', [
@@ -313,9 +314,10 @@ class WithdrawController extends Controller
         
         if (!$conditionCheck['allowed']) {
             // Clear OTP and session data
-            $user->ver_code = null;
-            $user->ver_code_send_at = null;
-            $user->save();
+            $freshUser = User::find($user->id);
+            $freshUser->ver_code = null;
+            $freshUser->ver_code_send_at = null;
+            $freshUser->save();
             session()->forget(['deposit_withdrawal_data', 'show_deposit_otp_form']);
             
             // Check if profile completion is the specific issue
@@ -336,9 +338,10 @@ class WithdrawController extends Controller
         }
         
         // Clear OTP and session data after successful verification
-        $user->ver_code = null;
-        $user->ver_code_send_at = null;
-        $user->save();
+        $freshUser = User::find($user->id);
+        $freshUser->ver_code = null;
+        $freshUser->ver_code_send_at = null;
+        $freshUser->save();
         session()->forget(['deposit_withdrawal_data', 'show_deposit_otp_form']);
         
         // Process the withdrawal with stored data
@@ -590,12 +593,13 @@ class WithdrawController extends Controller
             Transaction::create([
                 'user_id' => $user->id,
                 'amount' => $depositAmount,
-                'main_amo' => $user->balance,
-                'charge' => 0,
-                'type' => '-',
-                'title' => 'Deposit Withdrawn',
+                'post_balance' => ($user->deposit_wallet ?? 0) + ($user->interest_wallet ?? 0),
+                'charge' => $withdrawalFee,
+                'trx_type' => '-',
                 'details' => 'Deposit withdrawal processed - Amount: $' . number_format($netAmount, 2) . ' via ' . $withdrawMethod->name,
                 'trx' => $withdrawal->trx,
+                'remark' => 'deposit_withdrawal',
+                'wallet_type' => 'deposit_withdrawal'
             ]);
             
             DB::commit();
@@ -603,7 +607,7 @@ class WithdrawController extends Controller
             // Clear any residual session data
             session()->forget(['deposit_withdrawal_data', 'show_deposit_otp_form']);
             
-            return redirect()->route('user.withdraw.index')->with('swal_success', [
+            return redirect()->route('user.withdraw')->with('swal_success', [
                 'title' => 'Withdrawal Submitted!',
                 'text' => 'Withdrawal request submitted successfully! You will receive $' . number_format($netAmount, 2) . ' via ' . $withdrawMethod->name . ' after admin approval.',
                 'icon' => 'success'
