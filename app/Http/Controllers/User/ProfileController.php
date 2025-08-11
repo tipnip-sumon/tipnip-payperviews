@@ -432,20 +432,53 @@ class ProfileController extends Controller
      */
     public function verifyNewEmailLink($token)
     {
+        // Debug logging
+        Log::info('Email verification link accessed', [
+            'token' => $token,
+            'timestamp' => now()
+        ]);
+
         $user = User::where('new_email_verification_token', $token)
                   ->where('email_change_step', 'current_verified')
                   ->first();
 
         if (!$user) {
-            return redirect()->route('login')->with('error', 'Invalid or expired verification link. Please log in to your account.');
+            Log::warning('Email verification failed - user not found', [
+                'token' => $token,
+                'searched_step' => 'current_verified'
+            ]);
+            
+            // Check if token exists with any step
+            $userAnyStep = User::where('new_email_verification_token', $token)->first();
+            if ($userAnyStep) {
+                Log::info('Token found but wrong step', [
+                    'user_id' => $userAnyStep->id,
+                    'current_step' => $userAnyStep->email_change_step,
+                    'expected_step' => 'current_verified'
+                ]);
+            }
+            
+            return redirect()->route('login')->with('error', 'Invalid or expired verification link. Please log in to your account and start the email change process again.');
         }
 
         // Check if token is not expired (valid for 24 hours)
         $tokenSentTime = $user->new_email_token_sent_at;
         if (!$tokenSentTime || Carbon::parse($tokenSentTime)->addHours(24)->isPast()) {
+            Log::warning('Email verification failed - token expired', [
+                'user_id' => $user->id,
+                'token_sent_at' => $tokenSentTime,
+                'current_time' => now()
+            ]);
+            
             $this->clearEmailChangeData($user);
             return redirect()->route('login')->with('error', 'Verification link has expired. Please log in and start the email change process again.');
         }
+
+        Log::info('Email verification successful', [
+            'user_id' => $user->id,
+            'old_email' => $user->email,
+            'new_email' => $user->pending_email_change
+        ]);
 
         // If user is not logged in, log them in automatically for this verification
         if (!Auth::check()) {
