@@ -596,18 +596,45 @@ class ProfileController extends Controller
      */
     private function sendEmailChangeVerification($email, $code, $user)
     {
-        $subject = 'Email Change Verification - ' . config('app.name');
-        
         try {
-            // Use the same pattern as WithdrawController for reliable email sending
-            Mail::send('emails.verification-code', [
-                'user' => $user,
-                'code' => $code,
-                'type' => 'Email Change Verification'
-            ], function ($message) use ($email, $subject) {
-                $message->to($email)->subject($subject);
-            });
+            // Simple email approach using basic HTML
+            $subject = 'Email Change Verification - ' . config('app.name');
+            $emailBody = $this->createChangeEmailContent($user, $code, 'Email Change Verification', $email);
+            
+            // Try to send email
+            $emailSent = false;
+            try {
+                Mail::html($emailBody, function($message) use ($email, $subject) {
+                    $message->to($email)
+                            ->subject($subject);
+                });
+                $emailSent = true;
+            } catch (\Exception $e) {
+                Log::error('Mail::html failed, trying with send method: ' . $e->getMessage());
+                
+                // Fallback to view-based email
+                try {
+                    Mail::send('emails.verification-code', [
+                        'user' => $user,
+                        'code' => $code,
+                        'type' => 'Email Change Verification'
+                    ], function($message) use ($email, $subject) {
+                        $message->to($email)
+                                ->subject($subject);
+                    });
+                    $emailSent = true;
+                } catch (\Exception $e2) {
+                    Log::error('Mail::send also failed: ' . $e2->getMessage());
+                    $emailSent = false;
+                }
+            }
+            
+            if (!$emailSent) {
+                throw new \Exception('All email sending methods failed');
+            }
+            
         } catch (\Exception $e) {
+            Log::error('Email change verification sending failed: ' . $e->getMessage());
             throw new \Exception('Failed to send verification email: ' . $e->getMessage());
         }
     }
@@ -617,20 +644,125 @@ class ProfileController extends Controller
      */
     private function sendUsernameChangeVerification($email, $code, $user, $newUsername)
     {
-        $subject = 'Username Change Verification - ' . config('app.name');
-        
         try {
-            // Use the same pattern as WithdrawController for reliable email sending
-            Mail::send('emails.verification-code', [
-                'user' => $user,
-                'code' => $code,
-                'type' => 'Username Change Verification'
-            ], function ($message) use ($email, $subject) {
-                $message->to($email)->subject($subject);
-            });
+            // Simple email approach using basic HTML
+            $subject = 'Username Change Verification - ' . config('app.name');
+            $emailBody = $this->createChangeEmailContent($user, $code, 'Username Change Verification', $newUsername);
+            
+            // Try to send email
+            $emailSent = false;
+            try {
+                Mail::html($emailBody, function($message) use ($email, $subject) {
+                    $message->to($email)
+                            ->subject($subject);
+                });
+                $emailSent = true;
+            } catch (\Exception $e) {
+                Log::error('Mail::html failed, trying with send method: ' . $e->getMessage());
+                
+                // Fallback to view-based email
+                try {
+                    Mail::send('emails.verification-code', [
+                        'user' => $user,
+                        'code' => $code,
+                        'type' => 'Username Change Verification'
+                    ], function($message) use ($email, $subject) {
+                        $message->to($email)
+                                ->subject($subject);
+                    });
+                    $emailSent = true;
+                } catch (\Exception $e2) {
+                    Log::error('Mail::send also failed: ' . $e2->getMessage());
+                    $emailSent = false;
+                }
+            }
+            
+            if (!$emailSent) {
+                throw new \Exception('All email sending methods failed');
+            }
+            
         } catch (\Exception $e) {
+            Log::error('Username change verification sending failed: ' . $e->getMessage());
             throw new \Exception('Failed to send verification email: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Create email content for change verification
+     */
+    private function createChangeEmailContent($user, $code, $type, $newValue)
+    {
+        $appName = config('app.name');
+        $userName = $user->name ?? $user->username;
+        $changeType = str_replace(' Verification', '', $type);
+        $fee = ($changeType === 'Email Change') ? '$2.00' : '$5.00';
+        
+        return "
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset='UTF-8'>
+            <title>{$type} - {$appName}</title>
+            <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 20px; background: #f4f4f4; }
+                .container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+                .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #007bff; padding-bottom: 20px; }
+                .logo { font-size: 24px; font-weight: bold; color: #007bff; margin-bottom: 10px; }
+                .subtitle { color: #666; font-size: 16px; }
+                .otp-code { background: linear-gradient(135deg, #007bff, #0056b3); color: white; font-size: 32px; font-weight: bold; padding: 20px; border-radius: 10px; text-align: center; margin: 25px 0; letter-spacing: 4px; box-shadow: 0 4px 15px rgba(0,123,255,0.3); }
+                .info-box { background: #e3f2fd; border-left: 4px solid #2196f3; padding: 20px; margin: 20px 0; border-radius: 5px; }
+                .warning-box { background: #fff3e0; border-left: 4px solid #ff9800; padding: 20px; margin: 20px 0; border-radius: 5px; }
+                .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #666; }
+                .highlight { color: #007bff; font-weight: bold; }
+                ul { padding-left: 20px; }
+                li { margin: 8px 0; }
+            </style>
+        </head>
+        <body>
+            <div class='container'>
+                <div class='header'>
+                    <div class='logo'>{$appName}</div>
+                    <div class='subtitle'>{$type}</div>
+                </div>
+                
+                <p>Hello <strong>{$userName}</strong>,</p>
+                
+                <p>You have requested to change your " . strtolower(str_replace(' Change', '', $changeType)) . " to: <span class='highlight'>{$newValue}</span></p>
+                
+                <p>Please use the verification code below to complete this change:</p>
+                
+                <div class='otp-code'>{$code}</div>
+                
+                <div class='info-box'>
+                    <strong>📋 Change Details:</strong>
+                    <ul>
+                        <li><strong>Type:</strong> {$changeType}</li>
+                        <li><strong>New Value:</strong> {$newValue}</li>
+                        <li><strong>Fee:</strong> {$fee}</li>
+                        <li><strong>Requested:</strong> " . now()->format('M d, Y h:i A') . "</li>
+                    </ul>
+                </div>
+                
+                <div class='warning-box'>
+                    <strong>⚠️ Important Security Information:</strong>
+                    <ul>
+                        <li>This verification code is valid for <strong>30 minutes</strong> only</li>
+                        <li>The fee will be automatically deducted upon successful verification</li>
+                        <li>Never share this code with anyone</li>
+                        <li>If you didn't request this change, please ignore this email and contact support</li>
+                        <li>This code can only be used once</li>
+                    </ul>
+                </div>
+                
+                <div class='footer'>
+                    <p>This is an automated security message from <strong>{$appName}</strong>.</p>
+                    <p>Please do not reply to this email.</p>
+                    <p>Generated on: " . now()->format('M d, Y \a\t h:i A T') . "</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        ";
     }
 
 }
