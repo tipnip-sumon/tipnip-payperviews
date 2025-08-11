@@ -176,8 +176,8 @@
                             <div class="col-md-6">
                                 <table class="table table-borderless">
                                     <tr>
-                                        <td class="fw-bold">Phone:</td>
-                                        <td>{{ $user->phone ?: 'Not set' }}</td>
+                                        <td class="fw-bold">Mobile:</td>
+                                        <td>{{ $user->mobile ?: 'Not set' }}</td>
                                     </tr>
                                     <tr>
                                         <td class="fw-bold">Country:</td>
