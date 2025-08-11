@@ -321,7 +321,6 @@ class ProfileController extends Controller
 
         try {
             // Generate OTP for current email verification (Step 1)
-            //$currentEmailOtp = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
             $currentEmailOtp = random_int(100000, 999999);
             
             // Store pending change data
@@ -329,7 +328,7 @@ class ProfileController extends Controller
             $user->current_email_otp = $currentEmailOtp;
             $user->current_email_otp_sent_at = now();
             $user->current_email_verified = false;
-            $user->email_change_step = 'awaiting_current_verification';
+            // Keep email_change_step = 'initial' until OTP is verified
             $user->email_change_requested_at = now();
             $user->save();
 
@@ -376,11 +375,13 @@ class ProfileController extends Controller
             return back()->with('error', 'No pending email change found.');
         }
 
-        // Determine which step we're in
-        if ($user->email_change_step === 'awaiting_current_verification') {
+        // Determine which step we're in based on database values
+        if ($user->email_change_step === 'initial' && $user->pending_email_change && $user->current_email_otp) {
+            // Step 1: Verify current email OTP
             return $this->verifyCurrentEmail($request, $user);
-        } elseif ($user->email_change_step === 'awaiting_new_verification') {
-            return $this->verifyNewEmail($request, $user);
+        } elseif ($user->email_change_step === 'current_verified' && $user->new_email_verification_token) {
+            // Step 2: This should be handled by the email link, not here
+            return back()->with('error', 'Please check your new email and click the verification link to complete the process.');
         } else {
             return back()->with('error', 'Invalid email change state. Please start the process again.');
         }
@@ -411,7 +412,7 @@ class ProfileController extends Controller
             $user->current_email_verified = true;
             $user->new_email_verification_token = $newEmailToken;
             $user->new_email_token_sent_at = now();
-            $user->email_change_step = 'awaiting_new_verification';
+            $user->email_change_step = 'current_verified'; // Step 2: waiting for new email verification
             $user->save();
 
             // Send verification link to NEW email address

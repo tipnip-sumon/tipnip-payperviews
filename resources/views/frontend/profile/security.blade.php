@@ -256,8 +256,8 @@
                             @endif
                         </p>
                         
-                        @if($user->email_change_step && $user->email_change_step !== 'initial')
-                            @if($user->email_change_step === 'awaiting_current_verification')
+                        @if($user->pending_email_change && $user->current_email_otp)
+                            @if($user->email_change_step === 'initial' && !$user->current_email_verified)
                                 <!-- Step 1: Current Email OTP Verification -->
                                 <div class="alert alert-info">
                                     <i class="fas fa-shield-alt me-2"></i>
@@ -293,14 +293,14 @@
                                     </div>
                                 </form>
                                 
-                            @elseif($user->email_change_step === 'awaiting_new_verification')
+                            @elseif($user->email_change_step === 'current_verified' && $user->new_email_verification_token)
                                 <!-- Step 2: Waiting for New Email Verification -->
                                 <div class="alert alert-warning">
                                     <i class="fas fa-envelope me-2"></i>
                                     <strong>New Email Verification Required</strong>
                                     <br>Current email verified successfully! Now please check your new email: <strong>{{ $user->pending_email_change }}</strong>
                                     <br>Click the verification link in the email to complete the change.
-                                    <br><small>Link expires in {{ $user->new_email_token_sent_at ? \Carbon\Carbon::parse($user->new_email_token_sent_at)->addMinutes(30)->diffForHumans() : 'unknown' }}</small>
+                                    <br><small>Link expires in {{ $user->new_email_token_sent_at ? \Carbon\Carbon::parse($user->new_email_token_sent_at)->addHours(24)->diffForHumans() : 'unknown' }}</small>
                                 </div>
                                 
                                 <div class="d-flex gap-2">
