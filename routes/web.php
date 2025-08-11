@@ -968,6 +968,15 @@ Route::get('/policies/{type}', function ($type) {
 })->name('policies')->where('type', 'terms-of-service|privacy-policy');
 
 // =============================================================================
+// EMAIL VERIFICATION ROUTES (NO AUTH REQUIRED)
+// =============================================================================
+
+// Email verification route (accessible without login)
+Route::controller(ProfileController::class)->group(function () {
+    Route::get('/profile/verify-new-email/{token}', 'verifyNewEmailLink')->name('email.verify.new');
+});
+
+// =============================================================================
 // PROFILE ROUTES
 // =============================================================================
 
@@ -984,7 +993,6 @@ Route::middleware(['auth','prevent-back'])->group(function () {
         // Paid Email & Username Change Routes
         Route::post('/profile/request-email-change', 'requestEmailChange')->name('profile.email.change.request');
         Route::post('/profile/verify-current-email', 'verifyCurrentEmail')->name('profile.email.verify.current');
-        Route::get('/profile/verify-new-email/{token}', 'verifyNewEmailLink')->name('email.verify.new');
         Route::post('/profile/verify-email-change', 'verifyEmailChange')->name('profile.email.change.verify');
         Route::post('/profile/cancel-email-change', 'cancelEmailChange')->name('profile.email.change.cancel');
         Route::post('/profile/request-username-change', 'requestUsernameChange')->name('profile.username.change.request');

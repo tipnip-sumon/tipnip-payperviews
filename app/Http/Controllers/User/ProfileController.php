@@ -428,6 +428,7 @@ class ProfileController extends Controller
 
     /**
      * Step 2: Verify new email via verification link (this will be called from email link)
+     * This route is accessible without authentication since users might click the link from a different device
      */
     public function verifyNewEmailLink($token)
     {
@@ -436,14 +437,25 @@ class ProfileController extends Controller
                   ->first();
 
         if (!$user) {
-            return redirect()->route('profile.security')->with('error', 'Invalid or expired verification link.');
+            return redirect()->route('login')->with('error', 'Invalid or expired verification link. Please log in to your account.');
         }
 
         // Check if token is not expired (valid for 24 hours)
         $tokenSentTime = $user->new_email_token_sent_at;
         if (!$tokenSentTime || Carbon::parse($tokenSentTime)->addHours(24)->isPast()) {
             $this->clearEmailChangeData($user);
-            return redirect()->route('profile.security')->with('error', 'Verification link has expired. Please start the email change process again.');
+            return redirect()->route('login')->with('error', 'Verification link has expired. Please log in and start the email change process again.');
+        }
+
+        // If user is not logged in, log them in automatically for this verification
+        if (!Auth::check()) {
+            Auth::login($user);
+        }
+
+        // Verify that the logged-in user matches the user whose email is being verified
+        if (Auth::id() !== $user->id) {
+            Auth::logout();
+            Auth::login($user);
         }
 
         return $this->completeEmailChange($user);
