@@ -13,6 +13,7 @@ use App\Http\Middleware\NoCache;
 use App\Http\Middleware\DeviceDetectionMiddleware;
 use App\Http\Middleware\AdminSessionHandler;
 use App\Http\Middleware\FreshLogin;
+use App\Http\Middleware\SessionSecurity;
 use Illuminate\Foundation\Application;
 use App\Http\Middleware\AdminMiddleware;
 use App\Http\Middleware\EnsureUserIsAdmin;
@@ -48,6 +49,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'device.detect' => DeviceDetectionMiddleware::class,
             'admin.session' => AdminSessionHandler::class,
             'fresh.login' => FreshLogin::class,
+            'session.security' => SessionSecurity::class,
         ]);
         $middleware->appendToGroup('ensure.admin', [
             EnsureUserIsAdmin::class,

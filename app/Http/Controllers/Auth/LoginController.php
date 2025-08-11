@@ -39,13 +39,26 @@ class LoginController extends Controller
      */
     protected function authenticated(\Illuminate\Http\Request $request, $user)
     {
-        // Set fresh login flags without aggressive session clearing
+        // Set session security validation
         session([
             'login_success' => true,
             'fresh_login' => true,
             'user_id' => $user->id,
-            'login_timestamp' => time()
+            'auth_user_id' => $user->id, // For session security validation
+            'login_timestamp' => time(),
+            'session_created_at' => now()->toDateTimeString()
         ]);
+        
+        // Store current session ID in user model for single session enforcement
+        try {
+            $user->update([
+                'current_session_id' => session()->getId(),
+                'last_login_at' => now(),
+                'last_login_ip' => $request->ip()
+            ]);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::warning('Could not update user session info: ' . $e->getMessage());
+        }
         
         // Create response with basic cache control
         $response = redirect()->intended($this->redirectPath());
@@ -55,7 +68,8 @@ class LoginController extends Controller
             'Cache-Control' => 'no-cache, no-store, must-revalidate',
             'Pragma' => 'no-cache',
             'Expires' => 'Thu, 01 Jan 1970 00:00:00 GMT',
-            'X-Fresh-Login' => 'true'
+            'X-Fresh-Login' => 'true',
+            'X-Session-Security' => 'enabled'
         ]);
         
         return $response;

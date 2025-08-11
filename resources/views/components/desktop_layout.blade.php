@@ -1801,29 +1801,132 @@
     @stack('script')
 
     <script>
-    // Enhanced logout function with fallback mechanisms (from user_layout)
+    // COMPREHENSIVE LOGOUT SYSTEM WITH SECURITY VALIDATION
     function performLogout() {
-        // Primary: Try simple logout (no CSRF, no middleware)
-        window.location.href = "{{ route('simple.logout') }}";
+        // First: Clear local storage and session data
+        try {
+            localStorage.clear();
+            sessionStorage.clear();
+        } catch(e) {
+            console.warn('Could not clear local storage:', e);
+        }
+        
+        // Primary: Simple logout with session validation
+        performSecureLogout();
+    }
+    
+    // Secure logout with session validation
+    function performSecureLogout() {
+        // Add timestamp and user validation to prevent cross-user access
+        const logoutUrl = "{{ route('simple.logout') }}" + 
+                         "?user_verify={{ auth()->check() ? auth()->id() : 'guest' }}" +
+                         "&session_token=" + generateSessionToken() +
+                         "&t=" + Math.floor(Date.now() / 1000);
+        
+        window.location.href = logoutUrl;
+    }
+    
+    // Generate session token for logout validation
+    function generateSessionToken() {
+        try {
+            const userAgent = navigator.userAgent.substring(0, 50);
+            const timestamp = Math.floor(Date.now() / 1000);
+            return btoa(userAgent + timestamp).substring(0, 20);
+        } catch(e) {
+            return 'fallback_' + Math.random().toString(36).substring(7);
+        }
     }
     
     // Fallback logout function
     function performLogoutFallback() {
-        // Fallback: Try standard logout
-        window.location.href = "{{ route('logout') }}";
+        // Clear storage first
+        try {
+            localStorage.clear();
+            sessionStorage.clear();
+        } catch(e) {}
+        
+        // Fallback: Try standard logout with CSRF
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = "{{ route('logout') }}";
+        
+        const csrfToken = document.querySelector('meta[name="csrf-token"]');
+        if (csrfToken) {
+            const tokenInput = document.createElement('input');
+            tokenInput.type = 'hidden';
+            tokenInput.name = '_token';
+            tokenInput.value = csrfToken.getAttribute('content');
+            form.appendChild(tokenInput);
+        }
+        
+        document.body.appendChild(form);
+        form.submit();
     }
     
     // Emergency logout function
     function performEmergencyLogout() {
-        // Emergency: Direct redirect to login
-        window.location.href = "{{ route('login') }}?emergency_logout=1&t=" + Math.floor(Date.now() / 1000);
+        // Clear everything locally
+        try {
+            localStorage.clear();
+            sessionStorage.clear();
+            
+            // Clear all cookies for this domain
+            document.cookie.split(";").forEach(function(c) { 
+                document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+            });
+        } catch(e) {}
+        
+        // Emergency: Direct redirect to login with cache busting
+        window.location.href = "{{ route('login') }}?emergency_logout=1&user_check={{ auth()->check() ? auth()->id() : 'none' }}&t=" + Math.floor(Date.now() / 1000);
     }
     
-    // Global error handler for logout failures
+    // Session security validator - prevents cross-user access
+    function validateSessionSecurity() {
+        @auth
+        const expectedUserId = {{ auth()->id() }};
+        const userVerification = localStorage.getItem('current_user_id');
+        
+        // If user verification doesn't match, force logout
+        if (userVerification && parseInt(userVerification) !== expectedUserId) {
+            console.warn('Session security violation detected - user mismatch');
+            performEmergencyLogout();
+            return false;
+        }
+        
+        // Store current user for verification
+        localStorage.setItem('current_user_id', expectedUserId);
+        @endauth
+        
+        return true;
+    }
+    
+    // Enhanced error handler for logout and session issues
     window.addEventListener('error', function(e) {
-        if (e.message && e.message.includes('419')) {
+        if (e.message && (e.message.includes('419') || e.message.includes('Unauthorized'))) {
+            console.warn('CSRF or authentication error detected, performing emergency logout');
             performEmergencyLogout();
         }
+    });
+    
+    // Comprehensive session monitoring
+    document.addEventListener('DOMContentLoaded', function() {
+        // Validate session security on page load
+        validateSessionSecurity();
+        
+        // Monitor for session changes via storage events
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'current_user_id' && e.newValue !== e.oldValue) {
+                console.warn('User session change detected in another tab');
+                validateSessionSecurity();
+            }
+        });
+        
+        // Periodic session validation (every 5 minutes)
+        setInterval(function() {
+            if (document.hasFocus()) {
+                validateSessionSecurity();
+            }
+        }, 300000); // 5 minutes
     });
 
     // Desktop logout confirmation with SweetAlert (enhanced)

@@ -48,6 +48,9 @@ class User extends Authenticatable implements MustVerifyEmail
         'kv', // KYC verification status
         'email_verified_at', // Add this to fillable
         'identity_verified', // Identity verification status
+        'current_session_id', // For session security validation
+        'last_login_at', // Last login timestamp
+        'last_login_ip', // Last login IP address
         // Paid change tracking fields
         'pending_email_change',
         'email_change_token',
