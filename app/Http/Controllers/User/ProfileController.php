@@ -432,7 +432,7 @@ class ProfileController extends Controller
     public function verifyNewEmailLink($token)
     {
         $user = User::where('new_email_verification_token', $token)
-                  ->where('email_change_step', 'awaiting_new_verification')
+                  ->where('email_change_step', 'current_verified')
                   ->first();
 
         if (!$user) {
