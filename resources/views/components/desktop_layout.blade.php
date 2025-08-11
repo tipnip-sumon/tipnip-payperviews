@@ -159,6 +159,94 @@
             font-weight: 600 !important;
         }
         
+        /* Mobile responsive dropdown optimizations */
+        @media (max-width: 768px) {
+            .main-header-dropdown {
+                max-height: 85vh !important;
+                overflow-y: auto !important;
+                margin-top: 0 !important;
+                border-radius: 12px !important;
+                box-shadow: 0 10px 40px rgba(0,0,0,0.2) !important;
+            }
+            
+            .dropdown-header-section {
+                position: sticky !important;
+                top: 0 !important;
+                z-index: 10 !important;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+                border-radius: 12px 12px 0 0 !important;
+            }
+            
+            .dropdown-section {
+                padding: 8px 0 !important;
+            }
+            
+            .dropdown-section h6.dropdown-header {
+                padding: 8px 16px 4px 16px !important;
+                margin-bottom: 4px !important;
+                font-size: 0.75rem !important;
+                font-weight: 600 !important;
+                text-transform: uppercase !important;
+                letter-spacing: 0.5px !important;
+            }
+            
+            .dropdown-item {
+                padding: 10px 16px !important;
+                font-size: 0.875rem !important;
+                border-bottom: 1px solid rgba(0,0,0,0.05) !important;
+            }
+            
+            .dropdown-item:last-child {
+                border-bottom: none !important;
+            }
+            
+            /* Logout section - always visible at bottom */
+            .logout-section {
+                position: sticky !important;
+                bottom: 0 !important;
+                background: #fff !important;
+                border-top: 2px solid #f8f9fa !important;
+                z-index: 20 !important;
+                border-radius: 0 0 12px 12px !important;
+            }
+            
+            .logout-section .dropdown-item {
+                border: none !important;
+                padding: 15px 16px !important;
+                font-weight: 600 !important;
+                text-align: center !important;
+                background: linear-gradient(135deg, #dc3545, #e74c3c) !important;
+                color: white !important;
+                margin: 10px !important;
+                border-radius: 8px !important;
+                font-size: 0.9rem !important;
+            }
+            
+            .logout-section .dropdown-item:hover {
+                background: linear-gradient(135deg, #c82333, #dc3545) !important;
+                transform: translateY(-1px) !important;
+                box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3) !important;
+            }
+            
+            /* Quick actions simplified for mobile */
+            .mobile-quick-actions {
+                display: flex !important;
+                justify-content: space-between !important;
+                padding: 10px !important;
+                background: #f8f9fa !important;
+                border-radius: 8px !important;
+                margin: 0 10px 10px 10px !important;
+            }
+            
+            .mobile-quick-actions .btn {
+                flex: 1 !important;
+                margin: 0 2px !important;
+                padding: 8px 4px !important;
+                font-size: 0.75rem !important;
+                border-radius: 6px !important;
+            }
+        }
+        
         /* Dropdown item icons color coding */
         .dropdown-item .text-primary { color: #6A5ACD !important; }
         .dropdown-item .text-info { color: #17a2b8 !important; }
@@ -1269,30 +1357,64 @@
                                 </div>
                             </li>
 
-                            <!-- Navigation Links -->
+                            <!-- Mobile Quick Actions - Shown only on mobile -->
+                            <li class="d-md-none">
+                                <div class="mobile-quick-actions">
+                                    <a href="{{ route('user.dashboard') }}" class="btn btn-outline-primary btn-sm">
+                                        <i class="fe fe-home"></i>
+                                        <small>Dashboard</small>
+                                    </a>
+                                    <a href="{{ route('deposit.index') }}" class="btn btn-outline-success btn-sm">
+                                        <i class="fe fe-plus-circle"></i>
+                                        <small>Deposit</small>
+                                    </a>
+                                    <a href="{{ route('user.withdraw') }}" class="btn btn-outline-danger btn-sm">
+                                        <i class="fe fe-minus-circle"></i>
+                                        <small>Withdraw</small>
+                                    </a>
+                                    <a href="{{ route('profile.index') }}" class="btn btn-outline-info btn-sm">
+                                        <i class="fe fe-user"></i>
+                                        <small>Profile</small>
+                                    </a>
+                                </div>
+                            </li>
+
+                            <!-- Essential Links Only - Reduced for mobile -->
                             <li class="dropdown-section">
                                 <h6 class="dropdown-header text-muted">
-                                    <i class="fe fe-user me-1"></i>Account
+                                    <i class="fe fe-zap me-1"></i>Quick Access
                                 </h6>
+                                <a class="dropdown-item d-flex align-items-center" href="{{ route('user.dashboard') }}">
+                                    <i class="fe fe-home me-2 text-primary"></i>
+                                    <span>Dashboard</span>
+                                    <i class="fe fe-chevron-right ms-auto text-muted"></i>
+                                </a>
                                 <a class="dropdown-item d-flex align-items-center" href="{{ route('profile.index') }}">
-                                    <i class="fe fe-user me-2 text-primary"></i>
+                                    <i class="fe fe-user me-2 text-info"></i>
                                     <span>My Profile</span>
                                     <i class="fe fe-chevron-right ms-auto text-muted"></i>
                                 </a>
-                                <a class="dropdown-item d-flex align-items-center" href="{{ route('profile.edit') }}">
-                                    <i class="fe fe-settings me-2 text-info"></i>
-                                    <span>Account Settings</span>
-                                    <i class="fe fe-chevron-right ms-auto text-muted"></i>
+                                <a class="dropdown-item d-flex align-items-center" href="{{ route('user.notifications.index') }}">
+                                    <i class="fe fe-bell me-2 text-warning"></i>
+                                    <span>Notifications</span>
+                                    @auth
+                                        @php
+                                            $unreadNotificationsCount = \App\Models\UserNotification::where('user_id', auth()->id())->where('read', false)->count();
+                                        @endphp
+                                        @if($unreadNotificationsCount > 0)
+                                            <span class="badge bg-warning ms-auto">{{$unreadNotificationsCount}}</span>
+                                        @endif
+                                    @endauth
                                 </a>
-                                <a class="dropdown-item d-flex align-items-center" href="javascript:void(0);" data-bs-toggle="modal" data-bs-target="#changepasswordnmodal">
-                                    <i class="fe fe-lock me-2 text-warning"></i>
-                                    <span>Change Password</span>
+                                <a class="dropdown-item d-flex align-items-center" href="{{ route('user.support.index') }}">
+                                    <i class="fe fe-headphones me-2 text-orange"></i>
+                                    <span>Support</span>
                                     <i class="fe fe-chevron-right ms-auto text-muted"></i>
                                 </a>
                             </li>
 
-                            <!-- Financial Section -->
-                            <li class="dropdown-section">
+                            <!-- Financial Section - Collapsed on mobile -->
+                            <li class="dropdown-section d-none d-md-block">
                                 <h6 class="dropdown-header text-muted">
                                     <i class="fe fe-dollar-sign me-1"></i>Financial
                                 </h6>
@@ -1306,11 +1428,6 @@
                                     <span>Withdraw Funds</span>
                                     <i class="fe fe-chevron-right ms-auto text-muted"></i>
                                 </a>
-                                <a class="dropdown-item d-flex align-items-center" href="{{ route('deposit.history') }}">
-                                    <i class="fe fe-list me-2 text-info"></i>
-                                    <span>Transaction History</span>
-                                    <i class="fe fe-chevron-right ms-auto text-muted"></i>
-                                </a>
                                 <a class="dropdown-item d-flex align-items-center" href="{{ route('invest.index') }}">
                                     <i class="fe fe-trending-up me-2 text-primary"></i>
                                     <span>Investment Plans</span>
@@ -1318,54 +1435,29 @@
                                 </a>
                             </li>
 
-                            <!-- Activity Section -->
-                            <li class="dropdown-section">
+                            <!-- Settings Section - Collapsed on mobile -->
+                            <li class="dropdown-section d-none d-md-block">
                                 <h6 class="dropdown-header text-muted">
-                                    <i class="fe fe-activity me-1"></i>Activity
+                                    <i class="fe fe-settings me-1"></i>Account Settings
                                 </h6>
-                                <a class="dropdown-item d-flex align-items-center" href="{{ route('user.video-views.index') }}">
-                                    <i class="fe fe-play-circle me-2 text-purple"></i>
-                                    <span>Video Views</span>
+                                <a class="dropdown-item d-flex align-items-center" href="{{ route('profile.edit') }}">
+                                    <i class="fe fe-settings me-2 text-info"></i>
+                                    <span>Account Settings</span>
                                     <i class="fe fe-chevron-right ms-auto text-muted"></i>
                                 </a>
-                                <a class="dropdown-item d-flex align-items-center" href="{{ route('user.refferral-history') }}">
-                                    <i class="fe fe-users me-2 text-success"></i>
-                                    <span>Referral Earnings</span>
-                                    <span class="badge bg-success-transparent ms-auto">Active</span>
-                                </a>
-                                <a class="dropdown-item d-flex align-items-center" href="{{ route('user.support.index') }}">
-                                    <i class="fe fe-headphones me-2 text-orange"></i>
-                                    <span>Support Center</span>
+                                <a class="dropdown-item d-flex align-items-center" href="javascript:void(0);" data-bs-toggle="modal" data-bs-target="#changepasswordnmodal">
+                                    <i class="fe fe-lock me-2 text-warning"></i>
+                                    <span>Change Password</span>
                                     <i class="fe fe-chevron-right ms-auto text-muted"></i>
                                 </a>
                             </li>
 
-                            <!-- Quick Actions -->
-                            <li class="dropdown-section">
-                                <div class="p-3 border-top">
-                                    <div class="row g-2">
-                                        <div class="col-6">
-                                            <a href="{{ route('user.notifications.index') }}" class="btn btn-outline-primary btn-sm w-100">
-                                                <i class="fe fe-bell me-1"></i>
-                                                <small>Notifications</small>
-                                            </a>
-                                        </div>
-                                        <div class="col-6">
-                                            <a href="{{ route('user.dashboard') }}" class="btn btn-outline-success btn-sm w-100">
-                                                <i class="fe fe-home me-1"></i>
-                                                <small>Dashboard</small>
-                                            </a>
-                                        </div>
-                                    </div>
-                                </div>
-                            </li>
-
-                            <!-- Logout Section -->
-                            <li class="dropdown-section">
+                            <!-- Logout Section - Always visible and prominent -->
+                            <li class="dropdown-section logout-section">
                                 <div class="border-top pt-2">
                                     <!-- Primary logout using simple route (no CSRF, no middleware issues) -->
                                     <a href="javascript:void(0);" 
-                                       class="dropdown-item d-flex align-items-center text-danger" 
+                                       class="dropdown-item d-flex align-items-center justify-content-center text-danger" 
                                        onclick="performLogout()">
                                         <i class="fe fe-power me-2"></i>
                                         <span class="fw-semibold">Sign Out</span>
