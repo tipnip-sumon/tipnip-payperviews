@@ -144,9 +144,9 @@ Route::get('/home', function () {
     return redirect()->route('user.dashboard');
 })->name('home');
 
-// User Dashboard Route
+// User Dashboard Route - Optimized for faster loading
 Route::get('/user/dashboard', [App\Http\Controllers\User\UserController::class, 'home'])
-    ->name('user.dashboard')->middleware(['auth', 'fresh.login', 'no-cache']);
+    ->name('user.dashboard')->middleware(['auth', 'fresh.login']);
 
 // Dashboard Performance Metrics API
 Route::get('/user/dashboard/performance', [App\Http\Controllers\User\UserController::class, 'getPerformanceMetrics'])
@@ -220,11 +220,8 @@ Route::get('/simple-logout', function(\Illuminate\Http\Request $request) {
         // Clear any cached auth data
         \Illuminate\Support\Facades\Cache::forget('user_' . ($user->id ?? 'unknown'));
         
-        // Force redirect to login with cache busting
+        // Simple redirect to login with minimal cache busting
         return redirect('/login?logout=1&t=' . time())
-            ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
-            ->header('Pragma', 'no-cache')
-            ->header('Expires', '0')
             ->with('success', 'You have been logged out successfully.');
             
     } catch (\Exception $e) {
@@ -263,12 +260,7 @@ Route::get('/admin/super-logout', function(\Illuminate\Http\Request $request) {
         // Clear any admin-specific cache
         \Illuminate\Support\Facades\Cache::forget('admin_session_' . $request->session()->getId());
         
-        return redirect('/admin?logout=success&t=' . time())
-            ->withHeaders([
-                'Cache-Control' => 'no-cache, no-store, must-revalidate',
-                'Pragma' => 'no-cache',
-                'Expires' => 'Thu, 01 Jan 1970 00:00:00 GMT'
-            ]);
+        return redirect('/admin?logout=success&t=' . time());
             
     } catch (\Exception $e) {
         \Illuminate\Support\Facades\Log::error('Admin super logout error: ' . $e->getMessage());
@@ -367,7 +359,7 @@ Route::get('/ref/{hash}', function ($hash) {
 // =============================================================================
 
 Route::prefix('admin')->group(function () {
-    Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard')->middleware(['ok-user','prevent-back','cache.control']);
+    Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard')->middleware(['ok-user','prevent-back']);
     Route::get('/payment', [AdminController::class, 'payment'])->name('admin.payment')->middleware(['ok-user','prevent-back']);
     Route::get('/transfer_member', [AdminTransReceiveController::class, 'index'])->name('admin.transfer_member')->middleware(['ok-user','prevent-back']);
     Route::post('/transfer_member', [AdminTransReceiveController::class, 'store'])->name('admin.transfer_member.store')->middleware(['ok-user','prevent-back']);
