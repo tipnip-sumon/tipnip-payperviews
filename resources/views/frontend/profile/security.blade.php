@@ -256,8 +256,8 @@
                             @endif
                         </p>
                         
-                        @if($user->email_change_step)
-                            @if($user->email_change_step === 'current_email_verification')
+                        @if($user->email_change_step && $user->email_change_step !== 'initial')
+                            @if($user->email_change_step === 'awaiting_current_verification')
                                 <!-- Step 1: Current Email OTP Verification -->
                                 <div class="alert alert-info">
                                     <i class="fas fa-shield-alt me-2"></i>
@@ -267,18 +267,18 @@
                                 </div>
                                 
                                 <!-- Current Email OTP Form -->
-                                <form action="{{ route('profile.email.verify.current') }}" method="POST" class="mb-3">
+                                <form action="{{ route('profile.email.change.verify') }}" method="POST" class="mb-3">
                                     @csrf
                                     <div class="mb-3">
                                         <label for="current_email_otp" class="form-label">Verification Code (Current Email)</label>
                                         <input type="text" 
-                                               name="otp" 
+                                               name="verification_code" 
                                                id="current_email_otp" 
-                                               class="form-control @error('otp') is-invalid @enderror" 
+                                               class="form-control @error('verification_code') is-invalid @enderror" 
                                                placeholder="Enter 6-digit code from your current email"
                                                maxlength="6"
                                                required>
-                                        @error('otp')
+                                        @error('verification_code')
                                             <div class="invalid-feedback">{{ $message }}</div>
                                         @enderror
                                     </div>
@@ -293,7 +293,7 @@
                                     </div>
                                 </form>
                                 
-                            @elseif($user->email_change_step === 'new_email_verification')
+                            @elseif($user->email_change_step === 'awaiting_new_verification')
                                 <!-- Step 2: Waiting for New Email Verification -->
                                 <div class="alert alert-warning">
                                     <i class="fas fa-envelope me-2"></i>
