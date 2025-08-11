@@ -314,8 +314,7 @@ if (!function_exists('checkProfileCompletion')) {
             'firstname',
             'lastname',
             'mobile',
-            'country',
-            'address'
+            'country'
         ];
 
         foreach ($requiredFields as $field) {
