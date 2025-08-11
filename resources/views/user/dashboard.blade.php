@@ -2,78 +2,162 @@
     @section('title', $pageTitle)
     @section('content')
         <style>
-            /* Theme-adaptive text colors */
+            /* COMPREHENSIVE THEME TEXT SYSTEM - 100% VISIBILITY GUARANTEE */
+            
+            /* Base theme classes - Black text for light theme */
             .theme-text {
-                color: #000 !important; /* Black for light theme */
+                color: #000 !important;
+                font-weight: 500 !important;
             }
             .theme-text-header {
-                color: #000 !important; /* Black for light theme */
+                color: #000 !important;
                 font-weight: 700 !important;
             }
             .theme-text-content {
-                color: #000 !important; /* Black for light theme */
+                color: #000 !important;
                 font-weight: 600 !important;
             }
             .theme-text-muted {
-                color: #444 !important; /* Dark gray for light theme */
+                color: #444 !important;
                 font-weight: 500 !important;
+            }
+            
+            /* Balance card specific text - FORCE WHITE on gradient backgrounds */
+            .balance-card-text,
+            .balance-card .card-body,
+            .balance-card .card-body * {
+                color: #ffffff !important;
+                text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+            }
+            .balance-card-text-header,
+            .balance-card h6,
+            .balance-card .card-title {
+                color: #ffffff !important;
+                font-weight: 700 !important;
+                text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+            }
+            .balance-card-text-amount,
+            .balance-card h3,
+            .balance-card .balance-value {
+                color: #ffffff !important;
+                font-weight: 700 !important;
+                text-shadow: 0 2px 4px rgba(0,0,0,0.4);
+            }
+            .balance-card-text-small,
+            .balance-card small {
+                color: rgba(255,255,255,0.9) !important;
+                text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+            }
+            
+            /* FORCE all text in balance cards to be white */
+            .balance-card,
+            .balance-card *,
+            .balance-card .btn,
+            .balance-card .fa,
+            .balance-card .fas,
+            .balance-card i {
+                color: #ffffff !important;
             }
             
             /* Theme-adaptive table headers */
             .theme-table-header {
-                background-color: #f8f9fa !important; /* Light background for light theme */
+                background-color: #f8f9fa !important;
                 color: #000 !important;
                 font-weight: 700 !important;
             }
             
-            /* Dark theme overrides */
+            /* DARK THEME OVERRIDES - White text for dark theme */
             [data-theme="dark"] .theme-text,
             .dark-theme .theme-text,
-            body.dark .theme-text {
-                color: #fff !important; /* White for dark theme */
+            body.dark .theme-text,
+            html[data-theme-mode="dark"] .theme-text {
+                color: #ffffff !important;
             }
             [data-theme="dark"] .theme-text-header,
             .dark-theme .theme-text-header,
-            body.dark .theme-text-header {
-                color: #fff !important; /* White for dark theme */
+            body.dark .theme-text-header,
+            html[data-theme-mode="dark"] .theme-text-header {
+                color: #ffffff !important;
                 font-weight: 700 !important;
             }
             [data-theme="dark"] .theme-text-content,
             .dark-theme .theme-text-content,
-            body.dark .theme-text-content {
-                color: #fff !important; /* White for dark theme */
+            body.dark .theme-text-content,
+            html[data-theme-mode="dark"] .theme-text-content {
+                color: #ffffff !important;
                 font-weight: 600 !important;
             }
             [data-theme="dark"] .theme-text-muted,
             .dark-theme .theme-text-muted,
-            body.dark .theme-text-muted {
-                color: #ccc !important; /* Light gray for dark theme */
-                font-weight: 500 !important;
+            body.dark .theme-text-muted,
+            html[data-theme-mode="dark"] .theme-text-muted {
+                color: #cccccc !important;
             }
             
-            /* Dark theme table header overrides */
+            /* Dark theme table headers - White background for dark theme */
             [data-theme="dark"] .theme-table-header,
             .dark-theme .theme-table-header,
-            body.dark .theme-table-header {
-                background-color: #ffffff !important; /* White background for dark theme */
-                color: #000 !important; /* Black text on white background */
+            body.dark .theme-table-header,
+            html[data-theme-mode="dark"] .theme-table-header {
+                background-color: #ffffff !important;
+                color: #000 !important;
                 font-weight: 700 !important;
+            }
+            
+            /* ABSOLUTE WHITE TEXT ENFORCEMENT - No theme dependence */
+            .force-white-text,
+            .force-white-text *,
+            .welcome-banner,
+            .welcome-banner *,
+            .earnings-banner,
+            .earnings-banner *,
+            .gradient-card .text-white,
+            .gradient-card .text-white * {
+                color: #ffffff !important;
+                text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+            }
+            
+            /* Balance cards maintain white text in all themes (on gradient backgrounds) */
+            [data-theme="dark"] .balance-card-text,
+            .dark-theme .balance-card-text,
+            body.dark .balance-card-text,
+            html[data-theme-mode="dark"] .balance-card-text {
+                color: #ffffff !important;
+            }
+            
+            /* Global text color enforcement for better coverage */
+            [data-theme="dark"] h1, [data-theme="dark"] h2, [data-theme="dark"] h3, 
+            [data-theme="dark"] h4, [data-theme="dark"] h5, [data-theme="dark"] h6,
+            .dark-theme h1, .dark-theme h2, .dark-theme h3, 
+            .dark-theme h4, .dark-theme h5, .dark-theme h6,
+            body.dark h1, body.dark h2, body.dark h3, 
+            body.dark h4, body.dark h5, body.dark h6,
+            html[data-theme-mode="dark"] h1, html[data-theme-mode="dark"] h2, html[data-theme-mode="dark"] h3,
+            html[data-theme-mode="dark"] h4, html[data-theme-mode="dark"] h5, html[data-theme-mode="dark"] h6 {
+                color: #ffffff !important;
+            }
+            
+            [data-theme="dark"] p, [data-theme="dark"] span, [data-theme="dark"] div:not(.balance-card):not(.card-gradient),
+            .dark-theme p, .dark-theme span, .dark-theme div:not(.balance-card):not(.card-gradient),
+            body.dark p, body.dark span, body.dark div:not(.balance-card):not(.card-gradient),
+            html[data-theme-mode="dark"] p, html[data-theme-mode="dark"] span, html[data-theme-mode="dark"] div:not(.balance-card):not(.card-gradient) {
+                color: #ffffff !important;
             }
         </style>
         <!-- Main Statistics Cards -->
         <div class="row mb-4 my-4">
             <!-- New Dashing Welcome Banner -->
             <div class="col-12">
-                <div class="card border-0 shadow-lg" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%); border-radius: 20px; overflow: hidden;">
-                    <div class="card-body p-0">
+                <div class="card border-0 shadow-lg welcome-banner force-white-text" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%); border-radius: 20px; overflow: hidden;">
+                    <div class="card-body p-0 force-white-text">
                         <!-- Desktop Version -->
                         <div class="row align-items-center g-0 d-none d-lg-flex">
                             <div class="col-lg-8 p-5">
-                                <div class="text-white">
-                                    <h2 class="mb-3 fw-bold" style="text-shadow: 0 2px 4px rgba(0,0,0,0.3);">
-                                        <i class="fas fa-rocket me-3"></i>Welcome to Your Earnings Dashboard!
+                                <div class="text-white force-white-text">
+                                    <h2 class="mb-3 fw-bold text-white force-white-text" style="color: #ffffff !important; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">
+                                        <i class="fas fa-rocket me-3 text-white force-white-text" style="color: #ffffff !important;"></i>Welcome to Your Earnings Dashboard!
                                     </h2>
-                                    <p class="lead mb-4" style="text-shadow: 0 1px 3px rgba(0,0,0,0.3); opacity: 0.95;">
+                                    <p class="lead mb-4 text-white force-white-text" style="color: #ffffff !important; text-shadow: 0 1px 3px rgba(0,0,0,0.5); opacity: 0.95;">
                                         Track your investments, manage your portfolio, and watch your earnings grow with our advanced platform.
                                     </p>
                                     <div class="row">
@@ -159,24 +243,24 @@
                         <div class="d-flex align-items-center">
                             <div class="flex-grow-1">
                                 <div class="d-flex align-items-center justify-content-between mb-1">
-                                    <h6 class="text-white mb-0 fw-bold">💙 Account Wallet</h6>
+                                    <h6 class="balance-card-text-header mb-0">💙 Account Wallet</h6>
                                 </div>
-                                <h3 class="mb-0 fw-bold balance-amount text-white d-flex align-items-center" id="current-balance-amount">
+                                <h3 class="mb-0 balance-card-text-amount d-flex align-items-center" id="current-balance-amount">
                                     <span class="balance-value">${{ showAmount($currentBalance) }}</span>
                                     <span class="balance-hidden" style="display: none;">••••••••</span>
-                                    <button class="btn btn-sm btn-link text-white ms-2 p-0 balance-quick-toggle" onclick="toggleBalanceVisibility('current-balance')" style="font-size: 0.8rem; opacity: 0.7;">
+                                    <button class="btn btn-sm btn-link balance-card-text ms-2 p-0 balance-quick-toggle" onclick="toggleBalanceVisibility('current-balance')" style="font-size: 0.8rem; opacity: 0.7;">
                                         <i class="fas fa-eye balance-quick-icon"></i>
                                     </button>
                                 </h3>
                                 <div class="d-flex align-items-center mt-1">
-                                    <small class="text-white-50">Updated: <span id="current-balance-time">{{ now()->format('H:i') }}</span></small>
+                                    <small class="balance-card-text-small">Updated: <span id="current-balance-time">{{ now()->format('H:i') }}</span></small>
                                     <div class="loading-indicator ms-2" style="display: none;">
-                                        <i class="fas fa-spinner fa-spin text-white"></i>
+                                        <i class="fas fa-spinner fa-spin balance-card-text"></i>
                                     </div>
                                 </div>
                             </div>
                             <div class="bg-white bg-opacity-20 rounded-circle p-3">
-                                <i class="fas fa-wallet fa-lg text-white"></i>
+                                <i class="fas fa-wallet fa-lg balance-card-text"></i>
                             </div>
                         </div>
                         <div class="progress mt-2" style="height: 4px; background: rgba(255,255,255,0.2);">
@@ -191,27 +275,27 @@
                         <div class="d-flex align-items-center">
                             <div class="flex-grow-1">
                                 <div class="d-flex align-items-center justify-content-between mb-1">
-                                    <h6 class="text-white mb-0 fw-bold">💛 Team Bonus</h6>
+                                    <h6 class="balance-card-text-header mb-0">💛 Team Bonus</h6>
                                 </div>
-                                <h3 class="mb-0 fw-bold balance-amount text-white d-flex align-items-center" id="team-bonus-amount">
+                                <h3 class="mb-0 balance-card-text-amount d-flex align-items-center" id="team-bonus-amount">
                                     <span class="balance-value">${{ showAmount($referral_earnings) }}</span>
                                     <span class="balance-hidden" style="display: none;">••••••••</span>
-                                    <button class="btn btn-sm btn-link text-white ms-2 p-0 balance-quick-toggle" onclick="toggleBalanceVisibility('team-bonus')" style="font-size: 0.8rem; opacity: 0.7;">
+                                    <button class="btn btn-sm btn-link balance-card-text ms-2 p-0 balance-quick-toggle" onclick="toggleBalanceVisibility('team-bonus')" style="font-size: 0.8rem; opacity: 0.7;">
                                         <i class="fas fa-eye balance-quick-icon"></i>
                                     </button>
                                 </h3>
                                 <div class="d-flex align-items-center mt-1">
-                                    <small class="text-white-50">
+                                    <small class="balance-card-text-small">
                                         <i class="fas fa-arrow-up me-1"></i>
                                         Monthly: ${{ showAmount($monthly_referral_earnings ?? 0) }}
                                     </small>
                                     <div class="loading-indicator ms-2" style="display: none;">
-                                        <i class="fas fa-spinner fa-spin text-white"></i>
+                                        <i class="fas fa-spinner fa-spin balance-card-text"></i>
                                     </div>
                                 </div>
                             </div>
                             <div class="bg-white bg-opacity-20 rounded-circle p-3">
-                                <i class="fas fa-users fa-lg text-white"></i>
+                                <i class="fas fa-users fa-lg balance-card-text"></i>
                             </div>
                         </div>
                         <div class="progress mt-2" style="height: 4px; background: rgba(255,255,255,0.2);">
@@ -226,27 +310,27 @@
                         <div class="d-flex align-items-center">
                             <div class="flex-grow-1">
                                 <div class="d-flex align-items-center justify-content-between mb-1">
-                                    <h6 class="text-white mb-0 fw-bold">💰 Total Earnings Hub</h6>
+                                    <h6 class="balance-card-text-header mb-0">💰 Total Earnings Hub</h6>
                                 </div>
-                                <h3 class="mb-0 fw-bold balance-amount text-white d-flex align-items-center" id="total-earnings-amount">
+                                <h3 class="mb-0 balance-card-text-amount d-flex align-items-center" id="total-earnings-amount">
                                     <span class="balance-value">${{ showAmount(auth()->user()->interest_wallet) }}</span>
                                     <span class="balance-hidden" style="display: none;">••••••••</span>
-                                    <button class="btn btn-sm btn-link text-white ms-2 p-0 balance-quick-toggle" onclick="toggleBalanceVisibility('total-earnings')" style="font-size: 0.8rem; opacity: 0.7;">
+                                    <button class="btn btn-sm btn-link balance-card-text ms-2 p-0 balance-quick-toggle" onclick="toggleBalanceVisibility('total-earnings')" style="font-size: 0.8rem; opacity: 0.7;">
                                         <i class="fas fa-eye balance-quick-icon"></i>
                                     </button>
                                 </h3>
                                 <div class="d-flex align-items-center mt-1">
-                                    <small class="text-white-50">
+                                    <small class="balance-card-text-small">
                                         <i class="fas fa-coins me-1"></i>
                                         All Income: {{ $growth_percentage ?? 0 }}%
                                     </small>
                                     <div class="loading-indicator ms-2" style="display: none;">
-                                        <i class="fas fa-spinner fa-spin text-white"></i>
+                                        <i class="fas fa-spinner fa-spin balance-card-text"></i>
                                     </div>
                                 </div>
                             </div>
                             <div class="bg-white bg-opacity-20 rounded-circle p-3">
-                                <i class="fas fa-coins fa-lg text-white"></i>
+                                <i class="fas fa-coins fa-lg balance-card-text"></i>
                             </div>
                         </div>
                         <div class="progress mt-2" style="height: 4px; background: rgba(255,255,255,0.2);">
@@ -261,27 +345,27 @@
                         <div class="d-flex align-items-center">
                             <div class="flex-grow-1">
                                 <div class="d-flex align-items-center justify-content-between mb-1">
-                                    <h6 class="text-white mb-0 fw-bold">💎 Video Access Vault</h6>
+                                    <h6 class="balance-card-text-header mb-0">💎 Video Access Vault</h6>
                                 </div>
-                                <h3 class="mb-0 fw-bold balance-amount text-white d-flex align-items-center" id="video-access-amount">
+                                <h3 class="mb-0 balance-card-text-amount d-flex align-items-center" id="video-access-amount">
                                     <span class="balance-value">${{ showAmount($totalInvest) }}</span>
                                     <span class="balance-hidden" style="display: none;">••••••••</span>
-                                    <button class="btn btn-sm btn-link text-white ms-2 p-0 balance-quick-toggle" onclick="toggleBalanceVisibility('video-access-vault')" style="font-size: 0.8rem; opacity: 0.7;">
+                                    <button class="btn btn-sm btn-link balance-card-text ms-2 p-0 balance-quick-toggle" onclick="toggleBalanceVisibility('video-access-vault')" style="font-size: 0.8rem; opacity: 0.7;">
                                         <i class="fas fa-eye balance-quick-icon"></i>
                                     </button>
                                 </h3>
                                 <div class="d-flex align-items-center mt-1">
-                                    <small class="text-white-50">
+                                    <small class="balance-card-text-small">
                                         <i class="fas fa-play-circle me-1"></i>
                                         Active Plans: ${{ showAmount($runningInvests ?? 0) }}
                                     </small>
                                     <div class="loading-indicator ms-2" style="display: none;">
-                                        <i class="fas fa-spinner fa-spin text-white"></i>
+                                        <i class="fas fa-spinner fa-spin balance-card-text"></i>
                                     </div>
                                 </div>
                             </div>
                             <div class="bg-white bg-opacity-20 rounded-circle p-3">
-                                <i class="fas fa-video fa-lg text-white"></i>
+                                <i class="fas fa-video fa-lg balance-card-text"></i>
                             </div>
                         </div>
                         <div class="progress mt-2" style="height: 4px; background: rgba(255,255,255,0.2);">
@@ -820,18 +904,16 @@
                 background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
             }
             
-            /* Performance Metrics Styles */
+            /* Simplified animations for better performance */
             .metric-item {
                 padding: 8px;
                 border-radius: 8px;
                 background: rgba(255, 255, 255, 0.15);
                 border: 1px solid rgba(255, 255, 255, 0.2);
-                transition: all 0.3s ease;
             }
             
             .metric-item:hover {
                 background: rgba(255, 255, 255, 0.2);
-                transform: translateY(-2px);
             }
             
             .metric-item i {
@@ -851,16 +933,7 @@
                 opacity: 0.9;
             }
             
-            /* Animated performance indicators */
-            @keyframes pulse-metric {
-                0% { transform: scale(1); }
-                50% { transform: scale(1.05); }
-                100% { transform: scale(1); }
-            }
-            
-            .metric-item.active {
-                animation: pulse-metric 2s infinite;
-            }
+            /* Simplified animations for better performance - removed heavy keyframes */
             
             /* Performance status colors */
             .performance-excellent { border-left: 4px solid #28a745; }
@@ -953,12 +1026,7 @@
             }
             
             .card {
-                transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-            }
-            
-            .card:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+                /* Simplified card styling for better performance */
             }
             
             .quick-action-card {
@@ -1025,16 +1093,10 @@
                 margin-right: 0.25rem !important;
             }
 
-            /* Enhanced Balance Cards */
+            /* Simplified balance cards for better performance */
             .balance-card {
-                transition: transform 0.3s ease, box-shadow 0.3s ease;
                 overflow: hidden;
                 position: relative;
-            }
-            
-            .balance-card:hover {
-                transform: translateY(-3px);
-                box-shadow: 0 15px 35px rgba(0,0,0,0.15) !important;
             }
             
             .balance-hidden {
@@ -1048,52 +1110,14 @@
                 transition: all 0.3s ease;
             }
             
-            /* Animation for balance toggle */
-            @keyframes toggleFade {
-                0% { opacity: 0; transform: scale(0.8); }
-                100% { opacity: 1; transform: scale(1); }
-            }
-            
-            .balance-value, .balance-hidden {
-                animation: toggleFade 0.3s ease;
-            }
-            
-            /* Close Eye Toggle - Right next to amount */
+            /* Simplified balance toggle styles for better performance */
             .balance-quick-toggle {
-                transition: all 0.2s ease;
                 border: none !important;
                 background: none !important;
                 text-decoration: none !important;
             }
             
-            .balance-quick-toggle:hover {
-                opacity: 1 !important;
-                transform: scale(1.2);
-                color: white !important;
-            }
-            
-            .balance-quick-toggle:focus {
-                box-shadow: none !important;
-                color: white !important;
-            }
-            
-            .balance-quick-icon {
-                transition: all 0.2s ease;
-            }
-            
-            /* Balance amount styling for close integration */
-            .balance-amount {
-                gap: 8px;
-            }
-            
-            .balance-value, .balance-hidden {
-                line-height: 1.2;
-            }
-            
-            /* Hover effect on entire amount area */
-            .balance-amount:hover .balance-quick-toggle {
-                opacity: 1 !important;
-            }
+            /* Optimized styles - removed heavy animations for better performance */
         </style>
         
         <script>
@@ -1473,77 +1497,6 @@
             @keyframes slideOut {
                 from {
                     transform: translateX(0);
-                    opacity: 1;
-                }
-                to {
-                    transform: translateX(100%);
-                    opacity: 0;
-                }
-            }
-
-            /* Update animation for balance cards */
-            .balance-card.updating .balance-amount {
-                animation: balanceUpdate 0.6s ease-in-out;
-            }
-            
-            .balance-card.updating {
-                box-shadow: 0 4px 15px rgba(40, 167, 69, 0.2);
-                transition: box-shadow 0.6s ease;
-            }
-
-            @keyframes balanceUpdate {
-                0% { 
-                    transform: scale(1); 
-                    filter: brightness(1);
-                }
-                50% { 
-                    transform: scale(1.05); 
-                    color: #28a745;
-                    filter: brightness(1.1);
-                    text-shadow: 0 0 8px rgba(40, 167, 69, 0.3);
-                }
-                100% { 
-                    transform: scale(1); 
-                    filter: brightness(1);
-                    text-shadow: none;
-                }
-            }
-            
-            /* Card update indicator pulse */
-            @keyframes pulse {
-                0% {
-                    box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7);
-                }
-                70% {
-                    box-shadow: 0 0 0 10px rgba(40, 167, 69, 0);
-                }
-                100% {
-                    box-shadow: 0 0 0 0 rgba(40, 167, 69, 0);
-                }
-            }
-
-            /* Real-time indicator */
-            .realtime-indicator {
-                display: inline-block;
-                width: 8px;
-                height: 8px;
-                background: #28a745;
-                border-radius: 50%;
-                margin-left: 8px;
-                animation: pulse 2s infinite;
-            }
-
-            @keyframes pulse {
-                0% {
-                    box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7);
-                }
-                70% {
-                    box-shadow: 0 0 0 10px rgba(40, 167, 69, 0);
-                }
-                100% {
-                    box-shadow: 0 0 0 0 rgba(40, 167, 69, 0);
-                }
-            }
             
             @media (max-width: 768px) {
                 .card-body {
@@ -1554,22 +1507,9 @@
                     font-size: 1.5rem;
                 }
                 
-                .quick-action-card .card-body {
-                    padding: 0.75rem;
-                }
-                
                 .btn-sm {
                     font-size: 0.8rem;
                     padding: 0.2rem 0.4rem;
-                }
-
-                .toast-notification {
-                    min-width: 250px;
-                    margin: 5px 10px;
-                }
-
-                #performanceChart {
-                    height: 200px !important;
                 }
             }
         </style>
@@ -1578,7 +1518,7 @@
     @push('script')
     
     <script src="{{ asset('assets_custom/js/jquery-3.7.1.min.js') }}"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Chart.js removed to improve page loading speed -->
     
     <!-- Balance Toggle Function - Defined in separate script tag to ensure immediate availability -->
     <script>
@@ -1678,1226 +1618,175 @@
         });
     </script>
     
-    <script>
-        // High-Traffic Performance Metrics System
-        // Prevent redeclaration errors
-        if (typeof performanceRefreshInterval === 'undefined') {
-            var performanceRefreshInterval;
-        }
-        if (typeof isHighTrafficMode === 'undefined') {
-            var isHighTrafficMode = false;
-        }
-        if (typeof concurrentUsers === 'undefined') {
-            var concurrentUsers = 0;
-        }
-        if (typeof lastRefreshTime === 'undefined') {
-            var lastRefreshTime = Date.now();
-        }
-        
-        // Detect high traffic and adjust refresh intervals
-        function detectTrafficLoad() {
-            const userAgent = navigator.userAgent;
-            const connectionType = navigator.connection ? navigator.connection.effectiveType : '4g';
-            
-            // Adjust intervals based on load
-            if (concurrentUsers > 1000) {
-                isHighTrafficMode = true;
-                return 60000; // 1 minute for high traffic
-            } else if (concurrentUsers > 500) {
-                return 45000; // 45 seconds for medium traffic
-            } else {
-                return 30000; // 30 seconds for normal traffic
-            }
-        }
-        
-        // Throttled performance metrics refresh
-        function refreshPerformanceMetrics() {
-            const now = Date.now();
-            const timeSinceLastRefresh = now - lastRefreshTime;
-            const minInterval = detectTrafficLoad();
-            
-            // Skip if too frequent
-            if (timeSinceLastRefresh < minInterval) {
-                return;
-            }
-            
-            // Use fetch with timeout and error handling
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-            
-            fetch('{{ route("dashboard.performance") }}', {
-                method: 'GET',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                },
-                signal: controller.signal,
-                cache: 'no-cache'
-            })
-            .then(response => {
-                clearTimeout(timeoutId);
-                if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                
-                // Check if response is actually JSON
-                const contentType = response.headers.get('content-type');
-                if (!contentType || !contentType.includes('application/json')) {
-                    throw new Error('Performance metrics response is not JSON');
-                }
-                
-                return response.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    updatePerformanceDisplay(data.metrics);
-                    concurrentUsers = data.metrics.concurrent_users || 0;
-                    lastRefreshTime = now;
-                }
-            })
-            .catch(error => {
-                clearTimeout(timeoutId);
-                if (error.name === 'AbortError') {
-                    console.warn('Performance metrics request timed out');
-                } else {
-                    console.warn('Performance metrics update failed:', error);
-                }
-                // Exponential backoff on errors
-                setTimeout(() => {
-                    lastRefreshTime = now - (minInterval * 0.8); // Allow retry sooner
-                }, 10000);
-            });
-        }
-        
-        function updatePerformanceDisplay(metrics) {
-            // Efficient DOM updates with requestAnimationFrame
-            requestAnimationFrame(() => {
-                const metricElements = document.querySelectorAll('.metric-item h6');
-                if (metricElements.length >= 3) {
-                    // Update with performance indicators
-                    if (metrics.loading_time !== undefined) {
-                        metricElements[0].textContent = metrics.loading_time + 'ms';
-                        
-                        // Dynamic performance status based on load
-                        const parentCard = document.querySelector('.performance-banner');
-                        if (parentCard) {
-                            parentCard.classList.remove('performance-excellent', 'performance-good', 'performance-poor');
-                            
-                            // Adjusted thresholds for high traffic
-                            const loadThreshold = concurrentUsers > 1000 ? 500 : 300;
-                            const excellentThreshold = concurrentUsers > 1000 ? 200 : 100;
-                            
-                            if (metrics.loading_time < excellentThreshold) {
-                                parentCard.classList.add('performance-excellent');
-                            } else if (metrics.loading_time < loadThreshold) {
-                                parentCard.classList.add('performance-good');
-                            } else {
-                                parentCard.classList.add('performance-poor');
-                            }
-                        }
-                    }
-                    
-                    if (metrics.query_count !== undefined) {
-                        metricElements[1].textContent = metrics.query_count;
-                    }
-                    
-                    if (metrics.concurrent_users !== undefined) {
-                        metricElements[2].textContent = metrics.concurrent_users;
-                        
-                        // Show warning for high load
-                        if (metrics.concurrent_users > 5000) {
-                            metricElements[2].style.color = '#dc3545';
-                            metricElements[2].title = 'High server load detected';
-                        } else if (metrics.concurrent_users > 1000) {
-                            metricElements[2].style.color = '#ffc107';
-                            metricElements[2].title = 'Medium server load';
-                        } else {
-                            metricElements[2].style.color = '#ffffff';
-                            metricElements[2].title = '';
-                        }
-                    }
-                }
-                
-                // Update timestamp with cache-busting
-                const timestampElements = document.querySelectorAll('.performance-banner small');
-                timestampElements.forEach(element => {
-                    if (element.innerHTML.includes('fa-sync-alt') && metrics.load_timestamp) {
-                        const memoryText = element.innerHTML.split('|')[0];
-                        const loadIndicator = isHighTrafficMode ? ' 🔥' : '';
-                        element.innerHTML = memoryText + '<span class="mx-2">|</span><i class="fas fa-sync-alt me-1"></i>' + metrics.load_timestamp + loadIndicator;
-                    }
-                });
-                
-                // Pulse animation for updates (less frequent in high traffic)
-                if (!isHighTrafficMode) {
-                    document.querySelectorAll('.metric-item').forEach(item => {
-                        item.classList.add('active');
-                        setTimeout(() => item.classList.remove('active'), 1000);
-                    });
-                }
-            });
-        }
-        
-        // Intelligent refresh system
-        function startPerformanceMonitoring() {
-            // Clear any existing interval
-            if (performanceRefreshInterval) {
-                clearInterval(performanceRefreshInterval);
-            }
-            
-            // Start with immediate refresh
-            refreshPerformanceMetrics();
-            
-            // Dynamic interval based on traffic
-            function scheduleNextRefresh() {
-                const interval = detectTrafficLoad();
-                performanceRefreshInterval = setTimeout(() => {
-                    refreshPerformanceMetrics();
-                    scheduleNextRefresh(); // Schedule next refresh
-                }, interval);
-            }
-            
-            scheduleNextRefresh();
-        }
-        
-        // Page visibility optimization
-        document.addEventListener('visibilitychange', function() {
-            if (document.hidden) {
-                // Pause monitoring when tab is hidden
-                if (performanceRefreshInterval) {
-                    clearTimeout(performanceRefreshInterval);
-                }
-            } else {
-                // Resume monitoring when tab becomes visible
-                startPerformanceMonitoring();
-            }
-        });
-        
-        // Initialize monitoring
-        document.addEventListener('DOMContentLoaded', function() {
-            // Delay initial load to prevent stampede
-            const randomDelay = Math.random() * 5000; // 0-5 second random delay
-            setTimeout(() => {
-                startPerformanceMonitoring();
-            }, randomDelay);
-        });
-        
-        // Cleanup on page unload
-        window.addEventListener('beforeunload', function() {
-            if (performanceRefreshInterval) {
-                clearTimeout(performanceRefreshInterval);
-            }
-        });
-    </script>
+    <!-- Performance monitoring script removed to improve page loading speed -->
     
         <script>
-            // Dashboard Real-time Update System
-            // Prevent redeclaration errors
-            if (typeof dashboardUpdateInterval === 'undefined') {
-                var dashboardUpdateInterval;
-            }
-            if (typeof isPageActive === 'undefined') {
-                var isPageActive = true;
-            }
-            if (typeof lastUpdateTime === 'undefined') {
-                var lastUpdateTime = null;
-            }
-            if (typeof performanceChart === 'undefined') {
-                var performanceChart = null;
-            }
-
-            // Prevent external systems from interfering
-            window.dashboardInitialized = false;
-
-            // Page visibility API to pause updates when tab is not active
-            document.addEventListener('visibilitychange', function() {
-                isPageActive = !document.hidden;
-                if (isPageActive) {
-                    // Resume checking when tab becomes active
-                    updateDashboardData();
-                    startDashboardUpdates();
-                } else {
-                    // Pause checking when tab is inactive
-                    stopDashboardUpdates();
-                }
-            });
-
-            // Start dashboard updates on page load
+            // Simplified dashboard initialization - heavy real-time updates removed for better performance
             document.addEventListener('DOMContentLoaded', function() {
-                try {
-                    initializePerformanceChart();
-                    startDashboardUpdates();
-                    updateDashboardData(); // Initial load
-                    
-                    // Initialize session monitoring
-                    checkSessionNotifications(); // Initial check
-                    startSessionMonitoring(); // Start monitoring
-                    
-                    // Mark dashboard as initialized
-                    window.dashboardInitialized = true;
-                } catch (error) {
-                    // Handle initialization errors silently
-                }
-            });
-
-            function startDashboardUpdates() {
-                // Clear any existing interval
-                if (dashboardUpdateInterval) {
-                    clearInterval(dashboardUpdateInterval);
-                }
+                // Initialize basic balance toggle functionality
+                loadBalanceVisibility();
                 
-                // Start new interval - update every 30 seconds
-                dashboardUpdateInterval = setInterval(function() {
-                    if (isPageActive) {
-                        updateDashboardData();
-                    }
-                }, 30000);
-            }
-
-            function stopDashboardUpdates() {
-                if (dashboardUpdateInterval) {
-                    clearInterval(dashboardUpdateInterval);
-                    dashboardUpdateInterval = null;
-                }
-            }
-
-            // Function to update dashboard data
-            function updateDashboardData() {
-                // Check if CSRF token exists
-                const csrfToken = document.querySelector('meta[name="csrf-token"]');
-                if (!csrfToken) {
-                    return;
-                }
-                
-                showLoadingIndicators();
-                
-                fetch('/user/api/dashboard/quick-stats', {
-                    method: 'GET',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRF-TOKEN': csrfToken.getAttribute('content')
-                    },
-                    credentials: 'same-origin'
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                    }
-                    
-                    // Check if response is actually JSON
-                    const contentType = response.headers.get('content-type');
-                    if (!contentType || !contentType.includes('application/json')) {
-                        throw new Error('Quick stats response is not JSON');
-                    }
-                    
-                    return response.json();
-                })
-                .then(data => {
-                    if (data && data.stats) {
-                        updateBalanceCards(data.stats);
-                        updateTimestamp();
-                        hideLoadingIndicators();
-                        showUpdateSuccess();
-                    }
-                })
-                .catch(error => {
-                    hideLoadingIndicators();
-                    showUpdateError();
-                });
-            }
-
-            // Function to update balance cards
-            function updateBalanceCards(stats) {
-                // Update Current Balance
-                const currentBalanceElement = document.getElementById('current-balance-amount');
-                if (currentBalanceElement && stats.current_balance !== undefined) {
-                    animateNumberChange(currentBalanceElement, parseFloat(stats.current_balance), true);
-                }
-
-                // Update Team Bonus
-                const teamBonusElement = document.getElementById('team-bonus-amount');
-                if (teamBonusElement && stats.team_bonus !== undefined) {
-                    animateNumberChange(teamBonusElement, parseFloat(stats.team_bonus), true);
-                }
-
-                // Update Total Earnings Hub
-                const totalEarningsElement = document.getElementById('total-earnings-amount');
-                if (totalEarningsElement && stats.interest_wallet !== undefined) {
-                    animateNumberChange(totalEarningsElement, parseFloat(stats.interest_wallet), true);
-                }
-
-                // Update Video Access Vault - with special attention to zero values
-                const videoAccessElement = document.getElementById('video-access-amount');
-                if (videoAccessElement && stats.total_investment !== undefined) {
-                    const newValue = parseFloat(stats.total_investment);
-                    animateNumberChange(videoAccessElement, newValue, true); // Force animation even for $0.00
-                }
-
-                // Update Today's Earnings
-                const todayEarningsElement = document.querySelector('#today-earnings h4');
-                if (todayEarningsElement && stats.today_earnings !== undefined) {
-                    animateNumberChange(todayEarningsElement, parseFloat(stats.today_earnings), true);
-                }
-
-                // Update Monthly Earnings
-                const monthlyEarningsElement = document.querySelector('#monthly-earnings h4');
-                if (monthlyEarningsElement && stats.monthly_earnings !== undefined) {
-                    animateNumberChange(monthlyEarningsElement, parseFloat(stats.monthly_earnings), true);
-                }
-            }
-
-            // Function to animate number changes - No animation for zero values
-            function animateNumberChange(element, newValue, forceAnimation = false) {
-                if (!element) return;
-                
-                // Check if this element is inside a balance card that's currently hidden
-                const parentCard = element.closest('.balance-card');
-                if (parentCard) {
-                    const cardType = parentCard.getAttribute('data-stat');
-                    if (cardType && balanceVisibility && !balanceVisibility[cardType]) {
-                        // Update the hidden value without animation, but don't show it
-                        const valueElement = parentCard.querySelector('.balance-value');
-                        if (valueElement) {
-                            valueElement.textContent = '$' + newValue.toFixed(2);
-                        }
-                        return; // Don't animate hidden balances
-                    }
-                }
-                
-                const currentText = element.textContent || element.querySelector('.balance-value')?.textContent || '$0.00';
-                const currentValue = parseFloat(currentText.replace(/[$,]/g, '')) || 0;
-                const hasChanged = Math.abs(currentValue - newValue) > 0.01;
-                
-                // Skip animation for zero values - no need to animate $0.00
-                if (newValue === 0) {
-                    // Just update the value without animation
-                    if (element.querySelector('.balance-value')) {
-                        element.querySelector('.balance-value').textContent = '$' + newValue.toFixed(2);
-                    } else {
-                        element.textContent = '$' + newValue.toFixed(2);
-                    }
-                    return;
-                }
-                
-                // Animate if value changed OR if forced (like on refresh)
-                if (hasChanged || forceAnimation) {
-                    // Add updating class to parent card for additional styling
-                    if (parentCard) {
-                        parentCard.classList.add('updating');
-                        setTimeout(() => parentCard.classList.remove('updating'), 600);
-                    }
-                    
-                    element.style.transition = 'all 0.3s ease';
-                    element.style.transform = 'scale(1.05)';
-                    
-                    // Color based on value change
-                    if (hasChanged) {
-                        element.style.color = newValue > currentValue ? '#28a745' : (newValue < currentValue ? '#dc3545' : '#17a2b8');
-                    } else {
-                        element.style.color = '#17a2b8'; // Blue for refresh without change
-                    }
-                    
-                    setTimeout(() => {
-                        // Update the text content
-                        if (element.querySelector('.balance-value')) {
-                            element.querySelector('.balance-value').textContent = '$' + newValue.toFixed(2);
-                        } else {
-                            element.textContent = '$' + newValue.toFixed(2);
-                        }
-                        
-                        element.style.transform = 'scale(1)';
-                        element.style.boxShadow = '';
-                        
-                        setTimeout(() => {
-                            element.style.color = '';
-                        }, 300);
-                    }, 150);
-                    
-                    // Show update indicator for the specific card
-                    if (parentCard) {
-                        showCardUpdateIndicator(parentCard);
-                    }
-                } else {
-                    // Even if no animation, still update the value
-                    if (element.querySelector('.balance-value')) {
-                        element.querySelector('.balance-value').textContent = '$' + newValue.toFixed(2);
-                    } else {
-                        element.textContent = '$' + newValue.toFixed(2);
-                    }
-                }
-            }
-            
-            // Function to show update indicator for individual cards
-            function showCardUpdateIndicator(card) {
-                const existingIndicator = card.querySelector('.card-update-indicator');
-                if (existingIndicator) {
-                    existingIndicator.remove();
-                }
-                
-                const indicator = document.createElement('div');
-                indicator.className = 'card-update-indicator';
-                indicator.style.cssText = `
-                    position: absolute;
-                    top: 10px;
-                    right: 40px;
-                    width: 8px;
-                    height: 8px;
-                    background: #28a745;
-                    border-radius: 50%;
-                    animation: pulse 1s ease-in-out;
-                    z-index: 10;
-                `;
-                
-                card.style.position = 'relative';
-                card.appendChild(indicator);
-                
-                setTimeout(() => {
-                    if (indicator.parentNode) {
-                        indicator.remove();
-                    }
-                }, 2000);
-            }
-
-            // Function to show loading indicators
-            function showLoadingIndicators() {
-                try {
-                    document.querySelectorAll('.loading-indicator').forEach(indicator => {
-                        if (indicator) {
-                            indicator.style.display = 'inline-block';
-                        }
-                    });
-                } catch (error) {
-                    // Handle errors silently
-                }
-            }
-
-            // Function to hide loading indicators
-            function hideLoadingIndicators() {
-                try {
-                    document.querySelectorAll('.loading-indicator').forEach(indicator => {
-                        if (indicator) {
-                            indicator.style.display = 'none';
-                        }
-                    });
-                } catch (error) {
-                    // Handle errors silently
-                }
-            }
-
-            // Function to update timestamp
-            function updateTimestamp() {
-                const now = new Date();
-                const timeString = now.toLocaleTimeString('en-US', { 
-                    hour12: false, 
-                    hour: '2-digit', 
-                    minute: '2-digit' 
-                });
-                
-                document.querySelectorAll('[id$="-time"]').forEach(timeElement => {
-                    timeElement.textContent = timeString;
-                });
-                
-                lastUpdateTime = now;
-            }
-
-            // Function to show update success
-            function showUpdateSuccess() {
-                //showToast('Dashboard updated successfully', 'success');
-            }
-
-            // Function to show update error
-            function showUpdateError() {
-                //showToast('Failed to update dashboard data', 'error');
-            }
-
-            // Performance Chart Initialization
-            function initializePerformanceChart() {
-                const ctx = document.getElementById('performanceChart');
-                if (!ctx) return;
-
-                // Check if chartData is available
-                const chartLabels = @json(isset($chartData) ? $chartData->pluck('date') : []);
-                const chartAmounts = @json(isset($chartData) ? $chartData->pluck('amount') : []);
-                
-                // If no data available, use sample data
-                const fallbackLabels = chartLabels.length > 0 ? chartLabels : ['Jan', 'Feb', 'Mar', 'Apr', 'May'];
-                const fallbackData = chartAmounts.length > 0 ? chartAmounts : [0, 0, 0, 0, 0];
-
-                performanceChart = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: fallbackLabels,
-                        datasets: [{
-                            label: 'Daily Earnings',
-                            data: fallbackData,
-                            borderColor: '#0d6efd',
-                            backgroundColor: 'rgba(13, 110, 253, 0.1)',
-                            borderWidth: 3,
-                            fill: true,
-                            tension: 0.4,
-                            pointBackgroundColor: '#0d6efd',
-                            pointBorderColor: '#ffffff',
-                            pointBorderWidth: 2,
-                            pointRadius: 6,
-                            pointHoverRadius: 8,
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                display: false
-                            },
-                            tooltip: {
-                                backgroundColor: 'rgba(0,0,0,0.8)',
-                                titleColor: '#ffffff',
-                                bodyColor: '#ffffff',
-                                borderColor: '#0d6efd',
-                                borderWidth: 1,
-                                cornerRadius: 8,
-                                displayColors: false,
-                                callbacks: {
-                                    label: function(context) {
-                                        return 'Earnings: $' + context.parsed.y.toFixed(2);
-                                    }
-                                }
-                            }
-                        },
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                grid: {
-                                    color: 'rgba(0,0,0,0.1)'
-                                },
-                                ticks: {
-                                    callback: function(value) {
-                                        return '$' + value.toFixed(2);
-                                    }
-                                }
-                            },
-                            x: {
-                                grid: {
-                                    color: 'rgba(0,0,0,0.1)'
-                                }
-                            }
-                        },
-                        elements: {
-                            point: {
-                                hoverRadius: 10
-                            }
-                        },
-                        animation: {
-                            duration: 1000,
-                            easing: 'easeInOutQuart'
-                        }
-                    }
-                });
-            }
-
-            // Function to refresh performance data
-            function refreshPerformanceData() {
-                fetch('/user/api/dashboard/performance-metrics', {
-                    method: 'GET',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                    },
-                    credentials: 'same-origin'
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                    }
-                    
-                    // Check if response is actually JSON
-                    const contentType = response.headers.get('content-type');
-                    if (!contentType || !contentType.includes('application/json')) {
-                        throw new Error('Performance metrics response is not JSON');
-                    }
-                    
-                    return response.json();
-                })
-                .then(data => {
-                    if (performanceChart && data.data.daily_earnings) {
-                        performanceChart.data.labels = data.data.daily_earnings.map(item => item.date);
-                        performanceChart.data.datasets[0].data = data.data.daily_earnings.map(item => item.amount);
-                        performanceChart.update();
-                        showToast('Performance chart updated', 'success');
-                    }
-                })
-                .catch(error => {
-                    showToast('Failed to refresh performance data', 'error');
-                });
-            }
-
-            // Function to update chart period
-            function updateChartPeriod(period) {
-                // This would typically make an API call with the period parameter
-                showToast(`Switching to ${period} view`, 'info');
-                refreshPerformanceData();
-            }
-
-            // Auto-refresh session notifications every 10 seconds
-            if (typeof sessionCheckInterval === 'undefined') {
-                var sessionCheckInterval;
-            }
-
-            // Page visibility API to pause updates when tab is not active
-            document.addEventListener('visibilitychange', function() {
-                isPageActive = !document.hidden;
-                if (isPageActive) {
-                    // Resume checking when tab becomes active
-                    checkSessionNotifications();
-                    startSessionMonitoring();
-                } else {
-                    // Pause checking when tab is inactive
-                    stopSessionMonitoring();
-                }
-            });
-
-            function startSessionMonitoring() {
-                // Clear any existing interval
-                if (sessionCheckInterval) {
-                    clearInterval(sessionCheckInterval);
-                }
-                
-                // Start new interval - check every 10 seconds
-                sessionCheckInterval = setInterval(function() {
-                    if (isPageActive) {
-                        checkSessionNotifications();
-                    }
-                }, 10000);
-            }
-
-            function stopSessionMonitoring() {
-                if (sessionCheckInterval) {
-                    clearInterval(sessionCheckInterval);
-                    sessionCheckInterval = null;
-                }
-            }
-
-            // Function to check for session notifications
-            function checkSessionNotifications() {
-                fetch('/user/session-notifications/check', {
-                    method: 'GET',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                    },
-                    credentials: 'same-origin'
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                    }
-                    
-                    // Check if response is actually JSON
-                    const contentType = response.headers.get('content-type');
-                    if (!contentType || !contentType.includes('application/json')) {
-                        throw new Error('Response is not JSON');
-                    }
-                    
-                    return response.json();
-                })
-                .then(data => {
-                    updateSessionNotificationsArea(data);
-                })
-                .catch(error => {
-                    console.warn('Notification update error:', error);
-                    
-                    if (error.message && error.message.includes('401') || error.message.includes('403')) {
-                        const timestamp = Math.floor(Date.now() / 1000);
-                        Swal.fire({
-                            icon: 'warning',
-                            title: 'Session Expired',
-                            text: 'Your session has expired. Please log in again.',
-                            confirmButtonText: 'Go to Login',
-                            confirmButtonColor: '#007bff',
-                            allowOutsideClick: false,
-                            allowEscapeKey: false
-                        }).then(() => {
-                            window.location.href = `/login?from_logout=1&t=${timestamp}`;
-                        });
-                    } else if (error.message && error.message.includes('Response is not JSON')) {
-                        // Server returned HTML/text instead of JSON (possibly error page)
-                        console.warn('Server returned non-JSON response for notifications - retrying in 30 seconds');
-                        setTimeout(() => {
-                            checkSessionNotifications();
-                        }, 30000);
-                    }
-                    // For other errors, fail silently to avoid spam
-                });
-            }
-
-            // Function to update the session notifications area
-            function updateSessionNotificationsArea(data) {
-                const notificationsArea = document.getElementById('session-notifications-area');
-                if (!notificationsArea) return;
-
-                const unreadCount = data.unread_count || 0;
-                const currentCount = getCurrentNotificationCount();
-                
-                // Only update if count has changed
-                if (unreadCount !== currentCount) {
-                    // Add update indicator
-                    showUpdateIndicator();
-                    
-                    if (unreadCount > 0) {
-                        notificationsArea.innerHTML = `
-                            <div class="mt-2">
-                                <span class="badge bg-warning text-dark" onclick="showSessionNotifications()" style="cursor: pointer;">
-                                    <i class="fas fa-exclamation-triangle me-1"></i>
-                                    ${unreadCount} Security Alert${unreadCount > 1 ? 's' : ''}
-                                </span>
-                            </div>
-                        `;
-                        
-                        // Show toast notification for new alerts (only if count increased)
-                        if (unreadCount > currentCount && currentCount >= 0) {
-                            // Show both toast and Swal for important security alerts
-                            showToast(`New security alert detected! You have ${unreadCount} unread alert${unreadCount > 1 ? 's' : ''}`, 'warning');
+                // Copy referral link functionality
+                const copyButton = document.getElementById('copyReferralLink');
+                if (copyButton) {
+                    copyButton.addEventListener('click', function() {
+                        const referralInput = document.getElementById('referralLink');
+                        if (referralInput) {
+                            referralInput.select();
+                            referralInput.setSelectionRange(0, 99999); // For mobile devices
                             
-                            // Also show a more prominent Swal notification
-                            Swal.fire({
-                                icon: 'warning',
-                                title: 'Security Alert Detected!',
-                                text: `You have ${unreadCount} new security notification${unreadCount > 1 ? 's' : ''}. Please review immediately.`,
-                                showCancelButton: true,
-                                confirmButtonText: 'View Alerts',
-                                cancelButtonText: 'Later',
-                                confirmButtonColor: '#ffc107',
-                                cancelButtonColor: '#6c757d',
-                                timer: 8000,
-                                timerProgressBar: true,
-                                toast: false,
-                                position: 'center'
-                            }).then((result) => {
-                                if (result.isConfirmed) {
-                                    showSessionNotifications();
-                                }
-                            });
-                        }
-                    } else {
-                        notificationsArea.innerHTML = '';
-                    }
-                }
-            }
-            
-            // Helper function to get current notification count
-            function getCurrentNotificationCount() {
-                const badge = document.querySelector('#session-notifications-area .badge.bg-warning');
-                if (!badge) return 0;
-                
-                const text = badge.textContent || '';
-                const match = text.match(/(\d+)/);
-                return match ? parseInt(match[1]) : 0;
-            }
-            
-            // Show visual update indicator
-            function showUpdateIndicator() {
-                const container = document.getElementById('session-status-container');
-                if (!container) return;
-                
-                // Remove existing indicator
-                const existingIndicator = container.querySelector('.session-update-indicator');
-                if (existingIndicator) {
-                    existingIndicator.remove();
-                }
-                
-                // Add new indicator
-                const indicator = document.createElement('div');
-                indicator.className = 'session-update-indicator';
-                container.appendChild(indicator);
-                
-                // Remove after 3 seconds
-                setTimeout(() => {
-                    if (indicator.parentNode) {
-                        indicator.remove();
-                    }
-                }, 3000); 
-            }
-
-            // Session Notifications Functions
-            window.showSessionNotifications = function() {
-                fetch('/user/session-notifications', {
-                    method: 'GET',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                    },
-                    credentials: 'same-origin'
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                    }
-                    
-                    // Check if response is actually JSON
-                    const contentType = response.headers.get('content-type');
-                    if (!contentType || !contentType.includes('application/json')) {
-                        throw new Error('Session notifications response is not JSON');
-                    }
-                    
-                    return response.json();
-                })
-                .then(data => {
-                    displayNotificationsModal(data.notifications);
-                })
-                .catch(error => {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Connection Error',
-                        text: 'Unable to load security notifications. Please check your internet connection.',
-                        showCancelButton: true,
-                        confirmButtonText: 'Refresh Page',
-                        cancelButtonText: 'Try Again',
-                        confirmButtonColor: '#dc3545',
-                        cancelButtonColor: '#6c757d'
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            window.location.reload();
-                        } else if (result.dismiss === Swal.DismissReason.cancel) {
-                            // Try to fetch notifications again
-                            showSessionNotifications();
-                        }
-                    });
-                });
-            };
-            
-            function displayNotificationsModal(notifications) {
-                const modalHtml = `
-                    <div class="modal fade" id="sessionNotificationsModal" tabindex="-1">
-                        <div class="modal-dialog modal-lg">
-                            <div class="modal-content">
-                                <div class="modal-header bg-warning text-dark">
-                                    <h5 class="modal-title">
-                                        <i class="fas fa-shield-alt me-2"></i>Security Alerts
-                                    </h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                </div>
-                                <div class="modal-body">
-                                    ${notifications.length > 0 ? 
-                                        notifications.map(notification => `
-                                            <div class="alert alert-warning d-flex align-items-start" role="alert">
-                                                <div class="me-3">
-                                                    <i class="fas fa-exclamation-triangle fa-2x text-warning"></i>
-                                                </div>
-                                                <div class="flex-grow-1">
-                                                    <h6 class="alert-heading">${notification.title}</h6>
-                                                    <p class="mb-2">${notification.message}</p>
-                                                    <div class="small text-muted">
-                                                        <div><strong>New Login From:</strong> ${notification.new_login_device || 'Unknown Device'}</div>
-                                                        <div><strong>IP Address:</strong> ${notification.new_login_ip}</div>
-                                                        <div><strong>Location:</strong> ${notification.new_login_location || 'Unknown'}</div>
-                                                        <div><strong>Time:</strong> ${new Date(notification.created_at).toLocaleString()}</div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        `).join('') 
-                                        : '<div class="alert alert-info">No security alerts found.</div>'
-                                    }
-                                </div>
-                                <div class="modal-footer">
-                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                    <button type="button" class="btn btn-primary" onclick="markNotificationsAsRead()">Mark All as Read</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                
-                // Remove existing modal if any
-                const existingModal = document.getElementById('sessionNotificationsModal');
-                if (existingModal) {
-                    existingModal.remove();
-                }
-                
-                // Add modal to body
-                document.body.insertAdjacentHTML('beforeend', modalHtml);
-                
-                // Show modal
-                const modal = new bootstrap.Modal(document.getElementById('sessionNotificationsModal'));
-                modal.show();
-            }
-            
-            window.markNotificationsAsRead = function() {
-                Swal.fire({
-                    icon: 'question',
-                    title: 'Mark All as Read?',
-                    text: 'This will mark all security alerts as read. Are you sure?',
-                    showCancelButton: true,
-                    confirmButtonText: 'Yes, Mark as Read',
-                    cancelButtonText: 'Cancel',
-                    confirmButtonColor: '#28a745',
-                    cancelButtonColor: '#6c757d'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        // Show loading
-                        Swal.fire({
-                            title: 'Updating...',
-                            text: 'Marking notifications as read',
-                            allowOutsideClick: false,
-                            allowEscapeKey: false,
-                            showConfirmButton: false,
-                            didOpen: () => {
-                                Swal.showLoading();
-                            }
-                        });
-                        
-                        fetch('/user/session-notifications/mark-read', {
-                            method: 'POST',
-                            headers: {
-                                'X-Requested-With': 'XMLHttpRequest',
-                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                                'Content-Type': 'application/json'
-                            },
-                            credentials: 'same-origin'
-                        })
-                        .then(response => {
-                            if (!response.ok) {
-                                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                            }
-                            
-                            // Check if response is actually JSON
-                            const contentType = response.headers.get('content-type');
-                            if (!contentType || !contentType.includes('application/json')) {
-                                throw new Error('Mark read response is not JSON');
-                            }
-                            
-                            return response.json();
-                        })
-                        .then(data => {
-                            if (data.success) {
-                                // Update the notifications area to remove the badge
-                                const notificationsArea = document.getElementById('session-notifications-area');
-                                if (notificationsArea) {
-                                    notificationsArea.innerHTML = '';
-                                }
-                                
-                                // Close modal
-                                const modal = bootstrap.Modal.getInstance(document.getElementById('sessionNotificationsModal'));
-                                if (modal) {
-                                    modal.hide();
-                                }
-                                
-                                // Show success message
-                                Swal.fire({
-                                    icon: 'success',
-                                    title: 'Success!',
-                                    text: 'Security alerts marked as read successfully',
-                                    timer: 2000,
-                                    timerProgressBar: true,
-                                    showConfirmButton: false
+                            // Use modern clipboard API if available
+                            if (navigator.clipboard) {
+                                navigator.clipboard.writeText(referralInput.value).then(function() {
+                                    showToast('Referral link copied to clipboard!', 'success');
+                                }).catch(function(err) {
+                                    // Fallback to execCommand
+                                    document.execCommand('copy');
+                                    showToast('Referral link copied to clipboard!', 'success');
                                 });
+                            } else {
+                                // Fallback for older browsers
+                                document.execCommand('copy');
+                                showToast('Referral link copied to clipboard!', 'success');
                             }
-                        })
-                        .catch(error => {
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Update Failed',
-                                text: 'Unable to mark notifications as read. Please try again.',
-                                showCancelButton: true,
-                                confirmButtonText: 'Retry',
-                                cancelButtonText: 'Close',
-                                confirmButtonColor: '#28a745',
-                                cancelButtonColor: '#6c757d'
-                            }).then((result) => {
-                                if (result.isConfirmed) {
-                                    markNotificationsAsRead();
-                                }
-                            });
-                        });
-                    }
-                });
-            };
-
-
-            // Copy referral link functionality
-            document.getElementById('copyReferralLink').addEventListener('click', function() {
-                const referralLink = document.getElementById('referralLink');
-                referralLink.select();
-                referralLink.setSelectionRange(0, 99999); // For mobile devices
-                
-                // Use modern clipboard API if available
-                if (navigator.clipboard) {
-                    navigator.clipboard.writeText(referralLink.value).then(function() {
-                        showToast('Referral link copied to clipboard!', 'success');
-                    }).catch(function(err) {
-                        // Fallback to execCommand
-                        document.execCommand('copy');
-                        showToast('Referral link copied to clipboard!', 'success');
+                            
+                            this.innerHTML = '<i class="fas fa-check me-1"></i>Copied!';
+                            this.classList.add('btn-success');
+                            setTimeout(() => {
+                                this.innerHTML = '<i class="fas fa-copy me-1"></i>Copy';
+                                this.classList.remove('btn-success');
+                                this.classList.add('btn-outline-primary');
+                            }, 2000);
+                        }
                     });
-                } else {
-                    // Fallback for older browsers
-                    document.execCommand('copy');
-                    showToast('Referral link copied to clipboard!', 'success');
                 }
             });
 
-            // Share referral link functionality
+            // Simple share referral link function - lightweight version
             window.shareReferralLink = function() {
-                const referralLink = document.getElementById('referralLink').value;
-                const shareData = {
-                    title: 'Join {{ config("app.name") }} and Start Earning!',
-                    text: 'Join me on {{ config("app.name") }} and start earning with our amazing investment platform!',
-                    url: referralLink
-                };
-
-                // Check if Web Share API is supported
-                if (navigator.share) {
-                    navigator.share(shareData).then(() => {
-                        showToast('Referral link shared successfully!', 'success');
-                    }).catch((err) => {
-                        // Fallback to manual sharing
-                        fallbackShare(referralLink);
-                    });
-                } else {
-                    // Fallback for browsers that don't support Web Share API
-                    fallbackShare(referralLink);
-                }
-            }
-
-            // Fallback share function
-            window.fallbackShare = function(link) {
-                // Create a temporary modal with social sharing options
-                const shareModal = `
-                    <div class="modal fade" id="shareModal" tabindex="-1" aria-labelledby="shareModalLabel" aria-hidden="true">
-                        <div class="modal-dialog modal-dialog-centered">
-                            <div class="modal-content">
-                                <div class="modal-header">
-                                    <h5 class="modal-title" id="shareModalLabel">Share Your Referral Link</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                </div>
-                                <div class="modal-body">
-                                    <div class="mb-3">
-                                        <label for="shareLink" class="form-label">Your Referral Link:</label>
-                                        <div class="input-group">
-                                            <input type="text" id="shareLink" class="form-control" value="${link}" readonly>
-                                            <button class="btn btn-outline-primary" type="button" onclick="copyFromModal()">
-                                                <i class="fas fa-copy"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div class="d-grid gap-2">
-                                        <a href="https://wa.me/?text=Join me on {{ config("app.name") }} and start earning! ${encodeURIComponent(link)}" 
-                                           class="btn btn-success" target="_blank">
-                                            <i class="fab fa-whatsapp me-2"></i>Share on WhatsApp
-                                        </a>
-                                        <a href="https://t.me/share/url?url=${encodeURIComponent(link)}&text=Join me on {{ config("app.name") }} and start earning!" 
-                                           class="btn btn-primary" target="_blank">
-                                            <i class="fab fa-telegram me-2"></i>Share on Telegram
-                                        </a>
-                                        <a href="https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(link)}" 
-                                           class="btn btn-primary" target="_blank">
-                                            <i class="fab fa-facebook me-2"></i>Share on Facebook
-                                        </a>
-                                        <a href="https://twitter.com/intent/tweet?text=Join me on {{ config('app.name') }} and start earning!&url=${encodeURIComponent(link)}" 
-                                           class="btn btn-info" target="_blank">
-                                            <i class="fab fa-twitter me-2"></i>Share on Twitter
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                
-                // Add modal to page if it doesn't exist
-                if (!document.getElementById('shareModal')) {
-                    document.body.insertAdjacentHTML('beforeend', shareModal);
-                }
-                
-                // Show the modal
-                const modal = new bootstrap.Modal(document.getElementById('shareModal'));
-                modal.show();
-            }
-
-            // Copy function for the modal
-            window.copyFromModal = function() {
-                const shareLink = document.getElementById('shareLink');
-                shareLink.select();
-                shareLink.setSelectionRange(0, 99999);
-                
-                if (navigator.clipboard) {
-                    navigator.clipboard.writeText(shareLink.value).then(function() {
-                        showToast('Link copied to clipboard!', 'success');
-                    }).catch(function(err) {
+                const referralInput = document.getElementById('referralLink');
+                if (referralInput) {
+                    // Copy to clipboard
+                    referralInput.select();
+                    referralInput.setSelectionRange(0, 99999);
+                    
+                    if (navigator.clipboard) {
+                        navigator.clipboard.writeText(referralInput.value).then(function() {
+                            alert('Referral link copied to clipboard!');
+                        }).catch(function(err) {
+                            document.execCommand('copy');
+                            alert('Referral link copied to clipboard!');
+                        });
+                    } else {
                         document.execCommand('copy');
-                        showToast('Link copied to clipboard!', 'success');
-                    });
-                } else {
-                    document.execCommand('copy');
-                    showToast('Link copied to clipboard!', 'success');
+                        alert('Referral link copied to clipboard!');
+                    }
                 }
             }
-
-            // Toast notification function
-            function showToast(message, type = 'info') {
-                // Check if a toast container exists, if not create one
-                let toastContainer = document.getElementById('toastContainer');
-                if (!toastContainer) {
-                    toastContainer = document.createElement('div');
-                    toastContainer.id = 'toastContainer';
-                    toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
-                    toastContainer.style.zIndex = '1055';
-                    document.body.appendChild(toastContainer);
-                }
-
-                const toastId = 'toast-' + Date.now();
-                let bgClass, iconClass;
-                
-                switch(type) {
-                    case 'success':
-                        bgClass = 'bg-success';
-                        iconClass = 'fa-check-circle';
-                        break;
-                    case 'warning':
-                        bgClass = 'bg-warning text-dark';
-                        iconClass = 'fa-exclamation-triangle';
-                        break;
-                    case 'error':
-                        bgClass = 'bg-danger';
-                        iconClass = 'fa-exclamation-circle';
-                        break;
-                    default:
-                        bgClass = 'bg-primary';
-                        iconClass = 'fa-info-circle';
-                }
-                
-                const toastHtml = `
-                    <div id="${toastId}" class="toast align-items-center text-white ${bgClass} border-0" role="alert" aria-live="assertive" aria-atomic="true">
-                        <div class="d-flex">
-                            <div class="toast-body">
-                                <i class="fas ${iconClass} me-2"></i>
-                                ${message}
-                            </div>
-                            <button type="button" class="btn-close ${type === 'warning' ? '' : 'btn-close-white'} me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-                        </div>
-                    </div>
-                `;
-                
-                toastContainer.insertAdjacentHTML('beforeend', toastHtml);
-                
-                const toastElement = document.getElementById(toastId);
-                const toast = new bootstrap.Toast(toastElement, {
-                    autohide: true,
-                    delay: type === 'warning' ? 5000 : 3000 // Warning toasts stay longer
-                });
-                
-                toast.show();
-                
-                // Remove the toast element after it's hidden
-                toastElement.addEventListener('hidden.bs.toast', function() {
-                    toastElement.remove();
-                });
-            }
-
-            // Prevent external systems from overriding dashboard functions
-            Object.freeze(window.toggleBalanceVisibility);
-            Object.freeze(window.showSessionNotifications);
-            Object.freeze(window.markNotificationsAsRead);
-            Object.freeze(window.shareReferralLink);
-            Object.freeze(window.fallbackShare);
-            Object.freeze(window.copyFromModal);
         </script>
+    @endpush
+
+@push('script')
+    
+    <script src="{{ asset('assets_custom/js/jquery-3.7.1.min.js') }}"></script>
+    <!-- Chart.js removed to improve page loading speed -->
+    
+    <!-- Balance Toggle Function - Defined in separate script tag to ensure immediate availability -->
+    <script>
+        // Balance Visibility Toggle Function - Updated for individual card control
+        // Check if balanceVisibility is already defined to prevent redeclaration
+        if (typeof balanceVisibility === 'undefined') {
+            var balanceVisibility = {
+                'current-balance': true,
+                'team-bonus': true,
+                'total-earnings': true,
+                'video-access-vault': true
+            };
+        }
+
+        // Define function with card-specific parameter
+        function toggleBalanceVisibility(cardType) {
+            // If no cardType specified, toggle all (backward compatibility)
+            if (!cardType) {
+                const allVisible = Object.values(balanceVisibility).every(visible => visible);
+                const newState = !allVisible;
+                Object.keys(balanceVisibility).forEach(key => {
+                    balanceVisibility[key] = newState;
+                });
+                updateAllBalanceCards();
+            } else {
+                // Toggle specific card
+                balanceVisibility[cardType] = !balanceVisibility[cardType];
+                updateBalanceCard(cardType);
+            }
+            
+            // Save preference to localStorage
+            localStorage.setItem('balanceVisibility', JSON.stringify(balanceVisibility));
+        }
+
+        function updateBalanceCard(cardType) {
+            const card = document.querySelector(`[data-stat="${cardType}"]`);
+            if (!card) return;
+
+            const valueElement = card.querySelector('.balance-value');
+            const hiddenElement = card.querySelector('.balance-hidden');
+            const toggleIcon = card.querySelector('.balance-toggle-icon');
+            
+            if (valueElement && hiddenElement) {
+                if (balanceVisibility[cardType]) {
+                    // Show balance
+                    valueElement.style.display = 'inline';
+                    hiddenElement.style.display = 'none';
+                } else {
+                    // Hide balance
+                    valueElement.style.display = 'none';
+                    hiddenElement.style.display = 'inline';
+                }
+            }
+            
+            // Update toggle icon
+            if (toggleIcon) {
+                if (balanceVisibility[cardType]) {
+                    toggleIcon.className = 'fas fa-eye';
+                    toggleIcon.parentElement.title = 'Hide Balance';
+                } else {
+                    toggleIcon.className = 'fas fa-eye-slash';
+                    toggleIcon.parentElement.title = 'Show Balance';
+                }
+            }
+        }
+
+        function updateAllBalanceCards() {
+            Object.keys(balanceVisibility).forEach(cardType => {
+                updateBalanceCard(cardType);
+            });
+        }
+        
+        // Also assign to window object for global access
+        window.toggleBalanceVisibility = toggleBalanceVisibility;
+        
+        // Load saved balance visibility preference
+        function loadBalanceVisibility() {
+            const saved = localStorage.getItem('balanceVisibility');
+            if (saved) {
+                try {
+                    const savedVisibility = JSON.parse(saved);
+                    balanceVisibility = { ...balanceVisibility, ...savedVisibility };
+                } catch (e) {
+                    // Use default settings if parsing fails
+                }
+            }
+            
+            // Apply saved states with slight delay to ensure DOM is ready
+            setTimeout(() => {
+                updateAllBalanceCards();
+            }, 100);
+        }
+        
+        // Initialize balance visibility when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            loadBalanceVisibility();
+        });
+    </script>
     @endpush
 </x-smart_layout>

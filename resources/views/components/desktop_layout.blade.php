@@ -21,7 +21,8 @@
     <link rel="icon" href="{{ $faviconUrl }}" type="image/x-icon">
 
     <!-- Choices JS -->
-    <script src="{{asset('assets/libs/choices.js/public/assets/scripts/choices.min.js')}}"></script>
+    {{-- <script src="{{asset('assets/libs/choices.js/public/assets/scripts/choices.min.js')}}"></script> --}}
+    {{-- Choices.js disabled to improve loading performance --}}
 
     <!-- Main Theme Js -->
     <script src="{{asset('assets/js/main.js')}}"></script> 
@@ -1776,7 +1777,8 @@
     <script src="{{asset('assets/js/defaultmenu.min.js')}}"></script>
 
     <!-- Node Waves JS-->
-    <script src="{{asset('assets/libs/node-waves/waves.min.js')}}"></script>
+    {{-- <script src="{{asset('assets/libs/node-waves/waves.min.js')}}"></script> --}}
+    {{-- Node waves disabled to improve loading performance --}}
 
     <!-- Sticky JS -->
     <script src="{{asset('assets/js/sticky.js')}}"></script>
@@ -1786,7 +1788,8 @@
     <script src="{{asset('assets/js/simplebar.js')}}"></script>
 
     <!-- Color Picker JS -->
-    <script src="{{asset('assets/libs/@simonwep/pickr/pickr.es5.min.js')}}"></script> 
+    {{-- <script src="{{asset('assets/libs/@simonwep/pickr/pickr.es5.min.js')}}"></script> --}}
+    {{-- Color picker disabled to improve loading performance --}} 
 
     <!-- Custom-Switcher JS -->
     <script src="{{asset('assets/js/custom-switcher.min.js')}}"></script>
@@ -1921,12 +1924,8 @@
             }
         });
         
-        // Periodic session validation (every 5 minutes)
-        setInterval(function() {
-            if (document.hasFocus()) {
-                validateSessionSecurity();
-            }
-        }, 300000); // 5 minutes
+        // Removed periodic session validation to improve performance
+        // Session validation now only happens on page load and storage events
     });
 
     // Desktop logout confirmation with SweetAlert (enhanced)

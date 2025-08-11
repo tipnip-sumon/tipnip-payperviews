@@ -1049,17 +1049,8 @@
             });
 
             function startSessionMonitoring() {
-                // Clear any existing interval
-                if (sessionCheckInterval) {
-                    clearInterval(sessionCheckInterval);
-                }
-                
-                // Start new interval - check every 10 seconds
-                sessionCheckInterval = setInterval(function() {
-                    if (isPageActive) {
-                        checkSessionNotifications();
-                    }
-                }, 10000);
+                // Session monitoring disabled for better performance
+                // Will only check on page load instead of continuous polling
             }
 
             function stopSessionMonitoring() {

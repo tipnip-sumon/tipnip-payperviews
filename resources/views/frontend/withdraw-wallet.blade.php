@@ -141,7 +141,7 @@
                         </div>
                     </div>
                 </div>
-            @elseif(isset($conditionCheck) && !$conditionCheck['allowed'])
+            @elseif(isset($conditionCheck) && !$conditionCheck['allowed']) 
                 <!-- Withdrawal Requirements Not Met -->
                 <div class="card border-warning mb-4">
                     <div class="card-body">
