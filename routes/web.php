@@ -101,12 +101,12 @@ Route::get('get-countries', function () {
 Route::get('/admin', [AdminController::class, 'index'])->name('admin.index')->middleware('clear.login.cache');
 Route::get('/admin/login', [AdminController::class, 'index'])->name('admin.login.form')->middleware('clear.login.cache');
 Route::post('admin/login', [AdminController::class, 'login'])->name('admin.login')->middleware('throttle:5,1');
-Route::get('/admin/video-leaderboard', [VideoLinkController::class, 'leaderboard'])->name('video.leaderboard')->middleware(['ok-user','prevent-back']);
+Route::get('/admin/video-leaderboard', [VideoLinkController::class, 'leaderboard'])->name('video.leaderboard')->middleware(['admin-optimized']);
 
 // Newsletter Routes
 Route::post('/newsletter/subscribe', [NewsletterController::class, 'subscribe'])->name('newsletter.subscribe');
 Route::post('/newsletter/unsubscribe', [NewsletterController::class, 'unsubscribe'])->name('newsletter.unsubscribe');
-Route::get('/admin/newsletter/stats', [NewsletterController::class, 'stats'])->name('admin.newsletter.stats')->middleware(['ok-user','prevent-back']);
+Route::get('/admin/newsletter/stats', [NewsletterController::class, 'stats'])->name('admin.newsletter.stats')->middleware(['admin-optimized']);
 
 // Guest Install Suggestion Routes
 Route::post('/dismiss-install-suggestion', function () {
@@ -359,17 +359,17 @@ Route::get('/ref/{hash}', function ($hash) {
 // =============================================================================
 
 Route::prefix('admin')->group(function () {
-    Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard')->middleware(['ok-user','prevent-back']);
-    Route::get('/payment', [AdminController::class, 'payment'])->name('admin.payment')->middleware(['ok-user','prevent-back']);
-    Route::get('/transfer_member', [AdminTransReceiveController::class, 'index'])->name('admin.transfer_member')->middleware(['ok-user','prevent-back']);
-    Route::post('/transfer_member', [AdminTransReceiveController::class, 'store'])->name('admin.transfer_member.store')->middleware(['ok-user','prevent-back']);
-    Route::get('/transfer_history', [AdminTransReceiveController::class, 'history'])->name('admin.transfer_history')->middleware(['ok-user','prevent-back']);
-    Route::get('/transfer_details/{id}', [AdminTransReceiveController::class, 'details'])->name('admin.transfer_details')->middleware(['ok-user','prevent-back']);
-    Route::get('/transfer_reports', [AdminTransReceiveController::class, 'reports'])->name('admin.transfer_reports')->middleware(['ok-user','prevent-back']);
-    Route::delete('/transfer_delete/{id}', [AdminTransReceiveController::class, 'destroy'])->name('admin.transfer_delete')->middleware(['ok-user','prevent-back']);
-    Route::get('/transfer_stats', [AdminTransReceiveController::class, 'getTransferStats'])->name('admin.transfer_stats')->middleware(['ok-user','prevent-back']);
-    Route::post('/logout', [AdminController::class, 'logout'])->name('admin.logout')->middleware(['ok-user','prevent-back']);
-    Route::get('/logout', [AdminController::class, 'logout'])->name('admin.logout.get')->middleware(['ok-user','prevent-back']); // Allow GET for logout links
+    Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard')->middleware(['admin-optimized']);
+    Route::get('/payment', [AdminController::class, 'payment'])->name('admin.payment')->middleware(['admin-optimized']);
+    Route::get('/transfer_member', [AdminTransReceiveController::class, 'index'])->name('admin.transfer_member')->middleware(['admin-optimized']);
+    Route::post('/transfer_member', [AdminTransReceiveController::class, 'store'])->name('admin.transfer_member.store')->middleware(['admin-optimized']);
+    Route::get('/transfer_history', [AdminTransReceiveController::class, 'history'])->name('admin.transfer_history')->middleware(['admin-optimized']);
+    Route::get('/transfer_details/{id}', [AdminTransReceiveController::class, 'details'])->name('admin.transfer_details')->middleware(['admin-optimized']);
+    Route::get('/transfer_reports', [AdminTransReceiveController::class, 'reports'])->name('admin.transfer_reports')->middleware(['admin-optimized']);
+    Route::delete('/transfer_delete/{id}', [AdminTransReceiveController::class, 'destroy'])->name('admin.transfer_delete')->middleware(['admin-optimized']);
+    Route::get('/transfer_stats', [AdminTransReceiveController::class, 'getTransferStats'])->name('admin.transfer_stats')->middleware(['admin-optimized']);
+    Route::post('/logout', [AdminController::class, 'logout'])->name('admin.logout')->middleware(['admin-optimized']);
+    Route::get('/logout', [AdminController::class, 'logout'])->name('admin.logout.get')->middleware(['admin-optimized']); // Allow GET for logout links
     
     // Simple admin logout (no CSRF, no middleware issues)
     Route::get('/simple-logout', [AdminController::class, 'simpleLogout'])->name('admin.simple.logout');
@@ -385,10 +385,10 @@ Route::prefix('admin')->group(function () {
     
     Route::get('/profile', [AdminController::class, 'profile'])->name('admin.profile');
     Route::post('/profile/update', [AdminController::class, 'updateProfile'])->name('admin.profile.update');
-    Route::post('/change-password', [AdminController::class, 'changePassword'])->name('admin.change-password')->middleware(['ok-user','prevent-back']);
+    Route::post('/change-password', [AdminController::class, 'changePassword'])->name('admin.change-password')->middleware(['admin-optimized']);
     
     // Deposit Management Routes  
-    Route::controller(AdminPaymentController::class)->middleware(['ok-user','prevent-back'])->group(function () {
+    Route::controller(AdminPaymentController::class)->middleware(['admin-optimized'])->group(function () {
         Route::get('/deposits', 'index')->name('admin.deposits.index');
         Route::get('/deposits/pending', 'pending')->name('admin.deposits.pending');
         Route::get('/deposits/approved', 'approved')->name('admin.deposits.approved');
@@ -401,7 +401,7 @@ Route::prefix('admin')->group(function () {
     });
     
     // Withdrawal Management Routes
-    Route::controller(AdminPaymentController::class)->middleware(['ok-user','prevent-back'])->group(function () {
+    Route::controller(AdminPaymentController::class)->middleware(['admin-optimized'])->group(function () {
         Route::get('/withdrawals', 'withdrawals')->name('admin.withdrawals.index');
         Route::get('/withdrawals/pending', 'pendingWithdrawals')->name('admin.withdrawals.pending');
         Route::get('/withdrawals/approved', 'approvedWithdrawals')->name('admin.withdrawals.approved');
@@ -415,7 +415,7 @@ Route::prefix('admin')->group(function () {
     });
     
     // Withdrawal Methods Management Routes 
-    Route::controller(App\Http\Controllers\admin\WithdrawMethodController::class)->middleware(['ok-user','prevent-back'])->group(function () {
+    Route::controller(App\Http\Controllers\admin\WithdrawMethodController::class)->middleware(['admin-optimized'])->group(function () {
         Route::get('/withdraw-methods', 'index')->name('admin.withdraw-methods.index');
         Route::get('/withdraw-methods/create', 'create')->name('admin.withdraw-methods.create');
         Route::post('/withdraw-methods', 'store')->name('admin.withdraw-methods.store');
@@ -430,7 +430,7 @@ Route::prefix('admin')->group(function () {
     });
     
     // User Management Routes 
-    Route::controller(AdminUserController::class)->middleware(['ok-user','prevent-back'])->group(function () {
+    Route::controller(AdminUserController::class)->middleware(['admin-optimized'])->group(function () {
         Route::get('/users/search', 'search')->name('admin.users.search');
         Route::get('/users', 'index')->name('admin.users.index');
         Route::get('/users/active', 'active')->name('admin.users.active');
@@ -484,7 +484,7 @@ Route::prefix('admin')->group(function () {
     });
 
     // Video Links Management Routes
-    Route::controller(VideoLinkController::class)->middleware(['ok-user','prevent-back'])->group(function () {
+    Route::controller(VideoLinkController::class)->middleware(['admin-optimized'])->group(function () {
         Route::get('/video-links', 'index')->name('admin.video-links.index');
         Route::get('/video-links/create', 'create')->name('admin.video-links.create');
         Route::get('/video-links/export', 'export')->name('admin.video-links.export');
@@ -500,7 +500,7 @@ Route::prefix('admin')->group(function () {
     });
     
     // General Settings Routes
-    Route::controller(GeneralSettingController::class)->middleware(['ok-user','prevent-back'])->group(function () {
+    Route::controller(GeneralSettingController::class)->middleware(['admin-optimized'])->group(function () {
         Route::get('/settings/general', 'index')->name('admin.settings.general');
         Route::put('/settings/general', 'update')->name('admin.settings.update');
         Route::get('/settings/media', 'mediaSettings')->name('admin.settings.media');
@@ -528,7 +528,7 @@ Route::prefix('admin')->group(function () {
     });
     
     // Commission Level Management Routes
-    Route::controller(App\Http\Controllers\admin\CommissionLevelController::class)->middleware(['ok-user','prevent-back'])->group(function () {
+    Route::controller(App\Http\Controllers\admin\CommissionLevelController::class)->middleware(['admin-optimized'])->group(function () {
         Route::get('/admin/commission-levels', 'index')->name('admin.commission-levels.index');
         Route::get('/admin/commission-levels/create', 'create')->name('admin.commission-levels.create');
         Route::post('/admin/commission-levels', 'store')->name('admin.commission-levels.store');
@@ -541,7 +541,7 @@ Route::prefix('admin')->group(function () {
     });
     
     // Support Management Routes
-    Route::controller(AdminSupportController::class)->middleware(['ok-user','prevent-back'])->group(function () {
+    Route::controller(AdminSupportController::class)->middleware(['admin-optimized'])->group(function () {
         Route::get('/support', 'index')->name('admin.support.index');
         Route::get('/support/tickets', 'tickets')->name('admin.support.tickets');
         Route::get('/support/tickets/{id}', 'show')->name('admin.support.show');
@@ -553,7 +553,7 @@ Route::prefix('admin')->group(function () {
     });
     
     // Admin Notification Management Routes
-    Route::controller(App\Http\Controllers\admin\NotificationController::class)->middleware(['ok-user','prevent-back'])->group(function () {
+    Route::controller(App\Http\Controllers\admin\NotificationController::class)->middleware(['admin-optimized'])->group(function () {
         Route::get('/notifications', 'index')->name('admin.notifications.index');
         Route::get('/notifications/create', 'create')->name('admin.notifications.create');
         Route::post('/notifications', 'store')->name('admin.notifications.store');
@@ -586,7 +586,7 @@ Route::prefix('admin')->group(function () {
     });
     
     // Sub-Admin Management Routes
-    Route::controller(App\Http\Controllers\admin\SubAdminController::class)->middleware(['ok-user','prevent-back'])->group(function () {
+    Route::controller(App\Http\Controllers\admin\SubAdminController::class)->middleware(['admin-optimized'])->group(function () {
         Route::get('/sub-admins', 'index')->name('admin.sub-admins.index');
         Route::get('/sub-admins/create', 'create')->name('admin.sub-admins.create');
         Route::get('/sub-admins/permissions', 'permissions')->name('admin.sub-admins.permissions');
@@ -600,7 +600,7 @@ Route::prefix('admin')->group(function () {
     });
     
     // Admin Plan Management
-    Route::controller(App\Http\Controllers\admin\PlanController::class)->middleware(['ok-user','prevent-back'])->group(function () {
+    Route::controller(App\Http\Controllers\admin\PlanController::class)->middleware(['admin-optimized'])->group(function () {
         Route::get('/plans', 'index')->name('admin.plans.index');
         Route::get('/plans/create', 'create')->name('admin.plans.create');
         Route::post('/plans', 'store')->name('admin.plans.store');
@@ -613,7 +613,7 @@ Route::prefix('admin')->group(function () {
     });
     
     // Analytics Management Routes 
-    Route::controller(AnalyticsController::class)->middleware(['ok-user','prevent-back'])->group(function () {
+    Route::controller(AnalyticsController::class)->middleware(['admin-optimized'])->group(function () {
         Route::get('/analytics', 'index')->name('admin.analytics.index');
         Route::get('/analytics/users', 'userAnalytics')->name('admin.analytics.users');
         Route::get('/analytics/revenue', 'revenueAnalytics')->name('admin.analytics.revenue');
@@ -631,7 +631,7 @@ Route::prefix('admin')->group(function () {
     });
     
     // Referral Benefits Management Routes
-    Route::controller(App\Http\Controllers\admin\ReferralBenefitsController::class)->middleware(['ok-user','prevent-back'])->group(function () {
+    Route::controller(App\Http\Controllers\admin\ReferralBenefitsController::class)->middleware(['admin-optimized'])->group(function () {
         Route::get('/referral-benefits', 'index')->name('admin.referral-benefits.index');
         Route::post('/referral-benefits/update-settings', 'updateSettings')->name('admin.referral-benefits.update-settings');
         Route::post('/referral-benefits/recalculate', 'recalculateQualifications')->name('admin.referral-benefits.recalculate');
@@ -647,7 +647,7 @@ Route::prefix('admin')->group(function () {
     });
 
     // Modal Management Routes
-    Route::controller(ModalManagementController::class)->middleware(['ok-user','prevent-back'])->group(function () {
+    Route::controller(ModalManagementController::class)->middleware(['admin-optimized'])->group(function () {
         Route::get('/modals', 'index')->name('admin.modal.index');
         Route::get('/modals/create', 'create')->name('admin.modal.create');
         Route::post('/modals', 'store')->name('admin.modal.store');
@@ -662,7 +662,7 @@ Route::prefix('admin')->group(function () {
     });
 
     // Admin Popup Management Routes
-    Route::controller(App\Http\Controllers\admin\PopupController::class)->middleware(['ok-user','prevent-back'])->group(function () {
+    Route::controller(App\Http\Controllers\admin\PopupController::class)->middleware(['admin-optimized'])->group(function () {
         Route::get('/popups', 'index')->name('admin.popups.index');
         Route::get('/popups/create', 'create')->name('admin.popups.create');
         Route::post('/popups', 'store')->name('admin.popups.store');
@@ -873,7 +873,7 @@ Route::controller(App\Http\Controllers\User\KycController::class)->middleware('a
 });
 
 // Admin KYC Routes
-Route::prefix('admin')->middleware(['ok-user','prevent-back'])->group(function () {
+Route::prefix('admin')->middleware(['admin-optimized'])->group(function () {
     Route::controller(AdminKycController::class)->group(function () {
         Route::get('/kyc', 'index')->name('admin.kyc.index');
         Route::get('/kyc/{id}', 'show')->name('admin.kyc.show');
@@ -888,7 +888,7 @@ Route::prefix('admin')->middleware(['ok-user','prevent-back'])->group(function (
     });
 
     // Transfer & Withdrawal Conditions Routes
-    Route::controller(\App\Http\Controllers\admin\TransferWithdrawConditionsController::class)->group(function () {
+    Route::controller(\App\Http\Controllers\admin\TransferWithdrawConditionsController::class)->middleware(['admin-optimized'])->group(function () {
         Route::get('/transfer-withdraw-conditions', 'index')->name('admin.transfer-withdraw-conditions.index');
         Route::put('/transfer-withdraw-conditions', 'update')->name('admin.transfer-withdraw-conditions.update');
         Route::post('/transfer-withdraw-conditions/reset', 'resetToDefaults')->name('admin.transfer-withdraw-conditions.reset');
@@ -1039,7 +1039,7 @@ Route::middleware('auth','prevent-back')->prefix('special-tickets')->name('speci
 });
 
 // Admin Lottery Routes   
-Route::middleware(['ok-user','prevent-back'])->prefix('admin/lottery')->name('admin.lottery.')->group(function () {
+Route::middleware(['admin-optimized'])->prefix('admin/lottery')->name('admin.lottery.')->group(function () {
     Route::get('/', [App\Http\Controllers\admin\LotteryController::class, 'index'])->name('index');
     
     // Draw Management Routes
@@ -1093,7 +1093,7 @@ Route::middleware(['ok-user','prevent-back'])->prefix('admin/lottery')->name('ad
 });
 
 // Admin Lottery Settings Management Routes
-Route::middleware(['ok-user','prevent-back'])->prefix('admin/lottery-settings')->name('admin.lottery-settings.')->group(function () {
+Route::middleware(['admin-optimized'])->prefix('admin/lottery-settings')->name('admin.lottery-settings.')->group(function () {
     Route::get('/', [App\Http\Controllers\admin\LotterySettingsController::class, 'index'])->name('index');
     Route::post('/update', [App\Http\Controllers\admin\LotterySettingsController::class, 'update'])->name('update');
     Route::post('/reset', [App\Http\Controllers\admin\LotterySettingsController::class, 'resetToDefaults'])->name('reset');
@@ -1104,14 +1104,14 @@ Route::middleware(['ok-user','prevent-back'])->prefix('admin/lottery-settings')-
 });
 
 // Admin System Commands (Emergency Command Runner)
-Route::middleware(['ok-user','prevent-back'])->prefix('admin/system-commands')->name('admin.system-commands.')->group(function () {
+Route::middleware(['admin-optimized'])->prefix('admin/system-commands')->name('admin.system-commands.')->group(function () {
     Route::get('/', [App\Http\Controllers\admin\SystemCommandController::class, 'index'])->name('index');
     Route::post('/execute', [App\Http\Controllers\admin\SystemCommandController::class, 'execute'])->name('execute');
     Route::get('/status', [App\Http\Controllers\admin\SystemCommandController::class, 'status'])->name('status');
 });
 
 // Admin Maintenance Mode Management
-Route::middleware(['ok-user','prevent-back'])->prefix('admin/maintenance')->name('admin.maintenance.')->group(function () {
+Route::middleware(['admin-optimized'])->prefix('admin/maintenance')->name('admin.maintenance.')->group(function () {
     Route::get('/', [App\Http\Controllers\admin\MaintenanceController::class, 'index'])->name('index');
     Route::post('/enable', [App\Http\Controllers\admin\MaintenanceController::class, 'enable'])->name('enable');
     Route::post('/disable', [App\Http\Controllers\admin\MaintenanceController::class, 'disable'])->name('disable');
@@ -1127,13 +1127,13 @@ Route::middleware(['ok-user','prevent-back'])->prefix('admin/maintenance')->name
 });
 
 // Admin Schedule Management
-Route::middleware(['ok-user','prevent-back'])->prefix('admin/schedule')->name('admin.schedule.')->group(function () {
+Route::middleware(['admin-optimized'])->prefix('admin/schedule')->name('admin.schedule.')->group(function () {
     Route::get('/', [App\Http\Controllers\admin\ScheduleController::class, 'index'])->name('index');
     Route::post('/run', [App\Http\Controllers\admin\ScheduleController::class, 'runSchedule'])->name('run');
 });
 // Admin Settings Management
 // Admin Queue Management
-Route::middleware(['ok-user','prevent-back'])->prefix('admin/queue')->name('admin.queue.')->group(function () {
+Route::middleware(['admin-optimized'])->prefix('admin/queue')->name('admin.queue.')->group(function () {
     Route::get('/', [App\Http\Controllers\admin\QueueController::class, 'index'])->name('index');
     Route::get('/worker-status', [App\Http\Controllers\admin\QueueController::class, 'workerStatus'])->name('worker-status');
     Route::post('/start-worker', [App\Http\Controllers\admin\QueueController::class, 'startWorker'])->name('start-worker');
@@ -1141,7 +1141,7 @@ Route::middleware(['ok-user','prevent-back'])->prefix('admin/queue')->name('admi
 });
 
 // Admin Failed Jobs Management
-Route::middleware(['ok-user','prevent-back'])->prefix('admin/failed-jobs')->name('admin.failed-jobs.')->group(function () {
+Route::middleware(['admin-optimized'])->prefix('admin/failed-jobs')->name('admin.failed-jobs.')->group(function () {
     Route::get('/', [App\Http\Controllers\admin\FailedJobsController::class, 'index'])->name('index');
     Route::post('/retry/{id}', [App\Http\Controllers\admin\FailedJobsController::class, 'retry'])->name('retry');
     Route::delete('/delete/{id}', [App\Http\Controllers\admin\FailedJobsController::class, 'delete'])->name('delete');
@@ -1150,7 +1150,7 @@ Route::middleware(['ok-user','prevent-back'])->prefix('admin/failed-jobs')->name
 });
 
 // Admin Email Campaign Routes
-Route::middleware(['ok-user','prevent-back'])->prefix('admin/email-campaigns')->name('admin.email-campaigns.')->group(function () {
+Route::middleware(['admin-optimized'])->prefix('admin/email-campaigns')->name('admin.email-campaigns.')->group(function () {
     Route::get('/', [App\Http\Controllers\admin\EmailCampaignController::class, 'index'])->name('index');
     Route::get('/analytics', [App\Http\Controllers\admin\EmailCampaignController::class, 'analytics'])->name('analytics');
     Route::get('/templates', [App\Http\Controllers\admin\EmailCampaignController::class, 'templates'])->name('templates');

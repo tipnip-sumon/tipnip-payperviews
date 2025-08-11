@@ -3,6 +3,7 @@
 use App\Http\Middleware\AdminAuth;
 use App\Http\Middleware\ValidUser;
 use App\Http\Middleware\PreventBack;
+use App\Http\Middleware\AdminOptimized;
 use App\Http\Middleware\AdminPermissionMiddleware;
 use App\Http\Middleware\PermissionMiddleware;
 use App\Http\Middleware\CacheControlMiddleware;
@@ -22,12 +23,16 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
         api: __DIR__.'/../routes/api.php',
-        commands: __DIR__.'/../routes/console.php',
+        commands: __DIR__.'/../routes/console.php', 
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->appendToGroup('ok-user', [
             ValidUser::class
+        ]);
+        $middleware->appendToGroup('admin-optimized', [
+            ValidUser::class,
+            AdminOptimized::class
         ]);
         $middleware->appendToGroup('auth:admin', [
             AdminAuth::class,
