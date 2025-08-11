@@ -461,6 +461,13 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Fresh login page loaded');
+    
+    // Debug CSRF token
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    console.log('CSRF Token found:', csrfToken ? 'Yes' : 'No');
+    if (!csrfToken) {
+        console.error('CSRF token not found in meta tag!');
+    }
 
     // Form elements
     const form = document.getElementById('loginForm');
@@ -642,6 +649,33 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    // Improved CSRF Token Getter Function
+    function getCSRFToken() {
+        // First try meta tag
+        const metaToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        if (metaToken) {
+            return metaToken;
+        }
+        
+        // Fallback: try to get from form
+        const formToken = document.querySelector('input[name="_token"]')?.value;
+        if (formToken) {
+            return formToken;
+        }
+        
+        // Last resort: generate from Laravel session
+        const cookies = document.cookie.split(';');
+        for (let cookie of cookies) {
+            const [name, value] = cookie.trim().split('=');
+            if (name === 'XSRF-TOKEN') {
+                return decodeURIComponent(value);
+            }
+        }
+        
+        console.error('No CSRF token found!');
+        return '';
+    }
+
     // Show CSRF Token Refresh Alert
     function showCSRFRefreshAlert() {
         return Swal.fire({
@@ -758,10 +792,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                    'X-Requested-With': 'XMLHttpRequest'
+                    'X-CSRF-TOKEN': getCSRFToken(),
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
                 },
-                body: JSON.stringify({ email: email })
+                body: JSON.stringify({ email: email }),
+                credentials: 'same-origin'
             });
 
             const data = await response.json();
@@ -860,10 +896,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                    'X-Requested-With': 'XMLHttpRequest'
+                    'X-CSRF-TOKEN': getCSRFToken(),
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
                 },
-                body: JSON.stringify({ email: email })
+                body: JSON.stringify({ email: email }),
+                credentials: 'same-origin'
             })
             .then(response => response.json())
             .then(data => {
@@ -915,24 +953,56 @@ document.addEventListener('DOMContentLoaded', function() {
             const formData = new FormData(form);
             
             // Ensure CSRF token is fresh
-            const csrfToken = document.querySelector('input[name="_token"]')?.value || 
-                            document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+            const csrfToken = getCSRFToken();
             
             if (csrfToken) {
                 formData.set('_token', csrfToken);
+            } else {
+                throw new Error('CSRF token not available');
             }
             
             let response;
             try {
+                // Enhanced CSRF token handling
+                const csrfToken = getCSRFToken();
+                console.log('Using CSRF token for login:', csrfToken ? 'Token available' : 'No token');
+                
                 response = await fetch(form.action, {
                     method: 'POST',
                     body: formData,
                     headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': csrfToken || '',
+                        'Accept': 'application/json'
                     }
                 });
+                
+                console.log('Login response status:', response.status);
+                
+                // Check for CSRF token mismatch specifically
+                if (response.status === 419) {
+                    console.log('CSRF token mismatch detected (419), refreshing token...');
+                    const newToken = getCSRFToken();
+                    if (newToken) {
+                        // Update token and retry
+                        formData.set('_token', newToken);
+                        $('meta[name="csrf-token"]').attr('content', newToken);
+                        $('input[name="_token"]').val(newToken);
+                        
+                        console.log('Retrying login with new CSRF token...');
+                        response = await fetch(form.action, {
+                            method: 'POST',
+                            body: formData,
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'X-CSRF-TOKEN': newToken,
+                                'Accept': 'application/json'
+                            }
+                        });
+                    }
+                }
             } catch (fetchError) {
-                console.log('Network error, trying simple login method...');
+                console.log('Network error, trying simple login method...', fetchError);
                 // If network error, try simple login
                 response = await fetch('/simple-login', {
                     method: 'POST',
@@ -944,6 +1014,12 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             if (response.ok || response.redirected) {
+                console.log('Login successful! Response:', {
+                    status: response.status,
+                    redirected: response.redirected,
+                    url: response.url
+                });
+                
                 Swal.fire({
                     title: 'Login Successful!',
                     text: 'Welcome back! Redirecting to your dashboard...',
@@ -959,6 +1035,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 });
             } else if (response.status === 403) {
+                console.log('Login failed - Email not verified (403)');
                 // Email not verified
                 const data = await response.json();
                 
@@ -982,7 +1059,17 @@ document.addEventListener('DOMContentLoaded', function() {
                     icon: 'warning',
                     confirmButtonText: 'OK'
                 });
+            } else if (response.status === 419) {
+                console.log('CSRF token mismatch detected (419)');
+                // This should have been handled above, but just in case
+                Swal.fire({
+                    title: 'Session Expired!',
+                    text: 'Your session has expired. Please try logging in again.',
+                    icon: 'warning',
+                    confirmButtonText: 'Try Again'
+                });
             } else if (response.status === 422) {
+                console.log('Validation errors (422)');
                 const data = await response.json();
                 
                 // Handle validation errors
@@ -1211,8 +1298,37 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (error) {
             console.error('Login error:', error);
             
-            // Don't show generic error if we've already handled a specific case
-            if (!error.message.includes('already handled')) {
+            // Check for CSRF token mismatch and refresh token
+            if (error.message.includes('419') || error.message.includes('CSRF') || 
+                (error.responseJSON && error.responseJSON.message && error.responseJSON.message.includes('CSRF'))) {
+                console.log('CSRF token mismatch detected, refreshing token...');
+                
+                // Refresh CSRF token
+                const newToken = getCSRFToken();
+                if (newToken) {
+                    $('meta[name="csrf-token"]').attr('content', newToken);
+                    $('input[name="_token"]').val(newToken);
+                    console.log('CSRF token refreshed successfully');
+                    
+                    Swal.fire({
+                        title: 'Session Expired!',
+                        text: 'Please try logging in again.',
+                        icon: 'warning',
+                        confirmButtonText: 'Try Again'
+                    });
+                } else {
+                    console.error('Failed to refresh CSRF token');
+                    Swal.fire({
+                        title: 'Session Error!',
+                        text: 'Please refresh the page and try again.',
+                        icon: 'error',
+                        confirmButtonText: 'Refresh Page'
+                    }).then(() => {
+                        location.reload();
+                    });
+                }
+            } else if (!error.message.includes('already handled')) {
+                // Don't show generic error if we've already handled a specific case
                 Swal.fire({
                     title: 'Login Failed!',
                     text: 'An error occurred. Please try again.',

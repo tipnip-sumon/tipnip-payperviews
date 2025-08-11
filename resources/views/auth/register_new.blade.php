@@ -301,6 +301,13 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Registration page loaded');
+    
+    // Debug CSRF token
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    console.log('CSRF Token found:', csrfToken ? 'Yes' : 'No');
+    if (!csrfToken) {
+        console.error('CSRF token not found in meta tag!');
+    }
 
     // Form elements
     const form = document.getElementById('registerForm');
@@ -334,7 +341,29 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Utility functions
     function getCSRFToken() {
-        return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+        // First try meta tag
+        const metaToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        if (metaToken) {
+            return metaToken;
+        }
+        
+        // Fallback: try to get from form
+        const formToken = document.querySelector('input[name="_token"]')?.value;
+        if (formToken) {
+            return formToken;
+        }
+        
+        // Last resort: generate from Laravel session
+        const cookies = document.cookie.split(';');
+        for (let cookie of cookies) {
+            const [name, value] = cookie.trim().split('=');
+            if (name === 'XSRF-TOKEN') {
+                return decodeURIComponent(value);
+            }
+        }
+        
+        console.error('No CSRF token found!');
+        return '';
     }
 
     function setInputState(input, message, state) {
@@ -392,10 +421,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': getCSRFToken(),
-                    'X-Requested-With': 'XMLHttpRequest'
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
                 },
-                body: JSON.stringify({ sponsor: sponsor })
+                body: JSON.stringify({ sponsor: sponsor }),
+                credentials: 'same-origin'
             });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
 
             const data = await response.json();
 
@@ -410,7 +445,12 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         } catch (error) {
             console.error('Sponsor validation error:', error);
-            sponsorMessage.textContent = 'Unable to validate sponsor';
+            console.error('Error details:', {
+                message: error.message,
+                stack: error.stack,
+                csrfToken: getCSRFToken()
+            });
+            sponsorMessage.textContent = 'Unable to validate sponsor. Please check your internet connection.';
             setInputState(sponsorInput, sponsorMessage, 'invalid');
             validationState.sponsor = false;
         }
@@ -447,10 +487,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': getCSRFToken(),
-                    'X-Requested-With': 'XMLHttpRequest'
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
                 },
-                body: JSON.stringify({ username: username })
+                body: JSON.stringify({ username: username }),
+                credentials: 'same-origin'
             });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
 
             const data = await response.json();
 
@@ -465,7 +511,12 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         } catch (error) {
             console.error('Username validation error:', error);
-            usernameMessage.textContent = 'Unable to check username availability';
+            console.error('Error details:', {
+                message: error.message,
+                stack: error.stack,
+                csrfToken: getCSRFToken()
+            });
+            usernameMessage.textContent = 'Unable to check username availability. Please try again.';
             setInputState(usernameInput, usernameMessage, 'invalid');
             validationState.username = false;
         }
@@ -502,10 +553,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': getCSRFToken(),
-                    'X-Requested-With': 'XMLHttpRequest'
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
                 },
-                body: JSON.stringify({ email: email })
+                body: JSON.stringify({ email: email }),
+                credentials: 'same-origin'
             });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
 
             const data = await response.json();
 
@@ -520,7 +577,12 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         } catch (error) {
             console.error('Email validation error:', error);
-            emailMessage.textContent = 'Unable to check email availability';
+            console.error('Error details:', {
+                message: error.message,
+                stack: error.stack,
+                csrfToken: getCSRFToken()
+            });
+            emailMessage.textContent = 'Unable to check email availability. Please try again.';
             setInputState(emailInput, emailMessage, 'invalid');
             validationState.email = false;
         }
@@ -630,12 +692,19 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             const formData = new FormData(form);
             
+            // Ensure CSRF token is included
+            if (!formData.has('_token')) {
+                formData.append('_token', getCSRFToken());
+            }
+            
             const response = await fetch(form.action, {
                 method: 'POST',
                 body: formData,
                 headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                },
+                credentials: 'same-origin'
             });
 
             if (response.ok) {
