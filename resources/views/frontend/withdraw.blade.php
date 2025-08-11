@@ -121,20 +121,60 @@
     <div class="row my-4">
         <!-- Withdrawal Form -->
         <div class="col-xl-8 col-md-8 col-sm-12">
-            @if(!isset($kycVerified) || !$kycVerified)
-                <!-- KYC Verification Required Notice -->
+            <!-- Check if deposit withdrawals are enabled -->
+            @if(isset($withdrawalConditions) && !$withdrawalConditions['deposit_withdrawal_enabled'])
+                <!-- Deposit Withdrawals Disabled Notice -->
+                <div class="card border-danger mb-4 my-4">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-ban text-danger fa-3x"></i>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <h5 class="text-danger mb-2">Deposit Withdrawals Disabled</h5>
+                                <p class="mb-0">Deposit withdrawals are currently disabled by the administrator. Please contact support for more information.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @elseif(isset($conditionCheck) && !$conditionCheck['allowed'])
+                <!-- Withdrawal Requirements Not Met -->
                 <div class="card border-warning mb-4 my-4">
                     <div class="card-body">
                         <div class="d-flex align-items-center">
                             <div class="flex-shrink-0">
-                                <i class="fas fa-shield-alt text-warning fa-3x"></i>
+                                <i class="fas fa-exclamation-triangle text-warning fa-3x"></i>
                             </div>
                             <div class="flex-grow-1 ms-3">
-                                <h5 class="text-warning mb-2">KYC Verification Required</h5>
-                                <p class="mb-3">You need to complete KYC verification before you can process any withdrawals.</p>
-                                <a href="{{ route('user.kyc.index') }}" class="btn btn-warning">
-                                    <i class="fas fa-user-check me-2"></i>Complete KYC Verification
-                                </a>
+                                <h5 class="text-warning mb-2">Withdrawal Requirements Not Met</h5>
+                                <p class="mb-3">Please complete the following requirements before proceeding with withdrawals:</p>
+                                <ul class="list-unstyled mb-3">
+                                    @foreach($conditionCheck['failures'] as $failure)
+                                        <li class="mb-2">
+                                            <i class="fas fa-times-circle text-danger me-2"></i>
+                                            {{ $failure }}
+                                        </li>
+                                    @endforeach
+                                </ul>
+                                
+                                <!-- Action buttons based on failures -->
+                                @if(in_array('KYC verification required', $conditionCheck['failures']))
+                                    <a href="{{ route('user.kyc.index') }}" class="btn btn-warning me-2">
+                                        <i class="fas fa-user-check me-2"></i>Complete KYC Verification
+                                    </a>
+                                @endif
+                                
+                                @if(in_array('Email verification required', $conditionCheck['failures']))
+                                    <a href="{{ route('user.send.verify.code') }}" class="btn btn-info me-2">
+                                        <i class="fas fa-envelope-check me-2"></i>Verify Email
+                                    </a>
+                                @endif
+                                
+                                @if(in_array('Profile completion required', $conditionCheck['failures']))
+                                    <a href="{{ route('user.profile.setting') }}" class="btn btn-primary me-2">
+                                        <i class="fas fa-user-edit me-2"></i>Complete Profile
+                                    </a>
+                                @endif
                             </div>
                         </div>
                     </div>
@@ -142,14 +182,24 @@
             @endif
             
             @if($activeDeposit && $withdrawalDetails)
-            <div class="card custom-card border-0 shadow {{ (!isset($kycVerified) || !$kycVerified) ? 'opacity-50' : '' }}">
+            @php
+                $isWithdrawalEnabled = isset($withdrawalConditions) ? $withdrawalConditions['deposit_withdrawal_enabled'] : true;
+                $conditionsMetOrOverride = !isset($conditionCheck) || $conditionCheck['allowed'] || !isset($kycVerified) || !$kycVerified;
+                $formDisabled = !$isWithdrawalEnabled || (!$conditionsMetOrOverride && isset($conditionCheck) && !$conditionCheck['allowed']);
+            @endphp
+            <div class="card custom-card border-0 shadow {{ $formDisabled ? 'opacity-50' : '' }}">
                 <div class="card-header bg-danger text-white">
                     <h5 class="card-title text-white mb-0">
                         <i class="ri-hand-coin-line me-2"></i>Request Withdrawal
+                        @if(isset($withdrawalConditions) && $withdrawalConditions['deposit_otp_required'])
+                            <span class="badge bg-warning ms-2">
+                                <i class="fas fa-shield-alt me-1"></i>OTP Required
+                            </span>
+                        @endif
                     </h5>
                 </div>
                 <form action="{{ route('user.withdraw.submit') }}" method="post" id="withdrawForm"
-                      {{ (!isset($kycVerified) || !$kycVerified) ? 'style=pointer-events:none;' : '' }}>
+                      {{ $formDisabled ? 'style=pointer-events:none;' : '' }}>
                     @csrf
                     <div class="card-body p-4">
                         <!-- Withdrawal Method -->
@@ -158,7 +208,7 @@
                                 <i class="ri-bank-card-line me-2 text-primary"></i>Withdrawal Method:
                             </label>
                             <select class="form-select @error('method_id') is-invalid @enderror" 
-                                                id="withdraw_method" name="method_id" required>
+                                                id="withdraw_method" name="method_id" required {{ $formDisabled ? 'disabled' : '' }}>
                                             <option value="">Select Method</option>
                                             @forelse($withdrawMethods as $method)
                                                 <option value="{{ $method->id }}" 
@@ -247,14 +297,18 @@
                             <h6><i class="ri-information-line me-2"></i>Transaction Flow:</h6>
                             <ol class="mb-0">
                                 <li>Fill withdrawal method and account details</li>
-                                <li>Click "Send OTP" to receive verification code</li>
-                                <li>Enter OTP and transaction password to complete</li>
+                                @if(isset($withdrawalConditions) && $withdrawalConditions['deposit_otp_required'])
+                                    <li>Click "Send OTP" to receive verification code</li>
+                                    <li>Enter OTP and transaction password to complete</li>
+                                @else
+                                    <li>Enter transaction password and submit directly</li>
+                                @endif
                             </ol>
                         </div>
                         @endif
                         
                         <!-- OTP Verification Section -->
-                        @if($isDepositOtpSession ?? false)
+                        @if(($isDepositOtpSession ?? false) && isset($withdrawalConditions) && $withdrawalConditions['deposit_otp_required'])
                         <div class="mb-4" id="otpSection">
                             <div class="card border-primary">
                                 <div class="card-header bg-primary text-white">
@@ -329,19 +383,31 @@
                     </div>
                     
                     <div class="card-footer bg-light text-center p-4">
-                        @if(isset($kycVerified) && $kycVerified)
-                            @if($isDepositOtpSession ?? false)
-                                <button class="btn btn-success btn-lg w-100" type="submit" id="withdrawBtn">
-                                    <i class="ri-shield-check-line me-2"></i>Verify OTP & Password - Complete Withdrawal
-                                </button>
+                        @if(!$formDisabled)
+                            @if(isset($withdrawalConditions) && $withdrawalConditions['deposit_otp_required'])
+                                @if($isDepositOtpSession ?? false)
+                                    <button class="btn btn-success btn-lg w-100" type="submit" id="withdrawBtn">
+                                        <i class="ri-shield-check-line me-2"></i>Verify OTP & Password - Complete Withdrawal
+                                    </button>
+                                @else
+                                    <button class="btn btn-primary btn-lg w-100" type="submit" id="withdrawBtn">
+                                        <i class="ri-mail-send-line me-2"></i>Send Verification Code (${{ number_format($withdrawalDetails['net_amount'], 2) }})
+                                    </button>
+                                @endif
                             @else
-                                <button class="btn btn-primary btn-lg w-100" type="submit" id="withdrawBtn">
-                                    <i class="ri-mail-send-line me-2"></i>Send Verification Code (${{ number_format($withdrawalDetails['net_amount'], 2) }})
+                                <!-- Direct withdrawal without OTP -->
+                                <button class="btn btn-success btn-lg w-100" type="submit" id="withdrawBtn">
+                                    <i class="ri-hand-coin-line me-2"></i>Submit Withdrawal Request (${{ number_format($withdrawalDetails['net_amount'], 2) }})
                                 </button>
                             @endif
                         @else
                             <button class="btn btn-secondary btn-lg w-100" type="button" disabled>
-                                <i class="fas fa-lock me-2"></i>KYC Verification Required
+                                <i class="fas fa-lock me-2"></i>
+                                @if(!$isWithdrawalEnabled)
+                                    Deposit Withdrawals Disabled
+                                @else
+                                    Requirements Not Met
+                                @endif
                             </button>
                         @endif
                     </div>

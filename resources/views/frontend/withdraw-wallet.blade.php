@@ -125,29 +125,81 @@
     <div class="row">
         <!-- Withdrawal Form -->
         <div class="col-xl-8">
-            @if(!isset($kycVerified) || !$kycVerified)
-                <!-- KYC Verification Required Notice -->
+            <!-- Check if wallet withdrawals are enabled -->
+            @if(isset($withdrawalConditions) && !$withdrawalConditions['wallet_withdrawal_enabled'])
+                <!-- Wallet Withdrawals Disabled Notice -->
+                <div class="card border-danger mb-4">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-ban text-danger fa-3x"></i>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <h5 class="text-danger mb-2">Wallet Withdrawals Disabled</h5>
+                                <p class="mb-0">Wallet withdrawals are currently disabled by the administrator. Please contact support for more information.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @elseif(isset($conditionCheck) && !$conditionCheck['allowed'])
+                <!-- Withdrawal Requirements Not Met -->
                 <div class="card border-warning mb-4">
                     <div class="card-body">
                         <div class="d-flex align-items-center">
                             <div class="flex-shrink-0">
-                                <i class="fas fa-shield-alt text-warning fa-3x"></i>
+                                <i class="fas fa-exclamation-triangle text-warning fa-3x"></i>
                             </div>
                             <div class="flex-grow-1 ms-3">
-                                <h5 class="text-warning mb-2">KYC Verification Required</h5>
-                                <p class="mb-3">You need to complete KYC verification before you can process wallet withdrawals.</p>
-                                <a href="{{ route('user.kyc.index') }}" class="btn btn-warning">
-                                    <i class="fas fa-user-check me-2"></i>Complete KYC Verification
-                                </a>
+                                <h5 class="text-warning mb-2">Withdrawal Requirements Not Met</h5>
+                                <p class="mb-3">Please complete the following requirements before proceeding with wallet withdrawals:</p>
+                                <ul class="list-unstyled mb-3">
+                                    @foreach($conditionCheck['failures'] as $failure)
+                                        <li class="mb-2">
+                                            <i class="fas fa-times-circle text-danger me-2"></i>
+                                            {{ $failure }}
+                                        </li>
+                                    @endforeach
+                                </ul>
+                                
+                                <!-- Action buttons based on failures -->
+                                @if(in_array('KYC verification required', $conditionCheck['failures']))
+                                    <a href="{{ route('user.kyc.index') }}" class="btn btn-warning me-2">
+                                        <i class="fas fa-user-check me-2"></i>Complete KYC Verification
+                                    </a>
+                                @endif
+                                
+                                @if(in_array('Email verification required', $conditionCheck['failures']))
+                                    <a href="{{ route('user.send.verify.code') }}" class="btn btn-info me-2">
+                                        <i class="fas fa-envelope-check me-2"></i>Verify Email
+                                    </a>
+                                @endif
+                                
+                                @if(in_array('Profile completion required', $conditionCheck['failures']))
+                                    <a href="{{ route('user.profile.setting') }}" class="btn btn-primary me-2">
+                                        <i class="fas fa-user-edit me-2"></i>Complete Profile
+                                    </a>
+                                @endif
                             </div>
                         </div>
                     </div>
                 </div>
             @endif
             
-            <div class="card custom-card {{ (!isset($kycVerified) || !$kycVerified) ? 'opacity-50' : '' }}">
+            @php
+                $isWalletWithdrawalEnabled = isset($withdrawalConditions) ? $withdrawalConditions['wallet_withdrawal_enabled'] : true;
+                $conditionsMetOrOverride = !isset($conditionCheck) || $conditionCheck['allowed'] || !isset($kycVerified) || !$kycVerified;
+                $formDisabled = !$isWalletWithdrawalEnabled || (!$conditionsMetOrOverride && isset($conditionCheck) && !$conditionCheck['allowed']);
+            @endphp
+            <div class="card custom-card {{ $formDisabled ? 'opacity-50' : '' }}">
                 <div class="card-header">
                     <div class="card-title">
+                        <i class="ri-wallet-3-line me-2"></i>Withdraw Wallet Balance
+                        @if(isset($withdrawalConditions) && $withdrawalConditions['wallet_otp_required'])
+                            <span class="badge bg-warning ms-2">
+                                <i class="fas fa-shield-alt me-1"></i>OTP Required
+                            </span>
+                        @endif
+                    </div>
                         <i class="fe fe-download me-2"></i>
                         Wallet Withdrawal Request
                     </div>
@@ -165,7 +217,7 @@
                                 <strong>Current Status:</strong> Showing initial withdrawal form (isWalletOtpSession = {{ $isWalletOtpSession ? 'true' : 'false' }})
                             </div>
                             <form action="{{ route('user.withdraw.wallet.submit') }}" method="POST" 
-                                  style="{{ (!isset($kycVerified) || !$kycVerified) ? 'pointer-events: none;' : '' }}">
+                                  style="{{ $formDisabled ? 'pointer-events: none;' : '' }}">
                                 @csrf
                                 
                                 <div class="row">
@@ -176,6 +228,7 @@
                                                 <span class="input-group-text">$</span>
                                                 <input type="number" class="form-control @error('amount') is-invalid @enderror" 
                                                        id="amount" name="amount" min="1" max="{{ $totalWalletBalance }}" 
+                                                       {{ $formDisabled ? 'disabled' : '' }} 
                                                        step="0.01" value="{{ old('amount') }}" required>
                                             </div>
                                             <small class="text-muted">Available Balance: ${{ number_format($totalWalletBalance, 2) }}</small>
@@ -243,25 +296,38 @@
 
                                 <div class="alert alert-info">
                                     <i class="fe fe-info me-2"></i>
-                                    <strong>Step 1:</strong> Fill out the withdrawal details above and click "Send Verification Code" to receive an OTP via email.
+                                    @if(isset($withdrawalConditions) && $withdrawalConditions['wallet_otp_required'])
+                                        <strong>Step 1:</strong> Fill out the withdrawal details above and click "Send Verification Code" to receive an OTP via email.
+                                    @else
+                                        <strong>Note:</strong> Fill out the withdrawal details above and submit your request directly.
+                                    @endif
                                 </div>
 
-                                <button type="submit" class="btn btn-primary" 
-                                        {{ (!isset($kycVerified) || !$kycVerified) ? 'disabled' : '' }}>
-                                    <i class="fe fe-mail me-2"></i>
-                                    Send Verification Code
-                                </button>
-                                
-                                @if(!isset($kycVerified) || !$kycVerified)
-                                    <div class="mt-3">
-                                        <a href="{{ route('user.kyc.index') }}" class="btn btn-warning">
-                                            <i class="fas fa-user-check me-2"></i>Complete KYC to Withdraw
-                                        </a>
-                                    </div>
+                                @if(!$formDisabled)
+                                    @if(isset($withdrawalConditions) && $withdrawalConditions['wallet_otp_required'])
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fe fe-mail me-2"></i>
+                                            Send Verification Code
+                                        </button>
+                                    @else
+                                        <button type="submit" class="btn btn-success">
+                                            <i class="fe fe-check me-2"></i>
+                                            Submit Withdrawal Request
+                                        </button>
+                                    @endif
+                                @else
+                                    <button type="button" class="btn btn-secondary" disabled>
+                                        <i class="fas fa-lock me-2"></i>
+                                        @if(!$isWalletWithdrawalEnabled)
+                                            Wallet Withdrawals Disabled
+                                        @else
+                                            Requirements Not Met
+                                        @endif
+                                    </button>
                                 @endif
                             </form>
-                        @else
-                            <!-- Step 2: OTP Verification Form -->
+                        @elseif(isset($withdrawalConditions) && $withdrawalConditions['wallet_otp_required'])
+                            <!-- Step 2: OTP Verification Form - Only show if OTP is required -->
                             <div class="alert alert-warning mb-3">
                                 <strong>Current Status:</strong> Showing OTP form (isWalletOtpSession = {{ $isWalletOtpSession ? 'true' : 'false' }})
                             </div>

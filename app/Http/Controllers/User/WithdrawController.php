@@ -67,6 +67,15 @@ class WithdrawController extends Controller
         $isDepositOtpSession = session('show_deposit_otp_form') === true;
         $depositStoredData = session('deposit_withdrawal_data');
 
+        // Get withdrawal conditions from database
+        if (!function_exists('getWithdrawalConditions')) {
+            require_once app_path('helpers/ConditionHelper.php');
+        }
+        $withdrawalConditions = getWithdrawalConditions();
+        
+        // Check individual conditions
+        $conditionCheck = checkWithdrawalConditions($user);
+        
         $data = [
             'pageTitle' => 'Withdraw Deposit',
             'activeDeposit' => $activeDeposit,
@@ -76,7 +85,9 @@ class WithdrawController extends Controller
             'recentWithdrawals' => $recentWithdrawals,
             'kycVerified' => $user->kv == 1,
             'isDepositOtpSession' => $isDepositOtpSession,
-            'depositStoredData' => $depositStoredData
+            'depositStoredData' => $depositStoredData,
+            'withdrawalConditions' => $withdrawalConditions,
+            'conditionCheck' => $conditionCheck
         ];        return view('frontend.withdraw', $data);
     }
     
@@ -524,6 +535,15 @@ class WithdrawController extends Controller
         $isWalletOtpSession = session('show_wallet_otp_form') === true;
         $walletStoredData = session('wallet_withdrawal_data');
 
+        // Get withdrawal conditions from database
+        if (!function_exists('getWithdrawalConditions')) {
+            require_once app_path('helpers/ConditionHelper.php');
+        }
+        $withdrawalConditions = getWithdrawalConditions();
+        
+        // Check individual conditions
+        $conditionCheck = checkWithdrawalConditions($user);
+
         $data = [
             'pageTitle' => 'Withdraw Wallet Balance',
             'depositWallet' => $depositWallet,
@@ -534,7 +554,9 @@ class WithdrawController extends Controller
             'recentWithdrawals' => $recentWithdrawals,
             'kycVerified' => $user->kv == 1,
             'isWalletOtpSession' => $isWalletOtpSession,
-            'walletStoredData' => $walletStoredData
+            'walletStoredData' => $walletStoredData,
+            'withdrawalConditions' => $withdrawalConditions,
+            'conditionCheck' => $conditionCheck
         ];
         
         return view('frontend.withdraw-wallet', $data);
