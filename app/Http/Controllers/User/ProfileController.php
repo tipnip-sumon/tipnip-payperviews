@@ -557,7 +557,7 @@ class ProfileController extends Controller
         $user = Auth::user();
         
         $request->validate([
-            'new_username' => 'required|string|min:3|max:50|unique:users,username,' . $user->id . '|regex:/^[a-zA-Z0-9_]+$/',
+            'new_username' => 'required|string|min:3|max:50|unique:users,username|regex:/^[a-zA-Z0-9_]+$/',
             'password' => 'required|string'
         ], [
             'new_username.required' => 'New username is required',
@@ -567,6 +567,16 @@ class ProfileController extends Controller
             'new_username.regex' => 'Username can only contain letters, numbers, and underscores',
             'password.required' => 'Password is required for verification'
         ]);
+
+        // Check if user is trying to change to their current username
+        if ($request->new_username === $user->username) {
+            return back()->withInput()->with('error', 'You cannot change to your current username. Please choose a different username.');
+        }
+
+        // Check if user is trying to change to their current username
+        if (strtolower($request->new_username) === strtolower($user->username)) {
+            return back()->with('error', 'You cannot change to your current username. Please choose a different username.');
+        }
 
         // Verify password
         if (!Hash::check($request->password, $user->password)) {

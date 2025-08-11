@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
+use App\Models\User;
 
 use App\Http\Controllers\Api\ServerTimeController;
 // use App\Http\Controllers\Api\DebugController; // Commented out - controller doesn't exist
@@ -12,6 +13,59 @@ use App\Http\Controllers\Api\ModalController;
 Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
+
+// Check username availability
+Route::post('/check-username', function (Request $request) {
+    $request->validate([
+        'username' => 'required|string|min:3|max:50|regex:/^[a-zA-Z0-9_]+$/'
+    ]);
+    
+    $username = $request->username;
+    $currentUserId = Auth::id();
+    
+    // Check if username exists (excluding current user if logged in)
+    $exists = User::where('username', $username)
+                  ->when($currentUserId, function ($query) use ($currentUserId) {
+                      return $query->where('id', '!=', $currentUserId);
+                  })
+                  ->exists();
+    
+    return response()->json([
+        'available' => !$exists,
+        'username' => $username
+    ]);
+})->middleware('web');
+
+// Check email availability
+Route::post('/check-email', function (Request $request) {
+    $request->validate([
+        'email' => 'required|email|max:255'
+    ]);
+    
+    $email = $request->email;
+    $currentUserId = Auth::id();
+    
+    // Check if email exists (excluding current user if logged in)
+    $exists = User::where('email', $email)
+                  ->when($currentUserId, function ($query) use ($currentUserId) {
+                      return $query->where('id', '!=', $currentUserId);
+                  })
+                  ->exists();
+    
+    // Check if it's the current user's email
+    $isCurrent = false;
+    if ($currentUserId) {
+        $currentUser = User::find($currentUserId);
+        $isCurrent = $currentUser && $currentUser->email === $email;
+    }
+    
+    return response()->json([
+        'available' => !$exists && !$isCurrent,
+        'exists' => $exists,
+        'is_current' => $isCurrent,
+        'email' => $email
+    ]);
+})->middleware('web');
 
 // Get user balance endpoint
 Route::get('/user/balance', function (Request $request) {

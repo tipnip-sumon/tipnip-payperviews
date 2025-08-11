@@ -327,11 +327,18 @@
                                 @csrf
                                 <div class="mb-3">
                                     <label for="new_email" class="form-label">New Email Address</label>
-                                    <input type="email" 
-                                           name="new_email" 
-                                           id="new_email" 
-                                           class="form-control @error('new_email') is-invalid @enderror" 
-                                           required>
+                                    <div class="input-group">
+                                        <input type="email" 
+                                               name="new_email" 
+                                               id="new_email" 
+                                               class="form-control @error('new_email') is-invalid @enderror" 
+                                               placeholder="Enter your new email address"
+                                               required>
+                                        <span class="input-group-text" id="email-status-icon">
+                                            <i class="fas fa-envelope text-muted"></i>
+                                        </span>
+                                    </div>
+                                    <div id="email-feedback" class="form-text"></div>
                                     @error('new_email')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
@@ -428,10 +435,12 @@
                                            class="form-control @error('new_username') is-invalid @enderror" 
                                            pattern="[a-zA-Z0-9_]+"
                                            title="Username can only contain letters, numbers, and underscores"
+                                           data-current-username="{{ $user->username }}"
                                            required>
                                     @error('new_username')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
+                                    <div id="username-feedback" class="form-text"></div>
                                     <div class="form-text">
                                         Username can only contain letters, numbers, and underscores. Min 3, Max 50 characters.
                                     </div>
@@ -681,6 +690,7 @@
     @endpush
 
     @push('script')
+    <script src="{{ asset('assets_custom/js/jquery-3.7.1.min.js') }}"></script>
     <script>
         $(document).ready(function() {
             // Auto-hide alerts after 5 seconds
@@ -717,6 +727,184 @@
                     $(this).removeClass('is-invalid');
                 }
             });
+
+            // Real-time username validation
+            let usernameCheckTimeout;
+            const $usernameInput = $('#new_username');
+            const $usernameFeedback = $('#username-feedback');
+            const $submitButton = $('button[type="submit"]', $usernameInput.closest('form'));
+            const currentUsername = $usernameInput.data('current-username');
+
+            $usernameInput.on('input', function() {
+                const username = $(this).val().trim();
+                
+                // Clear previous timeout
+                clearTimeout(usernameCheckTimeout);
+                
+                // Reset states
+                $(this).removeClass('is-valid is-invalid');
+                $usernameFeedback.removeClass('text-success text-danger text-warning').html('');
+                $submitButton.prop('disabled', false);
+                
+                // Check if empty
+                if (username === '') {
+                    return;
+                }
+                
+                // Check length
+                if (username.length < 3) {
+                    $(this).addClass('is-invalid');
+                    $usernameFeedback.addClass('text-danger').html('<i class="fas fa-times"></i> Username must be at least 3 characters long');
+                    $submitButton.prop('disabled', true);
+                    return;
+                }
+                
+                if (username.length > 50) {
+                    $(this).addClass('is-invalid');
+                    $usernameFeedback.addClass('text-danger').html('<i class="fas fa-times"></i> Username cannot exceed 50 characters');
+                    $submitButton.prop('disabled', true);
+                    return;
+                }
+                
+                // Check format
+                if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+                    $(this).addClass('is-invalid');
+                    $usernameFeedback.addClass('text-danger').html('<i class="fas fa-times"></i> Username can only contain letters, numbers, and underscores');
+                    $submitButton.prop('disabled', true);
+                    return;
+                }
+                
+                // Check if same as current username
+                if (username === currentUsername) {
+                    $(this).addClass('is-invalid');
+                    $usernameFeedback.addClass('text-warning').html('<i class="fas fa-exclamation-triangle"></i> This is your current username. Please choose a different one.');
+                    $submitButton.prop('disabled', true);
+                    return;
+                }
+                
+                // Show checking status
+                $usernameFeedback.addClass('text-info').html('<i class="fas fa-spinner fa-spin"></i> Checking availability...');
+                
+                // Debounce the availability check
+                usernameCheckTimeout = setTimeout(function() {
+                    checkUsernameAvailability(username);
+                }, 500);
+            });
+
+            function checkUsernameAvailability(username) {
+                $.ajax({
+                    url: '/api/check-username',
+                    method: 'POST',
+                    data: {
+                        username: username,
+                        _token: $('meta[name="csrf-token"]').attr('content')
+                    },
+                    success: function(response) {
+                        if (response.available) {
+                            $usernameInput.removeClass('is-invalid').addClass('is-valid');
+                            $usernameFeedback.removeClass('text-info text-danger').addClass('text-success')
+                                .html('<i class="fas fa-check"></i> Username is available!');
+                            $submitButton.prop('disabled', false);
+                        } else {
+                            $usernameInput.removeClass('is-valid').addClass('is-invalid');
+                            $usernameFeedback.removeClass('text-info text-success').addClass('text-danger')
+                                .html('<i class="fas fa-times"></i> Username is already taken. Please choose another one.');
+                            $submitButton.prop('disabled', true);
+                        }
+                    },
+                    error: function(xhr) {
+                        $usernameInput.removeClass('is-valid').addClass('is-invalid');
+                        $usernameFeedback.removeClass('text-info text-success').addClass('text-danger')
+                            .html('<i class="fas fa-exclamation-triangle"></i> Error checking username availability. Please try again.');
+                        $submitButton.prop('disabled', true);
+                    }
+                });
+            }
+        });
+        
+        // Email validation
+        $(document).ready(function() {
+            const $emailInput = $('#new_email');
+            const $emailFeedback = $('#email-feedback');
+            const $emailStatusIcon = $('#email-status-icon i');
+            const $emailSubmitButton = $emailInput.closest('form').find('button[type="submit"]');
+            let emailTimeout;
+
+            $emailInput.on('input', function() {
+                const email = $(this).val().trim();
+                
+                // Clear previous timeout
+                clearTimeout(emailTimeout);
+                
+                // Reset UI
+                $(this).removeClass('is-valid is-invalid');
+                $emailFeedback.removeClass('text-success text-danger text-info').addClass('text-info')
+                    .html('<i class="fas fa-spinner fa-spin"></i> Checking email availability...');
+                $emailStatusIcon.removeClass('text-success text-danger text-muted').addClass('text-info');
+                
+                // Basic format validation
+                if (email.length === 0) {
+                    $emailFeedback.removeClass('text-success text-danger text-info').html('');
+                    $emailStatusIcon.removeClass('text-success text-danger text-info').addClass('text-muted');
+                    $emailSubmitButton.prop('disabled', false);
+                    return;
+                }
+                
+                // Email format validation
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(email)) {
+                    $(this).removeClass('is-valid').addClass('is-invalid');
+                    $emailFeedback.removeClass('text-success text-info').addClass('text-danger')
+                        .html('<i class="fas fa-times"></i> Please enter a valid email address.');
+                    $emailStatusIcon.removeClass('text-success text-info text-muted').addClass('text-danger');
+                    $emailSubmitButton.prop('disabled', true);
+                    return;
+                }
+                
+                // Debounce the API call
+                emailTimeout = setTimeout(function() {
+                    checkEmailAvailability(email);
+                }, 500);
+            });
+
+            function checkEmailAvailability(email) {
+                $.ajax({
+                    url: '/api/check-email',
+                    method: 'POST',
+                    data: {
+                        email: email,
+                        _token: $('meta[name="csrf-token"]').attr('content')
+                    },
+                    success: function(response) {
+                        if (response.is_current) {
+                            $emailInput.removeClass('is-valid').addClass('is-invalid');
+                            $emailFeedback.removeClass('text-info text-success').addClass('text-danger')
+                                .html('<i class="fas fa-times"></i> This is your current email address. Please enter a different one.');
+                            $emailStatusIcon.removeClass('text-success text-info text-muted').addClass('text-danger');
+                            $emailSubmitButton.prop('disabled', true);
+                        } else if (response.available) {
+                            $emailInput.removeClass('is-invalid').addClass('is-valid');
+                            $emailFeedback.removeClass('text-info text-danger').addClass('text-success')
+                                .html('<i class="fas fa-check"></i> Email is available!');
+                            $emailStatusIcon.removeClass('text-danger text-info text-muted').addClass('text-success');
+                            $emailSubmitButton.prop('disabled', false);
+                        } else {
+                            $emailInput.removeClass('is-valid').addClass('is-invalid');
+                            $emailFeedback.removeClass('text-info text-success').addClass('text-danger')
+                                .html('<i class="fas fa-times"></i> This email is already registered. Please use a different one.');
+                            $emailStatusIcon.removeClass('text-success text-info text-muted').addClass('text-danger');
+                            $emailSubmitButton.prop('disabled', true);
+                        }
+                    },
+                    error: function(xhr) {
+                        $emailInput.removeClass('is-valid').addClass('is-invalid');
+                        $emailFeedback.removeClass('text-info text-success').addClass('text-danger')
+                            .html('<i class="fas fa-exclamation-triangle"></i> Error checking email availability. Please try again.');
+                        $emailStatusIcon.removeClass('text-success text-info text-muted').addClass('text-danger');
+                        $emailSubmitButton.prop('disabled', true);
+                    }
+                });
+            }
         });
         
         function calculatePasswordStrength(password) {
