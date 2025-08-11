@@ -554,9 +554,37 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Validate amount against method limits on form submission
     const withdrawForm = document.querySelector('form[action*="withdraw.wallet.submit"]');
+    const submitButton = withdrawForm?.querySelector('button[type="submit"]');
+    
     if (withdrawForm) {
         withdrawForm.addEventListener('submit', function(e) {
             if (!methodSelect || !amountInput) return;
+            
+            // Show immediate loading feedback
+            if (submitButton) {
+                const originalText = submitButton.innerHTML;
+                submitButton.disabled = true;
+                submitButton.innerHTML = '<i class="fa fa-spinner fa-spin me-2"></i>Processing...';
+                
+                // Re-enable button after 10 seconds in case of network issues
+                setTimeout(() => {
+                    submitButton.disabled = false;
+                    submitButton.innerHTML = originalText;
+                }, 10000);
+            }
+            
+            // Show processing notification
+            Swal.fire({
+                title: 'Processing Withdrawal',
+                text: 'Please wait while we process your request...',
+                icon: 'info',
+                showConfirmButton: false,
+                allowOutsideClick: false,
+                timer: 3000,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
             
             const selectedOption = methodSelect.options[methodSelect.selectedIndex];
             const amount = parseFloat(amountInput.value);
@@ -567,13 +595,33 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 if (amount < minAmount) {
                     e.preventDefault();
-                    alert(`Minimum withdrawal amount for this method is $${minAmount.toFixed(2)}`);
+                    if (submitButton) {
+                        submitButton.disabled = false;
+                        submitButton.innerHTML = originalText;
+                    }
+                    Swal.close();
+                    Swal.fire({
+                        title: 'Invalid Amount',
+                        text: `Minimum withdrawal amount for this method is $${minAmount.toFixed(2)}`,
+                        icon: 'error',
+                        confirmButtonText: 'OK'
+                    });
                     return;
                 }
                 
                 if (amount > Math.min(maxAmount, {{ $totalWalletBalance }})) {
                     e.preventDefault();
-                    alert(`Maximum withdrawal amount for this method is $${Math.min(maxAmount, {{ $totalWalletBalance }}).toFixed(2)}`);
+                    if (submitButton) {
+                        submitButton.disabled = false;
+                        submitButton.innerHTML = originalText;
+                    }
+                    Swal.close();
+                    Swal.fire({
+                        title: 'Amount Too High',
+                        text: `Maximum withdrawal amount for this method is $${Math.min(maxAmount, {{ $totalWalletBalance }}).toFixed(2)}`,
+                        icon: 'error',
+                        confirmButtonText: 'OK'
+                    });
                     return;
                 }
             }
@@ -586,7 +634,9 @@ document.addEventListener('DOMContentLoaded', function() {
             title: '{{ session("swal_success.title") }}',
             text: '{{ session("swal_success.text") }}',
             icon: '{{ session("swal_success.icon") }}',
-            confirmButtonText: 'OK'
+            confirmButtonText: 'OK',
+            timer: 5000,
+            timerProgressBar: true
         });
     @endif
 
@@ -598,6 +648,85 @@ document.addEventListener('DOMContentLoaded', function() {
             confirmButtonText: 'OK'
         });
     @endif
+
+    // Handle regular session messages
+    @if(session('success'))
+        Swal.fire({
+            title: 'Success!',
+            text: '{{ session("success") }}',
+            icon: 'success',
+            confirmButtonText: 'OK',
+            timer: 5000,
+            timerProgressBar: true
+        });
+    @endif
+
+    @if(session('error'))
+        Swal.fire({
+            title: 'Error!',
+            text: '{{ session("error") }}',
+            icon: 'error',
+            confirmButtonText: 'OK'
+        });
+    @endif
+
+    // Auto-hide Bootstrap alerts after showing SweetAlert
+    @if(session('success') || session('error'))
+        // Hide the Bootstrap alert since we're showing SweetAlert
+        const alerts = document.querySelectorAll('.alert');
+        alerts.forEach(alert => {
+            alert.style.display = 'none';
+        });
+    @endif
+
+    // Add loading overlay for better UX
+    function showLoadingOverlay() {
+        const overlay = document.createElement('div');
+        overlay.id = 'loadingOverlay';
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        `;
+        overlay.innerHTML = `
+            <div style="background: white; padding: 20px; border-radius: 10px; text-align: center;">
+                <i class="fa fa-spinner fa-spin fa-2x text-primary"></i>
+                <p class="mt-2 mb-0">Processing your withdrawal...</p>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+        
+        // Auto-remove after 10 seconds
+        setTimeout(() => {
+            const existingOverlay = document.getElementById('loadingOverlay');
+            if (existingOverlay) {
+                existingOverlay.remove();
+            }
+        }, 10000);
+    }
+
+    // Enhanced form submission with better feedback
+    if (withdrawForm) {
+        const originalSubmitHandler = withdrawForm.onsubmit;
+        withdrawForm.addEventListener('submit', function(e) {
+            // Run original validation first
+            if (originalSubmitHandler && !originalSubmitHandler.call(this, e)) {
+                return;
+            }
+            
+            // If validation passes, show loading
+            if (!e.defaultPrevented) {
+                showLoadingOverlay();
+            }
+        });
+    }
 });
 </script>
 @endpush
