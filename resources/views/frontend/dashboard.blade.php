@@ -54,39 +54,70 @@
             </div>
         </div>
         
-        <!-- Total Earnings Hub -->
+        <!-- Total Earnings Hub - Completely Redesigned -->
         <div class="row mb-4">
             <div class="col-12">
-                <div class="card custom-card border-0 shadow-lg" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-                    <div class="card-body text-white p-4">
-                        <div class="row align-items-center">
-                            <div class="col-lg-8">
-                                <div class="d-flex align-items-center">
-                                    <div class="bg-white bg-opacity-20 rounded-circle p-3 me-3">
-                                        <i class="fas fa-chart-line fa-2x text-white"></i>
-                                    </div>
-                                    <div>
-                                        <h4 class="mb-1">Total Earnings Hub</h4>
-                                        <div class="d-flex align-items-center">
-                                            <span class="me-3">All Income: 0%</span>
-                                            <button class="btn btn-sm btn-outline-light me-2" id="toggleEarnings" onclick="toggleEarningsVisibility()">
-                                                <i class="fas fa-eye" id="earningsIcon"></i>
-                                            </button>
-                                            <h3 class="mb-0 fw-bold" id="earningsAmount" style="display: none;">
-                                                ${{ showAmount($investments['total_interest_earned'] + $referrals['referral_earnings'] + $videoSystem['video_earnings']) }}
-                                            </h3>
-                                            <h3 class="mb-0 fw-bold" id="hiddenEarnings">
-                                                ****
-                                            </h3>
-                                        </div>
-                                    </div>
+                <div class="new-earnings-card">
+                    <div class="earnings-card-header">
+                        <div class="earnings-title-section">
+                            <div class="earnings-icon-new">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                            <div class="earnings-title-text">
+                                <h3>💰 Total Earnings Hub</h3>
+                                <p>Your complete income overview</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="earnings-content-area">
+                        <div class="earnings-main-section">
+                            <div class="earnings-controls">
+                                <span class="income-label">All Income</span>
+                                <button class="visibility-toggle" id="toggleEarnings" onclick="toggleEarningsVisibility()">
+                                    <i class="fas fa-eye" id="earningsIcon"></i>
+                                </button>
+                            </div>
+                            <div class="earnings-amount-display">
+                                <h1 class="amount-visible" id="earningsAmount" style="display: none;">
+                                    ${{ showAmount($investments['total_interest_earned'] + $referrals['referral_earnings'] + $videoSystem['video_earnings']) }}
+                                </h1>
+                                <h1 class="amount-hidden" id="hiddenEarnings">
+                                    ••••••••
+                                </h1>
+                            </div>
+                        </div>
+                        
+                        <div class="earnings-breakdown-section">
+                            <h5 class="breakdown-heading">Earnings Breakdown</h5>
+                            
+                            <div class="breakdown-item-new">
+                                <div class="breakdown-icon-container interest-bg">
+                                    <i class="fas fa-chart-pie"></i>
+                                </div>
+                                <div class="breakdown-details">
+                                    <span class="breakdown-type">Interest</span>
+                                    <span class="breakdown-amount">${{ showAmount($investments['total_interest_earned']) }}</span>
                                 </div>
                             </div>
-                            <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
-                                <div class="text-white-50 small">
-                                    <div>Interest: ${{ showAmount($investments['total_interest_earned']) }}</div>
-                                    <div>Referrals: ${{ showAmount($referrals['referral_earnings']) }}</div>
-                                    <div>Videos: ${{ showAmount($videoSystem['video_earnings']) }}</div>
+                            
+                            <div class="breakdown-item-new">
+                                <div class="breakdown-icon-container referral-bg">
+                                    <i class="fas fa-users"></i>
+                                </div>
+                                <div class="breakdown-details">
+                                    <span class="breakdown-type">Referrals</span>
+                                    <span class="breakdown-amount">${{ showAmount($referrals['referral_earnings']) }}</span>
+                                </div>
+                            </div>
+                            
+                            <div class="breakdown-item-new">
+                                <div class="breakdown-icon-container video-bg">
+                                    <i class="fas fa-play-circle"></i>
+                                </div>
+                                <div class="breakdown-details">
+                                    <span class="breakdown-type">Videos</span>
+                                    <span class="breakdown-amount">${{ showAmount($videoSystem['video_earnings']) }}</span>
                                 </div>
                             </div>
                         </div>
@@ -116,55 +147,51 @@
                 </div>
             </div>
             
-            <!-- Wallet Cards - Vertical Layout with Eye Buttons -->
+            <!-- Account Wallets - Fresh Design -->
             <div class="col-lg-6 mb-3">
-                <div class="card custom-card border-0 shadow-sm h-100">
-                    <div class="card-header bg-transparent border-0">
-                        <h5 class="mb-0 text-primary"><i class="fas fa-wallet me-2"></i>Account Wallets</h5>
+                <div class="fresh-wallet-card">
+                    <div class="wallet-card-header">
+                        <h5 class="wallet-title"><i class="fas fa-wallet"></i>Account Wallets</h5>
                     </div>
-                    <div class="card-body">
+                    <div class="wallet-card-body">
                         <!-- Account Wallet - Total -->
-                        <div class="wallet-item border-bottom pb-3 mb-3">
-                            <div class="d-flex align-items-center">
-                                <div class="bg-primary bg-opacity-10 rounded-circle p-2 me-3">
-                                    <i class="fas fa-wallet text-primary"></i>
-                                </div>
-                                <div class="flex-grow-1">
-                                    <h6 class="text-muted mb-1">💙 Account Wallet - Total</h6>
-                                    <div class="d-flex align-items-center">
-                                        <button class="btn btn-sm btn-outline-primary me-2" onclick="toggleWalletVisibility('total')" title="Toggle visibility">
-                                            <i class="fas fa-eye" id="totalWalletIcon"></i>
-                                        </button>
-                                        <h4 class="mb-0 fw-bold text-primary" id="totalWalletAmount" style="display: none;">
-                                            ${{ showAmount($currentBalance) }}
-                                        </h4>
-                                        <h4 class="mb-0 fw-bold text-primary" id="totalWalletHidden">
-                                            ****
-                                        </h4>
-                                    </div>
+                        <div class="wallet-item-fresh">
+                            <div class="wallet-icon-section">
+                                <i class="fas fa-wallet"></i>
+                            </div>
+                            <div class="wallet-info-section">
+                                <h6 class="wallet-label">💙 Account Wallet - Total</h6>
+                                <div class="wallet-amount-controls">
+                                    <button class="wallet-toggle-btn" onclick="toggleWalletVisibility('total')" title="Toggle visibility">
+                                        <i class="fas fa-eye" id="totalWalletIcon"></i>
+                                    </button>
+                                    <h4 class="wallet-amount-value" id="totalWalletAmount" style="display: none;">
+                                        ${{ showAmount($currentBalance) }}
+                                    </h4>
+                                    <h4 class="wallet-amount-hidden" id="totalWalletHidden">
+                                        ****
+                                    </h4>
                                 </div>
                             </div>
                         </div>
                         
                         <!-- Account Wallet - Purchase -->
-                        <div class="wallet-item">
-                            <div class="d-flex align-items-center">
-                                <div class="bg-warning bg-opacity-10 rounded-circle p-2 me-3">
-                                    <i class="fas fa-coins text-warning"></i>
-                                </div>
-                                <div class="flex-grow-1">
-                                    <h6 class="text-muted mb-1">💛 Account Wallet - Purchase</h6>
-                                    <div class="d-flex align-items-center">
-                                        <button class="btn btn-sm btn-outline-warning me-2" onclick="toggleWalletVisibility('purchase')" title="Toggle visibility">
-                                            <i class="fas fa-eye" id="purchaseWalletIcon"></i>
-                                        </button>
-                                        <h4 class="mb-0 fw-bold text-warning" id="purchaseWalletAmount" style="display: none;">
-                                            ${{ showAmount(auth()->user()->deposit_wallet) }}
-                                        </h4>
-                                        <h4 class="mb-0 fw-bold text-warning" id="purchaseWalletHidden">
-                                            ****
-                                        </h4>
-                                    </div>
+                        <div class="wallet-item-fresh">
+                            <div class="wallet-icon-section">
+                                <i class="fas fa-coins"></i>
+                            </div>
+                            <div class="wallet-info-section">
+                                <h6 class="wallet-label">💛 Account Wallet - Purchase</h6>
+                                <div class="wallet-amount-controls">
+                                    <button class="wallet-toggle-btn" onclick="toggleWalletVisibility('purchase')" title="Toggle visibility">
+                                        <i class="fas fa-eye" id="purchaseWalletIcon"></i>
+                                    </button>
+                                    <h4 class="wallet-amount-value" id="purchaseWalletAmount" style="display: none;">
+                                        ${{ showAmount(auth()->user()->deposit_wallet) }}
+                                    </h4>
+                                    <h4 class="wallet-amount-hidden" id="purchaseWalletHidden">
+                                        ****
+                                    </h4>
                                 </div>
                             </div>
                         </div>
@@ -173,53 +200,49 @@
             </div>
             
             <div class="col-lg-6 mb-3">
-                <div class="card custom-card border-0 shadow-sm h-100">
-                    <div class="card-header bg-transparent border-0">
-                        <h5 class="mb-0 text-success"><i class="fas fa-chart-bar me-2"></i>Earnings & Investments</h5>
+                <div class="fresh-earnings-card">
+                    <div class="earnings-card-header">
+                        <h5 class="earnings-title"><i class="fas fa-chart-bar"></i>Team Bonus & Investments</h5>
                     </div>
-                    <div class="card-body">
+                    <div class="earnings-card-body">
                         <!-- Interest Wallet -->
-                        <div class="wallet-item border-bottom pb-3 mb-3">
-                            <div class="d-flex align-items-center">
-                                <div class="bg-success bg-opacity-10 rounded-circle p-2 me-3">
-                                    <i class="fas fa-chart-line text-success"></i>
-                                </div>
-                                <div class="flex-grow-1">
-                                    <h6 class="text-muted mb-1">💚 Interest Wallet</h6>
-                                    <div class="d-flex align-items-center">
-                                        <button class="btn btn-sm btn-outline-success me-2" onclick="toggleWalletVisibility('interest')" title="Toggle visibility">
-                                            <i class="fas fa-eye" id="interestWalletIcon"></i>
-                                        </button>
-                                        <h4 class="mb-0 fw-bold text-success" id="interestWalletAmount" style="display: none;">
-                                            ${{ showAmount(auth()->user()->interest_wallet) }}
-                                        </h4>
-                                        <h4 class="mb-0 fw-bold text-success" id="interestWalletHidden">
-                                            ****
-                                        </h4>
-                                    </div>
+                        <div class="earnings-item-fresh">
+                            <div class="earnings-icon-section">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                            <div class="earnings-info-section">
+                                <h6 class="earnings-label">💚 Interest Wallet</h6>
+                                <div class="earnings-amount-controls">
+                                    <button class="earnings-toggle-btn" onclick="toggleWalletVisibility('interest')" title="Toggle visibility">
+                                        <i class="fas fa-eye" id="interestWalletIcon"></i>
+                                    </button>
+                                    <h4 class="earnings-amount-value" id="interestWalletAmount" style="display: none;">
+                                        ${{ showAmount(auth()->user()->interest_wallet) }}
+                                    </h4>
+                                    <h4 class="earnings-amount-hidden" id="interestWalletHidden">
+                                        ****
+                                    </h4>
                                 </div>
                             </div>
                         </div>
                         
                         <!-- Total Investment -->
-                        <div class="wallet-item">
-                            <div class="d-flex align-items-center">
-                                <div class="bg-info bg-opacity-10 rounded-circle p-2 me-3">
-                                    <i class="fas fa-piggy-bank text-info"></i>
-                                </div>
-                                <div class="flex-grow-1">
-                                    <h6 class="text-muted mb-1">💎 Total Investment</h6>
-                                    <div class="d-flex align-items-center">
-                                        <button class="btn btn-sm btn-outline-info me-2" onclick="toggleWalletVisibility('investment')" title="Toggle visibility">
-                                            <i class="fas fa-eye" id="investmentWalletIcon"></i>
-                                        </button>
-                                        <h4 class="mb-0 fw-bold text-info" id="investmentWalletAmount" style="display: none;">
-                                            ${{ showAmount($totalInvest) }}
-                                        </h4>
-                                        <h4 class="mb-0 fw-bold text-info" id="investmentWalletHidden">
-                                            ****
-                                        </h4>
-                                    </div>
+                        <div class="earnings-item-fresh">
+                            <div class="earnings-icon-section">
+                                <i class="fas fa-piggy-bank"></i>
+                            </div>
+                            <div class="earnings-info-section">
+                                <h6 class="earnings-label">💎 Total Investment</h6>
+                                <div class="earnings-amount-controls">
+                                    <button class="earnings-toggle-btn" onclick="toggleWalletVisibility('investment')" title="Toggle visibility">
+                                        <i class="fas fa-eye" id="investmentWalletIcon"></i>
+                                    </button>
+                                    <h4 class="earnings-amount-value" id="investmentWalletAmount" style="display: none;">
+                                        ${{ showAmount($totalInvest) }}
+                                    </h4>
+                                    <h4 class="earnings-amount-hidden" id="investmentWalletHidden">
+                                        ****
+                                    </h4>
                                 </div>
                             </div>
                         </div>
@@ -302,12 +325,20 @@
             </div>
         </div>
 
-        <!-- Video View System Income Section -->
+        <!-- Video Access Vault - Completely Redesigned -->
         <div class="row mb-4">
             <div class="col-12">
-                <div class="card custom-card border-0 shadow-sm">
-                    <div class="card-header bg-transparent border-bottom d-flex justify-content-between align-items-center">
-                        <h5 class="card-title mb-0" style="color: #495057;">Video View System Income</h5>
+                <div class="fresh-video-vault">
+                    <div class="video-vault-header">
+                        <div class="video-vault-title-section">
+                            <div class="video-vault-icon">
+                                <i class="fas fa-play-circle"></i>
+                            </div>
+                            <div class="video-vault-title-text">
+                                <h5>💎 Video Access Vault</h5>
+                                <p>Your video earnings dashboard</p>
+                            </div>
+                        </div>
                         @php
                             $activePlan = auth()->user()->getHighestActivePlan();
                             $dailyLimit = auth()->user()->getDailyVideoLimit();
@@ -317,64 +348,65 @@
                             $remainingViews = max(0, $dailyLimit - $todayViews);
                             $videoRate = $activePlan ? $activePlan->video_earning_rate : 0;
                         @endphp
-                        <div class="d-flex align-items-center">
+                        <div class="video-vault-badges">
                             @if($activePlan)
-                                <div class="badge bg-primary me-2 p-2">
-                                    <i class="fas fa-award me-1"></i> {{ $activePlan->name }}
+                                <div class="vault-badge vault-badge-plan">
+                                    <i class="fas fa-award"></i> {{ $activePlan->name }}
                                 </div>
                             @endif
-                            <div class="badge bg-info p-2">
-                                <i class="fas fa-play-circle me-1"></i> Limit: {{ $todayViews }}/{{ $dailyLimit }} videos
+                            <div class="vault-badge vault-badge-limit">
+                                <i class="fas fa-play-circle"></i> Limit: {{ $todayViews }}/{{ $dailyLimit }} videos
                             </div>
                         </div>
                     </div>
-                    <div class="card-body">
-                        <div class="row">
-                            @if($activePlan)
-                                <div class="col-12 mb-3">
-                                    <div class="alert alert-light border border-primary shadow-sm">
-                                        <div class="d-flex justify-content-between align-items-center flex-wrap">
-                                            <div>
-                                                <h6 class="mb-1"><i class="fas fa-film text-primary"></i> Your Plan: <span class="text-primary">{{ $activePlan->name }}</span></h6>
-                                                <p class="mb-0 small">
-                                                    <span class="badge bg-success me-1">Daily Limit: {{ $dailyLimit }} videos</span>
-                                                    <span class="badge bg-info me-1">Rate: ${{ number_format($videoRate, 4) }}/video</span>
-                                                    <span class="badge bg-warning">Max Daily: ${{ number_format($dailyLimit * $videoRate, 2) }}</span>
-                                                </p>
-                                            </div>
-                                            <div class="mt-2 mt-md-0">
-                                                <div class="progress" style="height: 8px; width: 150px;">
-                                                    <div class="progress-bar {{ $remainingViews == 0 ? 'bg-danger' : 'bg-success' }}" role="progressbar" 
-                                                        style="width: {{ min(100, ($todayViews / max(1, $dailyLimit)) * 100) }}%"></div>
-                                                </div>
-                                                <small class="d-block text-center mt-1">
-                                                    {{ $remainingViews }} videos remaining today
-                                                </small>
-                                            </div>
+                    
+                    <div class="video-vault-content">
+                        @if($activePlan)
+                            <div class="video-plan-info">
+                                <div class="plan-info-content">
+                                    <div class="plan-details">
+                                        <h6><i class="fas fa-film"></i> Your Plan: <span>{{ $activePlan->name }}</span></h6>
+                                        <div class="plan-badges">
+                                            <span class="plan-badge plan-badge-success">Daily Limit: {{ $dailyLimit }} videos</span>
+                                            <span class="plan-badge plan-badge-info">Rate: ${{ number_format($videoRate, 4) }}/video</span>
+                                            <span class="plan-badge plan-badge-warning">Max Daily: ${{ number_format($dailyLimit * $videoRate, 2) }}</span>
                                         </div>
                                     </div>
-                                </div>
-                            @endif
-                            <div class="col-sm-6 col-lg-3 mb-3">
-                                <div class="text-center p-3 border rounded bg-light">
-                                    <div class="mb-2">
-                                        <i class="fas fa-play-circle fa-2x" style="color: #dc3545;"></i>
+                                    <div class="plan-progress">
+                                        <div class="progress-container">
+                                            <div class="progress-bar-new {{ $remainingViews == 0 ? 'progress-danger' : 'progress-success' }}" 
+                                                style="width: {{ min(100, ($todayViews / max(1, $dailyLimit)) * 100) }}%"></div>
+                                        </div>
+                                        <small class="progress-text">
+                                            {{ $remainingViews }} videos remaining today
+                                        </small>
                                     </div>
-                                    <h4 class="mb-1 fw-bold" style="color: #dc3545;">
+                                </div>
+                            </div>
+                        @endif
+                        
+                        <div class="video-stats-grid">
+                            <div class="video-stat-item">
+                                <div class="video-stat-icon">
+                                    <i class="fas fa-play-circle"></i>
+                                </div>
+                                <div class="video-stat-content">
+                                    <h4>
                                         @php
                                             $totalVideosWatched = \App\Models\VideoView::where('user_id', auth()->id())->count();
                                         @endphp
                                         {{ $totalVideosWatched }}
                                     </h4>
-                                    <p class="text-muted mb-0 small">Videos Watched</p>
+                                    <p>Videos Watched</p>
                                 </div>
                             </div>
-                            <div class="col-sm-6 col-lg-3 mb-3">
-                                <div class="text-center p-3 border rounded bg-light">
-                                    <div class="mb-2">
-                                        <i class="fas fa-dollar-sign fa-2x" style="color: #28a745;"></i>
-                                    </div>
-                                    <h4 class="mb-1 fw-bold" style="color: #28a745;">
+                            
+                            <div class="video-stat-item">
+                                <div class="video-stat-icon">
+                                    <i class="fas fa-dollar-sign"></i>
+                                </div>
+                                <div class="video-stat-content">
+                                    <h4>
                                         @php
                                             $videoEarnings = \App\Models\Transaction::where('user_id', auth()->id())
                                                 ->where('remark', 'video_view_earning')
@@ -382,71 +414,64 @@
                                         @endphp
                                         ${{ showAmount($videoEarnings) }}
                                     </h4>
-                                    <p class="text-muted mb-0 small">Video Earnings</p>
+                                    <p>Video Earnings</p>
                                 </div>
                             </div>
-                            <div class="col-sm-6 col-lg-3 mb-3">
-                                <div class="text-center p-3 border rounded bg-light">
-                                    <div class="mb-2">
-                                        <i class="fas fa-calendar-day fa-2x" style="color: #17a2b8;"></i>
-                                    </div>
-                                    <h4 class="mb-1 fw-bold" style="color: #17a2b8;">
-                                        {{ $todayViews }}
-                                        @if($dailyLimit > 0)
-                                            <small class="text-muted">/{{ $dailyLimit }}</small>
-                                        @endif
-                                    </h4>
-                                    <p class="text-muted mb-0 small">Today's Views</p>
+                            
+                            <div class="video-stat-item">
+                                <div class="video-stat-icon">
+                                    <i class="fas fa-calendar-day"></i>
+                                </div>
+                                <div class="video-stat-content">
+                                    <h4>{{ $todayViews }}@if($dailyLimit > 0)<small>/{{ $dailyLimit }}</small>@endif</h4>
+                                    <p>Today's Views</p>
                                 </div>
                             </div>
-                            <div class="col-sm-6 col-lg-3 mb-3">
-                                <div class="text-center p-3 border rounded bg-light">
-                                    <div class="mb-2">
-                                        <i class="fas fa-clock fa-2x" style="color: #6f42c1;"></i>
-                                    </div>
-                                    <h4 class="mb-1 fw-bold" style="color: #6f42c1;">
+                            
+                            <div class="video-stat-item">
+                                <div class="video-stat-icon">
+                                    <i class="fas fa-clock"></i>
+                                </div>
+                                <div class="video-stat-content">
+                                    <h4>
                                         @php
                                             $pendingEarnings = $todayViews * ($videoRate ?: 0.01);
                                         @endphp
                                         ${{ number_format($pendingEarnings, 2) }}
                                     </h4>
-                                    <p class="text-muted mb-0 small">Pending Earnings</p>
+                                    <p>Pending Earnings</p>
                                 </div>
                             </div>
                         </div>
-                        <div class="row mt-3">
-                            <div class="col-12">
-                                <div class="d-flex justify-content-center gap-2">
-                                    <a href="{{ route('user.video-views.index') }}" class="btn btn-primary btn-sm">
-                                        <i class="fas fa-play me-1"></i>Watch Videos
-                                        @if($remainingViews > 0)
-                                            <span class="badge bg-light text-dark ms-1">{{ $remainingViews }} left</span>
-                                        @endif
-                                    </a>
-                                    <a href="{{ route('user.video-views.history') }}" class="btn btn-outline-secondary btn-sm">
-                                        <i class="fas fa-history me-1"></i>View History
-                                    </a>
-                                    <a href="{{ route('user.video-views.earnings') }}" class="btn btn-outline-success btn-sm">
-                                        <i class="fas fa-chart-bar me-1"></i>Earnings Report
-                                    </a>
-                                </div>
-                                @if($remainingViews == 0 && $dailyLimit > 0)
-                                    <div class="text-center mt-3">
-                                        <div class="alert alert-warning border-warning py-2">
-                                            <i class="fas fa-exclamation-circle me-1"></i>
-                                            You've reached your daily limit of {{ $dailyLimit }} videos. New videos will be available tomorrow!
-                                        </div>
-                                    </div>
-                                @elseif(!$activePlan)
-                                    <div class="text-center mt-3">
-                                        <div class="alert alert-info border-info py-2">
-                                            <i class="fas fa-info-circle me-1"></i>
-                                            Upgrade your plan to increase your daily video limit and earning rate!
-                                            <a href="{{ route('invest.index') }}" class="btn btn-sm btn-outline-primary ms-2">View Plans</a>
-                                        </div>
-                                    </div>
-                                @endif
+                        
+                        <div class="video-actions">
+                            <div class="video-action-buttons">
+                                <a href="{{ route('user.video-views.index') }}" class="video-action-btn video-btn-primary">
+                                    <i class="fas fa-play"></i>Watch Videos
+                                    @if($remainingViews > 0)
+                                        <span class="action-badge">{{ $remainingViews }} left</span>
+                                    @endif
+                                </a>
+                                <a href="{{ route('user.video-views.history') }}" class="video-action-btn video-btn-secondary">
+                                    <i class="fas fa-history"></i>View History
+                                </a>
+                                <a href="{{ route('user.video-views.earnings') }}" class="video-action-btn video-btn-success">
+                                    <i class="fas fa-chart-bar"></i>Earnings Report
+                                </a>
                             </div>
+                            
+                            @if($remainingViews == 0 && $dailyLimit > 0)
+                                <div class="video-alert video-alert-warning">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                    <span>You've reached your daily limit of {{ $dailyLimit }} videos. New videos will be available tomorrow!</span>
+                                </div>
+                            @elseif(!$activePlan)
+                                <div class="video-alert video-alert-info">
+                                    <i class="fas fa-info-circle"></i>
+                                    <span>Upgrade your plan to increase your daily video limit and earning rate!</span>
+                                    <a href="{{ route('invest.index') }}" class="alert-action-btn">View Plans</a>
+                                </div>
+                            @endif
                         </div>
                     </div>
                 </div>
@@ -744,6 +769,75 @@
                 background-color: rgba(13, 202, 240, 0.1);
             }
             
+            /* Enhanced Earnings Card Styles */
+            .earnings-icon-container {
+                background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+                border-radius: 50%;
+                width: 60px;
+                height: 60px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 4px 12px rgba(13, 110, 253, 0.15);
+            }
+            
+            .earnings-display {
+                transition: all 0.3s ease;
+                border: 1px solid #e9ecef !important;
+            }
+            
+            .earnings-display:hover {
+                box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1) !important;
+                transform: translateY(-2px);
+            }
+            
+            .earnings-amount h2 {
+                font-size: 2.5rem;
+                text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            }
+            
+            .breakdown-item {
+                transition: all 0.3s ease;
+                border: 1px solid #f8f9fa !important;
+            }
+            
+            .breakdown-item:hover {
+                transform: translateX(5px);
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            }
+            
+            .breakdown-item .fas {
+                width: 20px;
+                text-align: center;
+            }
+            
+            /* Improved Badge Styling */
+            .badge.bg-success {
+                background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
+                color: white;
+                padding: 0.5rem 1rem;
+                font-size: 0.875rem;
+                border-radius: 50px;
+                box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+            }
+            
+            /* Enhanced Border Colors */
+            .border-primary {
+                border-color: #0d6efd !important;
+            }
+            
+            .border-info {
+                border-color: #0dcaf0 !important;
+            }
+            
+            .border-warning {
+                border-color: #ffc107 !important;
+            }
+            
+            .border-3 {
+                border-width: 3px !important;
+            }
+            
             .card {
                 transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
             }
@@ -784,6 +878,10 @@
             
             .fw-bold {
                 font-weight: 700 !important;
+            }
+            
+            .fw-medium {
+                font-weight: 500 !important;
             }
             
             .text-muted {
@@ -881,6 +979,14 @@
                 .btn-sm {
                     font-size: 0.8rem;
                     padding: 0.2rem 0.4rem;
+                }
+                
+                .earnings-amount h2 {
+                    font-size: 2rem;
+                }
+                
+                .breakdown-item {
+                    margin-bottom: 0.75rem !important;
                 }
             }
         </style>
@@ -1502,46 +1608,694 @@
         </script>
         
         <style>
-            .wallet-item {
-                transition: all 0.3s ease;
-                padding: 1rem;
-                border-radius: 0.5rem;
+            .bg-gradient-primary {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             }
             
-            .wallet-item:hover {
-                background-color: rgba(0, 0, 0, 0.02);
-                transform: translateY(-2px);
+            /* ===========================================
+               TOTAL EARNINGS HUB - FRESH DESIGN
+               =========================================== */
+            .new-earnings-card {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                border-radius: 20px;
+                padding: 30px;
+                margin-bottom: 20px;
+                color: white;
+                box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
             }
             
-            .wallet-item .btn {
-                min-width: 35px;
-                height: 35px;
+            .earnings-card-header {
+                margin-bottom: 25px;
+            }
+            
+            .earnings-title-section {
+                display: flex;
+                align-items: center;
+                gap: 20px;
+            }
+            
+            .earnings-icon-new {
+                background: rgba(255,255,255,0.2);
+                width: 70px;
+                height: 70px;
+                border-radius: 50%;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                transition: all 0.2s ease;
+                font-size: 28px;
             }
             
-            .wallet-item .btn:hover {
-                transform: scale(1.1);
+            .earnings-title-text h3 {
+                margin: 0;
+                font-size: 28px;
+                font-weight: bold;
             }
             
-            .card-header h5 {
-                font-weight: 600;
-                letter-spacing: 0.5px;
+            .earnings-title-text p {
+                margin: 5px 0 0 0;
+                opacity: 0.8;
+                font-size: 16px;
             }
             
-            .bg-opacity-10 {
-                background-opacity: 0.1 !important;
+            .earnings-content-area {
+                display: grid;
+                grid-template-columns: 2fr 1fr;
+                gap: 30px;
+                align-items: start;
             }
             
-            h4.fw-bold {
-                font-size: 1.25rem;
-                font-weight: 700;
+            .earnings-main-section {
+                background: rgba(255,255,255,0.1);
+                padding: 25px;
+                border-radius: 15px;
             }
             
-            .border-bottom {
-                border-bottom: 1px solid rgba(0, 0, 0, 0.1) !important;
+            .earnings-controls {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                margin-bottom: 20px;
+            }
+            
+            .income-label {
+                background: rgba(255,255,255,0.9);
+                color: #667eea;
+                padding: 8px 20px;
+                border-radius: 25px;
+                font-weight: bold;
+                font-size: 14px;
+            }
+            
+            .visibility-toggle {
+                background: transparent;
+                border: 2px solid rgba(255,255,255,0.5);
+                color: white;
+                padding: 8px 15px;
+                border-radius: 25px;
+                cursor: pointer;
+                transition: all 0.3s ease;
+            }
+            
+            .visibility-toggle:hover {
+                background: rgba(255,255,255,0.2);
+                border-color: white;
+            }
+            
+            .earnings-amount-display h1 {
+                font-size: 48px;
+                font-weight: bold;
+                margin: 0;
+                text-align: center;
+            }
+            
+            .earnings-breakdown-section {
+                background: rgba(255,255,255,0.1);
+                padding: 25px;
+                border-radius: 15px;
+            }
+            
+            .breakdown-heading {
+                margin-bottom: 20px;
+                font-size: 18px;
+                font-weight: bold;
+            }
+            
+            .breakdown-item-new {
+                display: flex;
+                align-items: center;
+                gap: 15px;
+                background: rgba(255,255,255,0.1);
+                padding: 15px;
+                border-radius: 12px;
+                margin-bottom: 15px;
+                transition: all 0.3s ease;
+            }
+            
+            .breakdown-item-new:hover {
+                background: rgba(255,255,255,0.2);
+                transform: translateX(5px);
+            }
+            
+            .breakdown-icon-container {
+                width: 45px;
+                height: 45px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: white;
+                font-size: 18px;
+            }
+            
+            .interest-bg { background: #28a745; }
+            .referral-bg { background: #17a2b8; }
+            .video-bg { background: #dc3545; }
+            
+            .breakdown-details {
+                flex: 1;
+            }
+            
+            .breakdown-type {
+                display: block;
+                font-size: 14px;
+                opacity: 0.8;
+            }
+            
+            .breakdown-amount {
+                display: block;
+                font-size: 18px;
+                font-weight: bold;
+                margin-top: 2px;
+            }
+            
+            /* ===========================================
+               ACCOUNT WALLETS - FRESH DESIGN
+               =========================================== */
+            .fresh-wallet-card {
+                background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+                border-radius: 20px;
+                padding: 25px;
+                color: white;
+                box-shadow: 0 10px 30px rgba(30, 60, 114, 0.3);
+                height: 100%;
+            }
+            
+            .wallet-card-header {
+                margin-bottom: 25px;
+            }
+            
+            .wallet-title {
+                font-size: 20px;
+                font-weight: bold;
+                margin: 0;
+            }
+            
+            .wallet-title i {
+                margin-right: 10px;
+                color: rgba(255,255,255,0.8);
+            }
+            
+            .wallet-item-fresh {
+                background: rgba(255,255,255,0.1);
+                padding: 20px;
+                border-radius: 15px;
+                margin-bottom: 20px;
+                display: flex;
+                align-items: center;
+                gap: 20px;
+                transition: all 0.3s ease;
+            }
+            
+            .wallet-item-fresh:hover {
+                background: rgba(255,255,255,0.2);
+                transform: translateY(-2px);
+            }
+            
+            .wallet-icon-section {
+                background: rgba(255,255,255,0.2);
+                width: 50px;
+                height: 50px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 20px;
+            }
+            
+            .wallet-info-section {
+                flex: 1;
+            }
+            
+            .wallet-label {
+                font-size: 16px;
+                margin-bottom: 10px;
+                opacity: 0.9;
+            }
+            
+            .wallet-amount-controls {
+                display: flex;
+                align-items: center;
+                gap: 15px;
+            }
+            
+            .wallet-toggle-btn {
+                background: transparent;
+                border: 2px solid rgba(255,255,255,0.5);
+                color: white;
+                padding: 6px 12px;
+                border-radius: 20px;
+                cursor: pointer;
+                transition: all 0.3s ease;
+            }
+            
+            .wallet-toggle-btn:hover {
+                background: rgba(255,255,255,0.2);
+                border-color: white;
+            }
+            
+            .wallet-amount-value, .wallet-amount-hidden {
+                font-size: 24px;
+                font-weight: bold;
+                margin: 0;
+            }
+            
+            /* ===========================================
+               TEAM BONUS & INVESTMENTS - FRESH DESIGN
+               =========================================== */
+            .fresh-earnings-card {
+                background: linear-gradient(135deg, #1fa2ff 0%, #12d8fa 50%, #a6ffcb 100%);
+                border-radius: 20px;
+                padding: 25px;
+                color: white;
+                box-shadow: 0 10px 30px rgba(31, 162, 255, 0.3);
+                height: 100%;
+            }
+            
+            .earnings-title {
+                font-size: 20px;
+                font-weight: bold;
+                margin: 0 0 25px 0;
+            }
+            
+            .earnings-title i {
+                margin-right: 10px;
+                color: rgba(255,255,255,0.8);
+            }
+            
+            .earnings-item-fresh {
+                background: rgba(255,255,255,0.1);
+                padding: 20px;
+                border-radius: 15px;
+                margin-bottom: 20px;
+                display: flex;
+                align-items: center;
+                gap: 20px;
+                transition: all 0.3s ease;
+            }
+            
+            .earnings-item-fresh:hover {
+                background: rgba(255,255,255,0.2);
+                transform: translateY(-2px);
+            }
+            
+            .earnings-icon-section {
+                background: rgba(255,255,255,0.2);
+                width: 50px;
+                height: 50px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 20px;
+            }
+            
+            .earnings-info-section {
+                flex: 1;
+            }
+            
+            .earnings-label {
+                font-size: 16px;
+                margin-bottom: 10px;
+                opacity: 0.9;
+            }
+            
+            .earnings-amount-controls {
+                display: flex;
+                align-items: center;
+                gap: 15px;
+            }
+            
+            .earnings-toggle-btn {
+                background: transparent;
+                border: 2px solid rgba(255,255,255,0.5);
+                color: white;
+                padding: 6px 12px;
+                border-radius: 20px;
+                cursor: pointer;
+                transition: all 0.3s ease;
+            }
+            
+            .earnings-toggle-btn:hover {
+                background: rgba(255,255,255,0.2);
+                border-color: white;
+            }
+            
+            .earnings-amount-value, .earnings-amount-hidden {
+                font-size: 24px;
+                font-weight: bold;
+                margin: 0;
+            }
+            
+            /* ===========================================
+               VIDEO ACCESS VAULT - FRESH DESIGN
+               =========================================== */
+            .fresh-video-vault {
+                background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 50%, #fecfef 100%);
+                border-radius: 20px;
+                padding: 30px;
+                color: white;
+                box-shadow: 0 10px 30px rgba(255, 154, 158, 0.3);
+            }
+            
+            .video-vault-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 30px;
+                flex-wrap: wrap;
+                gap: 20px;
+            }
+            
+            .video-vault-title-section {
+                display: flex;
+                align-items: center;
+                gap: 20px;
+            }
+            
+            .video-vault-icon {
+                background: rgba(255,255,255,0.2);
+                width: 60px;
+                height: 60px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 24px;
+            }
+            
+            .video-vault-title-text h5 {
+                margin: 0;
+                font-size: 24px;
+                font-weight: bold;
+            }
+            
+            .video-vault-title-text p {
+                margin: 5px 0 0 0;
+                opacity: 0.8;
+                font-size: 14px;
+            }
+            
+            .video-vault-badges {
+                display: flex;
+                gap: 10px;
+                flex-wrap: wrap;
+            }
+            
+            .vault-badge {
+                background: rgba(255,255,255,0.9);
+                color: #333;
+                padding: 8px 15px;
+                border-radius: 20px;
+                font-size: 14px;
+                font-weight: bold;
+                display: flex;
+                align-items: center;
+                gap: 5px;
+            }
+            
+            .vault-badge-plan {
+                background: #007bff;
+                color: white;
+            }
+            
+            .vault-badge-limit {
+                background: #17a2b8;
+                color: white;
+            }
+            
+            .video-plan-info {
+                background: rgba(255,255,255,0.1);
+                padding: 20px;
+                border-radius: 15px;
+                margin-bottom: 25px;
+            }
+            
+            .plan-info-content {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                flex-wrap: wrap;
+                gap: 20px;
+            }
+            
+            .plan-details h6 {
+                margin-bottom: 10px;
+                font-size: 16px;
+            }
+            
+            .plan-badges {
+                display: flex;
+                gap: 8px;
+                flex-wrap: wrap;
+            }
+            
+            .plan-badge {
+                background: rgba(255,255,255,0.9);
+                color: #333;
+                padding: 4px 12px;
+                border-radius: 15px;
+                font-size: 12px;
+                font-weight: bold;
+            }
+            
+            .plan-badge-success { background: #28a745; color: white; }
+            .plan-badge-info { background: #17a2b8; color: white; }
+            .plan-badge-warning { background: #ffc107; color: #333; }
+            
+            .plan-progress {
+                text-align: center;
+            }
+            
+            .progress-container {
+                background: rgba(255,255,255,0.3);
+                height: 8px;
+                border-radius: 4px;
+                width: 150px;
+                margin: 0 auto 5px auto;
+                overflow: hidden;
+            }
+            
+            .progress-bar-new {
+                height: 100%;
+                border-radius: 4px;
+                transition: all 0.3s ease;
+            }
+            
+            .progress-success { background: #28a745; }
+            .progress-danger { background: #dc3545; }
+            
+            .progress-text {
+                font-size: 12px;
+                opacity: 0.9;
+            }
+            
+            .video-stats-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 20px;
+                margin-bottom: 25px;
+            }
+            
+            .video-stat-item {
+                background: rgba(255,255,255,0.1);
+                padding: 20px;
+                border-radius: 15px;
+                display: flex;
+                align-items: center;
+                gap: 15px;
+                transition: all 0.3s ease;
+            }
+            
+            .video-stat-item:hover {
+                background: rgba(255,255,255,0.2);
+                transform: translateY(-2px);
+            }
+            
+            .video-stat-icon {
+                background: rgba(255,255,255,0.2);
+                width: 50px;
+                height: 50px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 20px;
+            }
+            
+            .video-stat-content h4 {
+                margin: 0;
+                font-size: 24px;
+                font-weight: bold;
+            }
+            
+            .video-stat-content p {
+                margin: 5px 0 0 0;
+                font-size: 14px;
+                opacity: 0.8;
+            }
+            
+            .video-actions {
+                text-align: center;
+            }
+            
+            .video-action-buttons {
+                display: flex;
+                justify-content: center;
+                gap: 15px;
+                margin-bottom: 20px;
+                flex-wrap: wrap;
+            }
+            
+            .video-action-btn {
+                background: rgba(255,255,255,0.9);
+                color: #333;
+                padding: 12px 20px;
+                border-radius: 25px;
+                text-decoration: none;
+                font-weight: bold;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                transition: all 0.3s ease;
+            }
+            
+            .video-action-btn:hover {
+                background: white;
+                transform: translateY(-2px);
+                box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+                color: #333;
+                text-decoration: none;
+            }
+            
+            .video-btn-primary { background: #007bff; color: white; }
+            .video-btn-secondary { background: #6c757d; color: white; }
+            .video-btn-success { background: #28a745; color: white; }
+            
+            .action-badge {
+                background: rgba(255,255,255,0.2);
+                padding: 2px 8px;
+                border-radius: 10px;
+                font-size: 11px;
+            }
+            
+            .video-alert {
+                background: rgba(255,255,255,0.1);
+                padding: 15px;
+                border-radius: 10px;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                flex-wrap: wrap;
+            }
+            
+            .video-alert-warning {
+                border-left: 4px solid #ffc107;
+            }
+            
+            .video-alert-info {
+                border-left: 4px solid #17a2b8;
+            }
+            
+            .alert-action-btn {
+                background: rgba(255,255,255,0.2);
+                color: white;
+                padding: 5px 15px;
+                border-radius: 15px;
+                text-decoration: none;
+                font-size: 12px;
+                margin-left: 10px;
+            }
+            
+            .alert-action-btn:hover {
+                background: rgba(255,255,255,0.3);
+                color: white;
+                text-decoration: none;
+            }
+            
+            /* ===========================================
+               RESPONSIVE DESIGN
+               =========================================== */
+            @media (max-width: 992px) {
+                .earnings-content-area {
+                    grid-template-columns: 1fr;
+                    gap: 20px;
+                }
+                
+                .video-vault-header {
+                    flex-direction: column;
+                    align-items: flex-start;
+                }
+                
+                .plan-info-content {
+                    flex-direction: column;
+                    align-items: flex-start;
+                }
+                
+                .video-stats-grid {
+                    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                    gap: 15px;
+                }
+                
+                .video-action-buttons {
+                    flex-direction: column;
+                    align-items: center;
+                    gap: 10px;
+                }
+                
+                .video-action-btn {
+                    width: 200px;
+                    justify-content: center;
+                }
+            }
+            
+            @media (max-width: 768px) {
+                .earnings-title-section {
+                    flex-direction: column;
+                    text-align: center;
+                    gap: 15px;
+                }
+                
+                .video-vault-title-section {
+                    flex-direction: column;
+                    text-align: center;
+                    gap: 15px;
+                }
+                
+                .video-stats-grid {
+                    grid-template-columns: 1fr;
+                }
+                
+                .wallet-item-fresh, .earnings-item-fresh {
+                    flex-direction: column;
+                    text-align: center;
+                    gap: 15px;
+                }
+                
+                .wallet-amount-controls, .earnings-amount-controls {
+                    flex-direction: column;
+                    gap: 10px;
+                }
+            }
+            
+            /* Legacy styles for other sections */
+            .card {
+                transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+            }
+            
+            .card:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+            }
+            
+            .quick-action-card {
+                transition: all 0.3s ease;
+                cursor: pointer;
+                border: none;
+            }
+            
+            .quick-action-card:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 12px 20px rgba(0,0,0,0.15);
             }
         </style>
     @endpush

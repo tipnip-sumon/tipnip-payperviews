@@ -1,73 +1,151 @@
 <x-smart_layout>
     @section('title', $pageTitle)
     @section('content')
-        <!-- Welcome Section -->
+        <style>
+            /* Theme-adaptive text colors */
+            .theme-text {
+                color: #000 !important; /* Black for light theme */
+            }
+            .theme-text-header {
+                color: #000 !important; /* Black for light theme */
+                font-weight: 700 !important;
+            }
+            .theme-text-content {
+                color: #000 !important; /* Black for light theme */
+                font-weight: 600 !important;
+            }
+            .theme-text-muted {
+                color: #444 !important; /* Dark gray for light theme */
+                font-weight: 500 !important;
+            }
+            
+            /* Theme-adaptive table headers */
+            .theme-table-header {
+                background-color: #f8f9fa !important; /* Light background for light theme */
+                color: #000 !important;
+                font-weight: 700 !important;
+            }
+            
+            /* Dark theme overrides */
+            [data-theme="dark"] .theme-text,
+            .dark-theme .theme-text,
+            body.dark .theme-text {
+                color: #fff !important; /* White for dark theme */
+            }
+            [data-theme="dark"] .theme-text-header,
+            .dark-theme .theme-text-header,
+            body.dark .theme-text-header {
+                color: #fff !important; /* White for dark theme */
+                font-weight: 700 !important;
+            }
+            [data-theme="dark"] .theme-text-content,
+            .dark-theme .theme-text-content,
+            body.dark .theme-text-content {
+                color: #fff !important; /* White for dark theme */
+                font-weight: 600 !important;
+            }
+            [data-theme="dark"] .theme-text-muted,
+            .dark-theme .theme-text-muted,
+            body.dark .theme-text-muted {
+                color: #ccc !important; /* Light gray for dark theme */
+                font-weight: 500 !important;
+            }
+            
+            /* Dark theme table header overrides */
+            [data-theme="dark"] .theme-table-header,
+            .dark-theme .theme-table-header,
+            body.dark .theme-table-header {
+                background-color: #ffffff !important; /* White background for dark theme */
+                color: #000 !important; /* Black text on white background */
+                font-weight: 700 !important;
+            }
+        </style>
+        <!-- Main Statistics Cards -->
         <div class="row mb-4 my-4">
+            <!-- New Dashing Welcome Banner -->
             <div class="col-12">
-                <div class="card custom-card bg-gradient-primary">
-                    <div class="card-body">
-                        <div class="d-flex align-items-center justify-content-between">
-                            <div class="flex-grow-1">
-                                <h4 class="text-white mb-1 fw-bold">Welcome back, {{ auth()->user()->firstname }} {{ auth()->user()->lastname }}!</h4> 
-                                <p class="text-white-75 mb-0">Here's what's happening with your account today.</p>
-                                <!-- Session Status -->
-                                <div class="mt-2" id="session-status-container">
-                                    <small class="badge bg-success">
-                                        <i class="fas fa-shield-alt me-1"></i>
-                                        Secure Session Active - Only one login allowed
-                                    </small>
-                                    @if(isset($user->session_created_at) && $user->session_created_at)
-                                        <small class="text-white-50 ms-2">
-                                            Session started: {{ $user->session_created_at->format('M d, h:i A') }}
-                                        </small>
-                                    @endif
-                                    
-                                    <!-- Session Notifications Alert - Dynamic Content -->
-                                    {{--
-                                    <div id="session-notifications-area">
-                                        @php
-                                            $unreadNotifications = \Illuminate\Support\Facades\DB::table('user_session_notifications')
-                                                ->where('user_id', $user->id)
-                                                ->where('is_read', false)
-                                                ->count();
-                                        @endphp
-                                        
-                                        @if($unreadNotifications > 0)
-                                            <div class="mt-2">
-                                                <span class="badge bg-warning text-dark" onclick="showSessionNotifications()" style="cursor: pointer;">
-                                                    <i class="fas fa-exclamation-triangle me-1"></i>
-                                                    {{ $unreadNotifications }} Security Alert{{ $unreadNotifications > 1 ? 's' : '' }}
-                                                </span>
+                <div class="card border-0 shadow-lg" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%); border-radius: 20px; overflow: hidden;">
+                    <div class="card-body p-0">
+                        <!-- Desktop Version -->
+                        <div class="row align-items-center g-0 d-none d-lg-flex">
+                            <div class="col-lg-8 p-5">
+                                <div class="text-white">
+                                    <h2 class="mb-3 fw-bold" style="text-shadow: 0 2px 4px rgba(0,0,0,0.3);">
+                                        <i class="fas fa-rocket me-3"></i>Welcome to Your Earnings Dashboard!
+                                    </h2>
+                                    <p class="lead mb-4" style="text-shadow: 0 1px 3px rgba(0,0,0,0.3); opacity: 0.95;">
+                                        Track your investments, manage your portfolio, and watch your earnings grow with our advanced platform.
+                                    </p>
+                                    <div class="row">
+                                        <div class="col-md-4 mb-3">
+                                            <div class="d-flex align-items-center">
+                                                <div class="bg-white bg-opacity-20 rounded-circle p-2 me-3">
+                                                    <i class="fas fa-chart-line text-white"></i>
+                                                </div>
+                                                <div>
+                                                    <h6 class="text-white mb-0 fw-bold">Smart Investing</h6>
+                                                    <small class="text-white-50">AI-powered strategies</small>
+                                                </div>
                                             </div>
-                                        @endif
+                                        </div>
+                                        <div class="col-md-4 mb-3">
+                                            <div class="d-flex align-items-center">
+                                                <div class="bg-white bg-opacity-20 rounded-circle p-2 me-3">
+                                                    <i class="fas fa-shield-alt text-white"></i>
+                                                </div>
+                                                <div>
+                                                    <h6 class="text-white mb-0 fw-bold">Secure Platform</h6>
+                                                    <small class="text-white-50">Bank-level security</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 mb-3">
+                                            <div class="d-flex align-items-center">
+                                                <div class="bg-white bg-opacity-20 rounded-circle p-2 me-3">
+                                                    <i class="fas fa-clock text-white"></i>
+                                                </div>
+                                                <div>
+                                                    <h6 class="text-white mb-0 fw-bold">24/7 Access</h6>
+                                                    <small class="text-white-50">Always available</small>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
-                                    --}}
                                 </div>
                             </div>
-                            <div class="d-flex align-items-center">
-                                <a href="{{ route('deposit.index') }}" class="btn btn-warning btn-lg me-3 shadow-sm">
-                                    <i class="fas fa-plus-circle me-2"></i>Add Funds
-                                </a>
+                            <div class="col-lg-4 p-4 text-center">
+                                <div class="text-white">
+                                    <div class="mb-4">
+                                        <i class="fas fa-wallet fa-4x mb-3" style="opacity: 0.8;"></i>
+                                        <h5 class="fw-bold">Ready to Start?</h5>
+                                    </div>
+                                    <div class="d-grid gap-3">
+                                        <a href="{{ route('deposit.index') }}" class="btn btn-light btn-lg fw-bold shadow-sm">
+                                            <i class="fas fa-plus-circle me-2"></i>Add Funds
+                                        </a>
+                                        <a href="{{ route('invest.index') }}" class="btn btn-outline-light btn-lg fw-bold">
+                                            <i class="fas fa-chart-line me-2"></i>Start Investing
+                                        </a>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <!-- Main Statistics Cards -->
-        <div class="row mb-4">
-            <!-- Add Funds Call-to-Action -->
-            <div class="col-12 mb-3">
-                <div class="card border-0 bg-gradient-success text-white shadow">
-                    <div class="card-body p-4">
-                        <div class="row align-items-center">
-                            <div class="col-lg-8">
-                                <h4 class="mb-2"><i class="fas fa-rocket me-2"></i>Ready to Boost Your Earnings?</h4>
-                                <p class="mb-0">Add funds to your account to unlock premium investment plans with higher daily video limits and earning rates!</p>
+                        
+                        <!-- Mobile Version - Simple Banner -->
+                        <div class="d-block d-lg-none p-4 text-center text-white">
+                            <div class="mb-3">
+                                <i class="fas fa-rocket fa-2x mb-2" style="opacity: 0.9;"></i>
+                                <h4 class="fw-bold mb-2" style="text-shadow: 0 2px 4px rgba(0,0,0,0.3);">Welcome Back!</h4>
+                                <p class="mb-3" style="text-shadow: 0 1px 3px rgba(0,0,0,0.3); opacity: 0.9;">
+                                    Track your earnings and grow your portfolio
+                                </p>
                             </div>
-                            <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
-                                <a href="{{ route('invest.index') }}" class="btn btn-light btn-lg fw-bold px-4 shadow-sm">
-                                    <i class="fas fa-credit-card me-2"></i>Deposit Now
+                            <div class="d-grid gap-2">
+                                <a href="{{ route('deposit.index') }}" class="btn btn-light fw-bold">
+                                    <i class="fas fa-plus-circle me-2"></i>Add Funds
+                                </a>
+                                <a href="{{ route('invest.index') }}" class="btn btn-outline-light fw-bold">
+                                    <i class="fas fa-chart-line me-2"></i>Start Investing
                                 </a>
                             </div>
                         </div>
@@ -76,138 +154,138 @@
             </div>
             
             <div class="col-sm-6 col-lg-3 mb-3">
-                <div class="card custom-card border-0 shadow-sm balance-card" data-stat="current-balance">
+                <div class="card border-0 shadow-sm balance-card" data-stat="current-balance" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 15px;">
                     <div class="card-body">
                         <div class="d-flex align-items-center">
                             <div class="flex-grow-1">
                                 <div class="d-flex align-items-center justify-content-between mb-1">
-                                    <h6 class="text-muted mb-0">Account Wallet</h6>
-                                    <button class="btn btn-sm btn-outline-secondary balance-toggle" onclick="toggleBalanceVisibility('current-balance')" title="Toggle Balance Visibility">
-                                        <i class="fas fa-eye balance-toggle-icon"></i>
-                                    </button>
+                                    <h6 class="text-white mb-0 fw-bold">💙 Account Wallet</h6>
                                 </div>
-                                <h3 class="mb-0 fw-bold balance-amount" style="color: #0d6efd;" id="current-balance-amount">
+                                <h3 class="mb-0 fw-bold balance-amount text-white d-flex align-items-center" id="current-balance-amount">
                                     <span class="balance-value">${{ showAmount($currentBalance) }}</span>
-                                    <span class="balance-hidden" style="display: none;">****</span>
+                                    <span class="balance-hidden" style="display: none;">••••••••</span>
+                                    <button class="btn btn-sm btn-link text-white ms-2 p-0 balance-quick-toggle" onclick="toggleBalanceVisibility('current-balance')" style="font-size: 0.8rem; opacity: 0.7;">
+                                        <i class="fas fa-eye balance-quick-icon"></i>
+                                    </button>
                                 </h3>
                                 <div class="d-flex align-items-center mt-1">
-                                    <small class="text-muted">Updated: <span id="current-balance-time">{{ now()->format('H:i') }}</span></small>
+                                    <small class="text-white-50">Updated: <span id="current-balance-time">{{ now()->format('H:i') }}</span></small>
                                     <div class="loading-indicator ms-2" style="display: none;">
-                                        <i class="fas fa-spinner fa-spin text-primary"></i>
+                                        <i class="fas fa-spinner fa-spin text-white"></i>
                                     </div>
                                 </div>
                             </div>
-                            <div class="bg-primary-light rounded-circle p-3">
-                                <i class="fas fa-wallet fa-lg" style="color: #0d6efd;"></i>
+                            <div class="bg-white bg-opacity-20 rounded-circle p-3">
+                                <i class="fas fa-wallet fa-lg text-white"></i>
                             </div>
                         </div>
-                        <div class="progress mt-2" style="height: 4px;">
-                            <div class="progress-bar bg-primary" role="progressbar" style="width: 100%"></div>
+                        <div class="progress mt-2" style="height: 4px; background: rgba(255,255,255,0.2);">
+                            <div class="progress-bar" role="progressbar" style="width: 100%; background: white;"></div>
                         </div>
                     </div>
                 </div>
             </div>
             <div class="col-sm-6 col-lg-3 mb-3">
-                <div class="card custom-card border-0 shadow-sm balance-card" data-stat="team-bonus">
+                <div class="card border-0 shadow-sm balance-card" data-stat="team-bonus" style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); border-radius: 15px;">
                     <div class="card-body">
                         <div class="d-flex align-items-center">
                             <div class="flex-grow-1">
                                 <div class="d-flex align-items-center justify-content-between mb-1">
-                                    <h6 class="text-muted mb-0">Team Bonus</h6>
-                                    <button class="btn btn-sm btn-outline-secondary balance-toggle" onclick="toggleBalanceVisibility('team-bonus')" title="Toggle Balance Visibility">
-                                        <i class="fas fa-eye balance-toggle-icon"></i>
-                                    </button>
+                                    <h6 class="text-white mb-0 fw-bold">💛 Team Bonus</h6>
                                 </div>
-                                <h3 class="mb-0 fw-bold balance-amount" style="color: #ffc107;" id="team-bonus-amount">
+                                <h3 class="mb-0 fw-bold balance-amount text-white d-flex align-items-center" id="team-bonus-amount">
                                     <span class="balance-value">${{ showAmount($referral_earnings) }}</span>
-                                    <span class="balance-hidden" style="display: none;">****</span>
+                                    <span class="balance-hidden" style="display: none;">••••••••</span>
+                                    <button class="btn btn-sm btn-link text-white ms-2 p-0 balance-quick-toggle" onclick="toggleBalanceVisibility('team-bonus')" style="font-size: 0.8rem; opacity: 0.7;">
+                                        <i class="fas fa-eye balance-quick-icon"></i>
+                                    </button>
                                 </h3>
                                 <div class="d-flex align-items-center mt-1">
-                                    <small class="text-success">
+                                    <small class="text-white-50">
                                         <i class="fas fa-arrow-up me-1"></i>
                                         Monthly: ${{ showAmount($monthly_referral_earnings ?? 0) }}
                                     </small>
                                     <div class="loading-indicator ms-2" style="display: none;">
-                                        <i class="fas fa-spinner fa-spin text-warning"></i>
+                                        <i class="fas fa-spinner fa-spin text-white"></i>
                                     </div>
                                 </div>
                             </div>
-                            <div class="bg-warning-light rounded-circle p-3">
-                                <i class="fas fa-users fa-lg" style="color: #ffc107;"></i>
+                            <div class="bg-white bg-opacity-20 rounded-circle p-3">
+                                <i class="fas fa-users fa-lg text-white"></i>
                             </div>
                         </div>
-                        <div class="progress mt-2" style="height: 4px;">
-                            <div class="progress-bar bg-warning" role="progressbar" style="width: {{ $total_referrals ? min(100, ($total_referrals / 10) * 100) : 0 }}%"></div>
+                        <div class="progress mt-2" style="height: 4px; background: rgba(255,255,255,0.2);">
+                            <div class="progress-bar" role="progressbar" style="width: {{ $total_referrals ? min(100, ($total_referrals / 10) * 100) : 0 }}%; background: white;"></div>
                         </div>
                     </div>
                 </div>
             </div>
             <div class="col-sm-6 col-lg-3 mb-3">
-                <div class="card custom-card border-0 shadow-sm balance-card" data-stat="total-earnings">
+                <div class="card border-0 shadow-sm balance-card" data-stat="total-earnings" style="background: linear-gradient(135deg, #0f7b0f 0%, #155d27 50%, #1e7e34 100%); border-radius: 15px;">
                     <div class="card-body">
                         <div class="d-flex align-items-center">
                             <div class="flex-grow-1">
                                 <div class="d-flex align-items-center justify-content-between mb-1">
-                                    <h6 class="text-muted mb-0">Total Earnings Hub</h6>
-                                    <button class="btn btn-sm btn-outline-secondary balance-toggle" onclick="toggleBalanceVisibility('total-earnings')" title="Toggle Balance Visibility">
-                                        <i class="fas fa-eye balance-toggle-icon"></i>
-                                    </button>
+                                    <h6 class="text-white mb-0 fw-bold">💰 Total Earnings Hub</h6>
                                 </div>
-                                <h3 class="mb-0 fw-bold balance-amount" style="color: #198754;" id="total-earnings-amount">
+                                <h3 class="mb-0 fw-bold balance-amount text-white d-flex align-items-center" id="total-earnings-amount">
                                     <span class="balance-value">${{ showAmount(auth()->user()->interest_wallet) }}</span>
-                                    <span class="balance-hidden" style="display: none;">****</span>
+                                    <span class="balance-hidden" style="display: none;">••••••••</span>
+                                    <button class="btn btn-sm btn-link text-white ms-2 p-0 balance-quick-toggle" onclick="toggleBalanceVisibility('total-earnings')" style="font-size: 0.8rem; opacity: 0.7;">
+                                        <i class="fas fa-eye balance-quick-icon"></i>
+                                    </button>
                                 </h3>
                                 <div class="d-flex align-items-center mt-1">
-                                    <small class="text-success">
+                                    <small class="text-white-50">
                                         <i class="fas fa-coins me-1"></i>
                                         All Income: {{ $growth_percentage ?? 0 }}%
                                     </small>
                                     <div class="loading-indicator ms-2" style="display: none;">
-                                        <i class="fas fa-spinner fa-spin text-success"></i>
+                                        <i class="fas fa-spinner fa-spin text-white"></i>
                                     </div>
                                 </div>
                             </div>
-                            <div class="bg-success-light rounded-circle p-3">
-                                <i class="fas fa-coins fa-lg" style="color: #198754;"></i>
+                            <div class="bg-white bg-opacity-20 rounded-circle p-3">
+                                <i class="fas fa-coins fa-lg text-white"></i>
                             </div>
                         </div>
-                        <div class="progress mt-2" style="height: 4px;">
-                            <div class="progress-bar bg-success" role="progressbar" style="width: {{ min(100, ($interests ?? 0) / max(1, $totalInvest ?? 1) * 100) }}%"></div>
+                        <div class="progress mt-2" style="height: 4px; background: rgba(255,255,255,0.2);">
+                            <div class="progress-bar" role="progressbar" style="width: {{ min(100, ($interests ?? 0) / max(1, $totalInvest ?? 1) * 100) }}%; background: white;"></div>
                         </div>
                     </div>
                 </div>
             </div>
             <div class="col-sm-6 col-lg-3 mb-3">
-                <div class="card custom-card border-0 shadow-sm balance-card" data-stat="video-access-vault">
+                <div class="card border-0 shadow-sm balance-card" data-stat="video-access-vault" style="background: linear-gradient(135deg, #6f2c91 0%, #9b339b 50%, #b5179e 100%); border-radius: 15px;">
                     <div class="card-body">
                         <div class="d-flex align-items-center">
                             <div class="flex-grow-1">
                                 <div class="d-flex align-items-center justify-content-between mb-1">
-                                    <h6 class="text-muted mb-0">Video Access Vault</h6>
-                                    <button class="btn btn-sm btn-outline-secondary balance-toggle" onclick="toggleBalanceVisibility('video-access-vault')" title="Toggle Balance Visibility">
-                                        <i class="fas fa-eye balance-toggle-icon"></i>
-                                    </button>
+                                    <h6 class="text-white mb-0 fw-bold">💎 Video Access Vault</h6>
                                 </div>
-                                <h3 class="mb-0 fw-bold balance-amount" style="color: #0dcaf0;" id="video-access-amount">
+                                <h3 class="mb-0 fw-bold balance-amount text-white d-flex align-items-center" id="video-access-amount">
                                     <span class="balance-value">${{ showAmount($totalInvest) }}</span>
-                                    <span class="balance-hidden" style="display: none;">****</span>
+                                    <span class="balance-hidden" style="display: none;">••••••••</span>
+                                    <button class="btn btn-sm btn-link text-white ms-2 p-0 balance-quick-toggle" onclick="toggleBalanceVisibility('video-access-vault')" style="font-size: 0.8rem; opacity: 0.7;">
+                                        <i class="fas fa-eye balance-quick-icon"></i>
+                                    </button>
                                 </h3>
                                 <div class="d-flex align-items-center mt-1">
-                                    <small class="text-info">
+                                    <small class="text-white-50">
                                         <i class="fas fa-play-circle me-1"></i>
                                         Active Plans: ${{ showAmount($runningInvests ?? 0) }}
                                     </small>
                                     <div class="loading-indicator ms-2" style="display: none;">
-                                        <i class="fas fa-spinner fa-spin text-info"></i>
+                                        <i class="fas fa-spinner fa-spin text-white"></i>
                                     </div>
                                 </div>
                             </div>
-                            <div class="bg-info-light rounded-circle p-3">
-                                <i class="fas fa-video fa-lg" style="color: #0dcaf0;"></i>
+                            <div class="bg-white bg-opacity-20 rounded-circle p-3">
+                                <i class="fas fa-video fa-lg text-white"></i>
                             </div>
                         </div>
-                        <div class="progress mt-2" style="height: 4px;">
-                            <div class="progress-bar bg-info" role="progressbar" style="width: {{ $totalInvest ? min(100, ($runningInvests ?? 0) / max(1, $totalInvest) * 100) : 0 }}%"></div>
+                        <div class="progress mt-2" style="height: 4px; background: rgba(255,255,255,0.2);">
+                            <div class="progress-bar" role="progressbar" style="width: {{ $totalInvest ? min(100, ($runningInvests ?? 0) / max(1, $totalInvest) * 100) : 0 }}%; background: white;"></div>
                         </div>
                     </div>
                 </div>
@@ -215,9 +293,9 @@
         </div>
 
         <!-- Lottery System Highlight -->
-        <div class="row mb-4">
+        <div class="row">
             <div class="col-12">
-                <div class="card border-0 shadow-lg" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <div class="card border-0 shadow-lg" style="background: linear-gradient(135deg, #2c3e50 0%, #34495e 50%, #2c3e50 100%); border-radius: 15px;">
                     <div class="card-body text-white p-4">
                         <div class="row align-items-center">
                             <div class="col-lg-8">
@@ -226,8 +304,8 @@
                                         <i class="fas fa-ticket-alt fa-2x text-white"></i>
                                     </div>
                                     <div>
-                                        <h3 class="text-white mb-1">🎰 Try Your Luck with Our Lottery!</h3>
-                                        <p class="text-white-50 mb-0">Buy lottery tickets and win amazing prizes. Weekly draws with guaranteed winners!</p>
+                                        <h3 class="text-white mb-1" style="text-shadow: 0 3px 6px rgba(0,0,0,0.9), 0 1px 3px rgba(0,0,0,0.8); font-weight: 800; color: #ffffff !important;">🎰 Try Your Luck with Our Lottery!</h3>
+                                        <p class="text-white mb-0" style="text-shadow: 0 2px 4px rgba(0,0,0,0.9), 0 1px 2px rgba(0,0,0,0.8); color: #ffffff !important; font-weight: 500;">Buy lottery tickets and win amazing prizes. Weekly draws with guaranteed winners!</p>
                                     </div>
                                 </div>
                                 <div class="row">
@@ -240,14 +318,14 @@
                                     @endphp
                                     <div class="col-sm-4 mb-2">
                                         <div class="text-center">
-                                            <h4 class="text-white mb-0">${{ $settings ? number_format($settings->ticket_price, 2) : '2.00' }}</h4>
-                                            <small class="text-white-50">Per Ticket</small>
+                                            <h4 class="text-white mb-0" style="text-shadow: 0 3px 6px rgba(0,0,0,0.9), 0 1px 3px rgba(0,0,0,0.8); font-weight: 800; color: #ffffff !important;">${{ $settings ? number_format($settings->ticket_price, 2) : '2.00' }}</h4>
+                                            <small class="text-white" style="text-shadow: 0 2px 4px rgba(0,0,0,0.9); color: #ffffff !important; font-weight: 600;">Per Ticket</small>
                                         </div>
                                     </div>
                                     <div class="col-sm-4 mb-2">
                                         <div class="text-center">
-                                            <h4 class="text-white mb-0">{{ $userTickets }}</h4>
-                                            <small class="text-white-50">Your Tickets</small>
+                                            <h4 class="text-white mb-0" style="text-shadow: 0 3px 6px rgba(0,0,0,0.9), 0 1px 3px rgba(0,0,0,0.8); font-weight: 800; color: #ffffff !important;">{{ $userTickets }}</h4>
+                                            <small class="text-white" style="text-shadow: 0 2px 4px rgba(0,0,0,0.9); color: #ffffff !important; font-weight: 600;">Your Tickets</small>
                                         </div>
                                     </div>
                                     <div class="col-sm-4 mb-2">
@@ -260,8 +338,8 @@
                                                     $actualPrizePool = $currentDraw->total_prize_pool;
                                                 }
                                             @endphp
-                                            <h4 class="text-white mb-0">${{ number_format($actualPrizePool, 2) }}</h4>
-                                            <small class="text-white-50">Prize Pool</small>
+                                            <h4 class="text-white mb-0" style="text-shadow: 0 3px 6px rgba(0,0,0,0.9), 0 1px 3px rgba(0,0,0,0.8); font-weight: 800; color: #ffffff !important;">${{ number_format($actualPrizePool, 2) }}</h4>
+                                            <small class="text-white" style="text-shadow: 0 2px 4px rgba(0,0,0,0.9); color: #ffffff !important; font-weight: 600;">Prize Pool</small>
                                         </div>
                                     </div>
                                 </div>
@@ -282,10 +360,10 @@
                                             <i class="fas fa-user-check me-2"></i>Complete KYC First
                                         </a>
                                     @endif
-                                    <a href="{{ route('lottery.my.tickets') }}" class="btn btn-outline-light">
+                                    <a href="{{ route('lottery.my.tickets') }}" class="btn btn-light btn-sm fw-bold shadow">
                                         <i class="fas fa-list me-2"></i>My Tickets
                                     </a>
-                                    <a href="{{ route('lottery.results') }}" class="btn btn-outline-light">
+                                    <a href="{{ route('lottery.results') }}" class="btn btn-light btn-sm fw-bold shadow">
                                         <i class="fas fa-trophy me-2"></i>View Results
                                     </a>
                                 </div>
@@ -301,7 +379,7 @@
             <div class="col-12">
                 <div class="card custom-card border-0 shadow-sm">
                     <div class="card-header bg-transparent border-bottom d-flex justify-content-between align-items-center">
-                        <h5 class="card-title mb-0" style="color: #495057;">
+                        <h5 class="card-title mb-0 theme-text-header">
                             Video View System Income 
                             <span class="badge bg-info ms-2">
                                 <i class="fas fa-play me-1"></i>Active
@@ -335,12 +413,12 @@
                                             <i class="fas fa-video fa-2x text-primary"></i>
                                         </div>
                                         <div class="flex-grow-1">
-                                            <h6 class="mb-1 text-primary">
+                                            <h6 class="mb-1 text-primary" style="font-weight: 700; color: #0056b3 !important;">
                                                 <i class="fas fa-play-circle me-1"></i>
                                                 Video Earnings Dashboard
                                             </h6>
-                                            <p class="mb-0 small text-muted">
-                                                📺 Track your daily video progress • � Monitor earnings • � View statistics
+                                            <p class="mb-0 small theme-text-muted">
+                                                📺 Track your daily video progress • 💰 Monitor earnings • 📊 View statistics
                                             </p>
                                         </div>
                                         <div class="text-end">
@@ -356,7 +434,7 @@
                                     <div class="alert alert-light border border-primary shadow-sm">
                                         <div class="d-flex justify-content-between align-items-center flex-wrap">
                                             <div>
-                                                <h6 class="mb-1"><i class="fas fa-film text-primary"></i> Your Plan: <span class="text-primary">{{ $activePlan->name }}</span></h6>
+                                                <h6 class="mb-1 theme-text-header"><i class="fas fa-film text-primary"></i> Your Plan: <span class="text-primary" style="font-weight: 700;">{{ $activePlan->name }}</span></h6>
                                                 <p class="mb-0 small">
                                                     <span class="badge bg-success me-1">Daily Limit: {{ $dailyLimit }} videos</span>
                                                     <span class="badge bg-info me-1">Rate: ${{ number_format($videoRate, 4) }}/video</span>
@@ -368,7 +446,7 @@
                                                     <div class="progress-bar {{ $remainingViews == 0 ? 'bg-danger' : 'bg-success' }}" role="progressbar" 
                                                         style="width: {{ min(100, ($todayViews / max(1, $dailyLimit)) * 100) }}%"></div>
                                                 </div>
-                                                <small class="d-block text-center mt-1">
+                                                <small class="d-block text-center mt-1 theme-text-content">
                                                     {{ $remainingViews }} videos remaining today
                                                 </small>
                                             </div>
@@ -381,10 +459,10 @@
                                     <div class="mb-2">
                                         <i class="fas fa-play-circle fa-2x" style="color: #dc3545;"></i>
                                     </div>
-                                    <h4 class="mb-1 fw-bold" style="color: #dc3545;">
+                                    <h4 class="mb-1 fw-bold" style="color: #dc3545; font-weight: 800;">
                                         {{ $totalVideosWatched ?? 0 }}
                                     </h4>
-                                    <p class="text-muted mb-0 small">Videos Watched</p>
+                                    <p class="mb-0 small theme-text-content">Videos Watched</p>
                                 </div>
                             </div>
                             <div class="col-sm-6 col-lg-3 mb-3">
@@ -392,10 +470,10 @@
                                     <div class="mb-2">
                                         <i class="fas fa-dollar-sign fa-2x" style="color: #28a745;"></i>
                                     </div>
-                                    <h4 class="mb-1 fw-bold" style="color: #28a745;">
+                                    <h4 class="mb-1 fw-bold" style="color: #28a745; font-weight: 800;">
                                         ${{ showAmount($videoEarnings ?? 0) }}
                                     </h4>
-                                    <p class="text-muted mb-0 small">Video Earnings</p>
+                                    <p class="mb-0 small theme-text-content">Video Earnings</p>
                                 </div>
                             </div>
                             <div class="col-sm-6 col-lg-3 mb-3">
@@ -403,13 +481,13 @@
                                     <div class="mb-2">
                                         <i class="fas fa-calendar-day fa-2x" style="color: #17a2b8;"></i>
                                     </div>
-                                    <h4 class="mb-1 fw-bold" style="color: #17a2b8;">
+                                    <h4 class="mb-1 fw-bold" style="color: #17a2b8; font-weight: 800;">
                                         {{ $todayViews }}
                                         @if($dailyLimit > 0)
-                                            <small class="text-muted">/{{ $dailyLimit }}</small>
+                                            <small class="theme-text-muted">/{{ $dailyLimit }}</small>
                                         @endif
                                     </h4>
-                                    <p class="text-muted mb-0 small">Today's Views</p>
+                                    <p class="mb-0 small theme-text-content">Today's Views</p>
                                 </div>
                             </div>
                             <div class="col-sm-6 col-lg-3 mb-3">
@@ -417,10 +495,10 @@
                                     <div class="mb-2">
                                         <i class="fas fa-clock fa-2x" style="color: #6f42c1;"></i>
                                     </div>
-                                    <h4 class="mb-1 fw-bold" style="color: #6f42c1;">
+                                    <h4 class="mb-1 fw-bold" style="color: #6f42c1; font-weight: 800;">
                                         ${{ number_format($todayEarnings ?? 0, 4) }}
                                     </h4>
-                                    <p class="text-muted mb-0 small">Today's Earnings</p>
+                                    <p class="mb-0 small theme-text-content">Today's Earnings</p>
                                 </div>
                             </div>
                         </div>
@@ -468,28 +546,28 @@
             <div class="col-lg-6 mb-3">
                 <div class="card custom-card border-0 shadow-sm">
                     <div class="card-header bg-transparent border-bottom">
-                        <h5 class="card-title mb-0" style="color: #495057;">Investment Overview</h5>
+                        <h5 class="card-title mb-0 theme-text-header">Investment Overview</h5>
                     </div>
                     <div class="card-body">
                         <div class="row">
                             <div class="col-6">
                                 <div class="text-center p-3">
-                                    <h4 class="mb-1 fw-bold" style="color: #198754;">${{ showAmount($runningInvests) }}</h4>
-                                    <p class="text-muted mb-0 small">Running Investments</p>
+                                    <h4 class="mb-1 fw-bold" style="color: #198754; font-weight: 800;">${{ showAmount($runningInvests) }}</h4>
+                                    <p class="mb-0 small theme-text-content">Running Investments</p>
                                 </div>
                             </div>
                             <div class="col-6">
                                 <div class="text-center p-3">
-                                    <h4 class="mb-1 fw-bold" style="color: #6c757d;">${{ showAmount($completedInvests) }}</h4>
-                                    <p class="text-muted mb-0 small">Completed Investments</p>
+                                    <h4 class="mb-1 fw-bold" style="color: #6c757d; font-weight: 800;">${{ showAmount($completedInvests) }}</h4>
+                                    <p class="mb-0 small theme-text-content">Completed Investments</p>
                                 </div>
                             </div>
                         </div>
                         <div class="row">
                             <div class="col-12">
                                 <div class="text-center p-3 bg-light rounded">
-                                    <h4 class="mb-1 fw-bold" style="color: #0d6efd;">${{ showAmount($interests) }}</h4>
-                                    <p class="text-muted mb-0 small">Total Interest Earned</p>
+                                    <h4 class="mb-1 fw-bold" style="color: #0d6efd; font-weight: 800;">${{ showAmount($interests) }}</h4>
+                                    <p class="mb-0 small theme-text-content">Total Interest Earned</p>
                                 </div>
                             </div>
                         </div>
@@ -499,28 +577,28 @@
             <div class="col-lg-6 mb-3">
                 <div class="card custom-card border-0 shadow-sm">
                     <div class="card-header bg-transparent border-bottom">
-                        <h5 class="card-title mb-0" style="color: #495057;">Transaction Summary</h5>
+                        <h5 class="card-title mb-0 theme-text-header">Transaction Summary</h5>
                     </div>
                     <div class="card-body">
                         <div class="row">
                             <div class="col-6">
                                 <div class="text-center p-3">
-                                    <h4 class="mb-1 fw-bold" style="color: #dc3545;">${{ showAmount($balance_transfer) }}</h4>
-                                    <p class="text-muted mb-0 small">Total Transferred</p>
+                                    <h4 class="mb-1 fw-bold" style="color: #dc3545; font-weight: 800;">${{ showAmount($balance_transfer) }}</h4>
+                                    <p class="mb-0 small theme-text-content">Total Transferred</p>
                                 </div>
                             </div>
                             <div class="col-6">
                                 <div class="text-center p-3">
-                                    <h4 class="mb-1 fw-bold" style="color: #198754;">${{ showAmount($balance_received) }}</h4>
-                                    <p class="text-muted mb-0 small">Total Received</p>
+                                    <h4 class="mb-1 fw-bold" style="color: #198754; font-weight: 800;">${{ showAmount($balance_received) }}</h4>
+                                    <p class="mb-0 small theme-text-content">Total Received</p>
                                 </div>
                             </div>
                         </div>
                         <div class="row">
                             <div class="col-12">
                                 <div class="text-center p-3 bg-light rounded">
-                                    <h4 class="mb-1 fw-bold" style="color: #0dcaf0;">${{ showAmount($referral_earnings) }}</h4>
-                                    <p class="text-muted mb-0 small">Referral Earnings</p>
+                                    <h4 class="mb-1 fw-bold" style="color: #0dcaf0; font-weight: 800;">${{ showAmount($referral_earnings) }}</h4>
+                                    <p class="mb-0 small theme-text-content">Referral Earnings</p>
                                 </div>
                             </div>
                         </div>
@@ -534,7 +612,7 @@
             <div class="col-12">
                 <div class="card custom-card border-0 shadow-sm">
                     <div class="card-header bg-transparent border-bottom">
-                        <h5 class="card-title mb-0" style="color: #495057;">Quick Actions</h5>
+                        <h5 class="card-title mb-0 theme-text-header">Quick Actions</h5>
                     </div>
                     <div class="card-body">
                         <div class="row">
@@ -605,7 +683,7 @@
             <div class="col-12">
                 <div class="card custom-card border-0 shadow-sm">
                     <div class="card-header bg-transparent border-bottom d-flex justify-content-between align-items-center">
-                        <h5 class="card-title mb-0" style="color: #495057;">
+                        <h5 class="card-title mb-0 theme-text-header">
                             <i class="fas fa-users me-2" style="color: #0d6efd;"></i>
                             Referral Program
                         </h5>
@@ -617,7 +695,7 @@
                         <div class="row">
                             <div class="col-lg-8">
                                 <div class="mb-3">
-                                    <h6 class="text-muted mb-2">Your Referral Link:</h6>
+                                    <h6 class="mb-2 theme-text-header">Your Referral Link:</h6>
                                     <div class="input-group">
                                         <input type="text" id="referralLink" class="form-control bg-light" 
                                                value="{{ auth()->user()->getReferralLink() }}" 
@@ -626,7 +704,7 @@
                                             <i class="fas fa-copy me-1"></i>Copy
                                         </button>
                                     </div>
-                                    <small class="text-muted">Share this link with your friends to earn referral commissions</small>
+                                    <small class="theme-text-content">Share this link with your friends to earn referral commissions</small>
                                 </div>
                                 <div class="row">
                                     <div class="col-sm-6">
@@ -634,7 +712,7 @@
                                             <h4 class="mb-1 fw-bold" style="color: #0d6efd;">
                                                 {{ auth()->user()->referrals()->count() }}
                                             </h4>
-                                            <p class="text-muted mb-0 small">Total Referrals</p>
+                                            <p class="mb-0 small theme-text-content">Total Referrals</p>
                                         </div>
                                     </div>
                                     <div class="col-sm-6">
@@ -642,7 +720,7 @@
                                             <h4 class="mb-1 fw-bold" style="color: #198754;">
                                                 ${{ showAmount($referral_earnings) }}
                                             </h4>
-                                            <p class="text-muted mb-0 small">Total Referral Earnings</p>
+                                            <p class="mb-0 small theme-text-content">Total Referral Earnings</p>
                                         </div>
                                     </div>
                                 </div>
@@ -682,20 +760,20 @@
             <div class="col-12">
                 <div class="card custom-card border-0 shadow-sm">
                     <div class="card-header bg-transparent border-bottom d-flex justify-content-between align-items-center">
-                        <h5 class="card-title mb-0" style="color: #495057;">Recent Transactions</h5>
+                        <h5 class="card-title mb-0 theme-text-header">Recent Transactions</h5>
                         <a href="{{ route('user.transfer_history') }}" class="btn btn-sm btn-outline-primary">View All</a>
                     </div>
                     <div class="card-body">
                         @if($transactions && count($transactions) > 0)
                             <div class="table-responsive">
                                 <table class="table table-hover">
-                                    <thead class="table-light">
+                                    <thead class="theme-table-header">
                                         <tr>
-                                            <th style="color: #495057;">Transaction ID</th>
-                                            <th style="color: #495057;">Type</th>
-                                            <th style="color: #495057;">Amount</th>
-                                            <th style="color: #495057;">Status</th>
-                                            <th style="color: #495057;">Date</th>
+                                            <th class="theme-table-header">Transaction ID</th>
+                                            <th class="theme-table-header">Type</th>
+                                            <th class="theme-table-header">Amount</th>
+                                            <th class="theme-table-header">Status</th>
+                                            <th class="theme-table-header">Date</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -713,7 +791,7 @@
                                             <td>
                                                 <span class="badge" style="background-color: #198754; color: white;">Completed</span>
                                             </td>
-                                            <td style="color: #6c757d;">{{ $transaction->created_at->format('M d, Y') }}</td>
+                                            <td class="theme-text-content">{{ $transaction->created_at->format('M d, Y') }}</td>
                                         </tr>
                                         @endforeach
                                     </tbody>
@@ -722,8 +800,8 @@
                         @else
                             <div class="text-center py-4">
                                 <i class="fas fa-receipt fa-3x text-muted mb-3"></i>
-                                <h5 class="text-muted">No Recent Transactions</h5>
-                                <p class="text-muted">Your transaction history will appear here.</p>
+                                <h5 class="theme-text-header">No Recent Transactions</h5>
+                                <p class="theme-text-content">Your transaction history will appear here.</p>
                             </div>
                         @endif
                     </div>
@@ -948,6 +1026,248 @@
             }
 
             /* Enhanced Balance Cards */
+            .balance-card {
+                transition: transform 0.3s ease, box-shadow 0.3s ease;
+                overflow: hidden;
+                position: relative;
+            }
+            
+            .balance-card:hover {
+                transform: translateY(-3px);
+                box-shadow: 0 15px 35px rgba(0,0,0,0.15) !important;
+            }
+            
+            .balance-hidden {
+                font-size: 1.5rem;
+                letter-spacing: 3px;
+                color: white !important;
+                font-weight: bold;
+            }
+            
+            .balance-amount {
+                transition: all 0.3s ease;
+            }
+            
+            /* Animation for balance toggle */
+            @keyframes toggleFade {
+                0% { opacity: 0; transform: scale(0.8); }
+                100% { opacity: 1; transform: scale(1); }
+            }
+            
+            .balance-value, .balance-hidden {
+                animation: toggleFade 0.3s ease;
+            }
+            
+            /* Close Eye Toggle - Right next to amount */
+            .balance-quick-toggle {
+                transition: all 0.2s ease;
+                border: none !important;
+                background: none !important;
+                text-decoration: none !important;
+            }
+            
+            .balance-quick-toggle:hover {
+                opacity: 1 !important;
+                transform: scale(1.2);
+                color: white !important;
+            }
+            
+            .balance-quick-toggle:focus {
+                box-shadow: none !important;
+                color: white !important;
+            }
+            
+            .balance-quick-icon {
+                transition: all 0.2s ease;
+            }
+            
+            /* Balance amount styling for close integration */
+            .balance-amount {
+                gap: 8px;
+            }
+            
+            .balance-value, .balance-hidden {
+                line-height: 1.2;
+            }
+            
+            /* Hover effect on entire amount area */
+            .balance-amount:hover .balance-quick-toggle {
+                opacity: 1 !important;
+            }
+        </style>
+        
+        <script>
+            // Enhanced Balance Visibility Toggle Function
+            function toggleBalanceVisibility(cardId) {
+                const card = document.querySelector(`[data-stat="${cardId}"]`);
+                if (!card) return;
+                
+                const valueSpan = card.querySelector('.balance-value');
+                const hiddenSpan = card.querySelector('.balance-hidden');
+                const quickToggleIcon = card.querySelector('.balance-quick-icon');
+                
+                if (!valueSpan || !hiddenSpan) return;
+                
+                // Determine current state
+                const isHidden = valueSpan.style.display === 'none';
+                
+                if (isHidden) {
+                    // Show balance
+                    valueSpan.style.display = 'inline';
+                    hiddenSpan.style.display = 'none';
+                    
+                    // Update close toggle icon
+                    if (quickToggleIcon) {
+                        quickToggleIcon.className = 'fas fa-eye balance-quick-icon';
+                        quickToggleIcon.style.transform = 'scale(1.3)';
+                        setTimeout(() => quickToggleIcon.style.transform = 'scale(1)', 200);
+                    }
+                    
+                    // Store preference
+                    localStorage.setItem(`balance-visible-${cardId}`, 'true');
+                    
+                    // Update tooltip
+                    const quickToggleBtn = card.querySelector('.balance-quick-toggle');
+                    if (quickToggleBtn) quickToggleBtn.title = 'Hide Balance';
+                    
+                } else {
+                    // Hide balance
+                    valueSpan.style.display = 'none';
+                    hiddenSpan.style.display = 'inline';
+                    
+                    // Update close toggle icon
+                    if (quickToggleIcon) {
+                        quickToggleIcon.className = 'fas fa-eye-slash balance-quick-icon';
+                        quickToggleIcon.style.transform = 'scale(1.3)';
+                        setTimeout(() => quickToggleIcon.style.transform = 'scale(1)', 200);
+                    }
+                    
+                    // Store preference
+                    localStorage.setItem(`balance-visible-${cardId}`, 'false');
+                    
+                    // Update tooltip
+                    const quickToggleBtn = card.querySelector('.balance-quick-toggle');
+                    if (quickToggleBtn) quickToggleBtn.title = 'Show Balance';
+                }
+            }
+            
+            // Load balance visibility preferences on page load
+            document.addEventListener('DOMContentLoaded', function() {
+                const balanceCards = document.querySelectorAll('.balance-card');
+                
+                balanceCards.forEach(card => {
+                    const cardId = card.getAttribute('data-stat');
+                    const isVisible = localStorage.getItem(`balance-visible-${cardId}`);
+                    
+                    if (isVisible === 'false') {
+                        const valueSpan = card.querySelector('.balance-value');
+                        const hiddenSpan = card.querySelector('.balance-hidden');
+                        const quickToggleIcon = card.querySelector('.balance-quick-icon');
+                        const quickToggleBtn = card.querySelector('.balance-quick-toggle');
+                        
+                        if (valueSpan && hiddenSpan) {
+                            valueSpan.style.display = 'none';
+                            hiddenSpan.style.display = 'inline';
+                            
+                            if (quickToggleIcon) quickToggleIcon.className = 'fas fa-eye-slash balance-quick-icon';
+                            if (quickToggleBtn) quickToggleBtn.title = 'Show Balance';
+                        }
+                    }
+                });
+                
+                // Add hover effects to balance amounts
+                const balanceAmounts = document.querySelectorAll('.balance-amount');
+                balanceAmounts.forEach(amount => {
+                    amount.addEventListener('mouseenter', function() {
+                        const quickToggle = this.querySelector('.balance-quick-toggle');
+                        if (quickToggle) {
+                            quickToggle.style.opacity = '1';
+                        }
+                    });
+                    
+                    amount.addEventListener('mouseleave', function() {
+                        const quickToggle = this.querySelector('.balance-quick-toggle');
+                        if (quickToggle) {
+                            quickToggle.style.opacity = '0.7';
+                        }
+                    });
+                });
+                
+                // Copy referral link functionality
+                const copyButton = document.getElementById('copyReferralLink');
+                if (copyButton) {
+                    copyButton.addEventListener('click', function() {
+                        const referralInput = document.getElementById('referralLink');
+                        if (referralInput) {
+                            referralInput.select();
+                            referralInput.setSelectionRange(0, 99999);
+                            
+                            try {
+                                document.execCommand('copy');
+                                this.innerHTML = '<i class="fas fa-check me-1"></i>Copied!';
+                                this.classList.remove('btn-outline-primary');
+                                this.classList.add('btn-success');
+                                
+                                setTimeout(() => {
+                                    this.innerHTML = '<i class="fas fa-copy me-1"></i>Copy';
+                                    this.classList.remove('btn-success');
+                                    this.classList.add('btn-outline-primary');
+                                }, 2000);
+                            } catch (err) {
+                                console.error('Copy failed:', err);
+                                // Fallback for modern browsers
+                                if (navigator.clipboard) {
+                                    navigator.clipboard.writeText(referralInput.value).then(() => {
+                                        this.innerHTML = '<i class="fas fa-check me-1"></i>Copied!';
+                                        this.classList.remove('btn-outline-primary');
+                                        this.classList.add('btn-success');
+                                        
+                                        setTimeout(() => {
+                                            this.innerHTML = '<i class="fas fa-copy me-1"></i>Copy';
+                                            this.classList.remove('btn-success');
+                                            this.classList.add('btn-outline-primary');
+                                        }, 2000);
+                                    });
+                                }
+                            }
+                        }
+                    });
+                }
+            });
+            
+            // Share referral link function
+            function shareReferralLink() {
+                const referralInput = document.getElementById('referralLink');
+                if (!referralInput) return;
+                
+                const referralLink = referralInput.value;
+                
+                if (navigator.share) {
+                    navigator.share({
+                        title: 'Join our platform',
+                        text: 'Join me on this amazing platform and start earning!',
+                        url: referralLink
+                    }).catch(err => console.log('Share failed:', err));
+                } else {
+                    // Fallback: copy to clipboard
+                    if (navigator.clipboard) {
+                        navigator.clipboard.writeText(referralLink).then(() => {
+                            alert('Referral link copied to clipboard!');
+                        }).catch(() => {
+                            // Final fallback
+                            referralInput.select();
+                            document.execCommand('copy');
+                            alert('Referral link copied to clipboard!');
+                        });
+                    } else {
+                        // Very old browser fallback
+                        referralInput.select();
+                        document.execCommand('copy');
+                        alert('Referral link copied to clipboard!');
+                    }
+                }
+            }
+        </script>
             .balance-card {
                 position: relative;
                 overflow: hidden;
