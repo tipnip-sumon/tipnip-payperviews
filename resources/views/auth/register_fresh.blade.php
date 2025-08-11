@@ -53,6 +53,186 @@
         margin-bottom: 30px;
     }
 
+    .progress-container {
+        margin-bottom: 30px;
+        position: relative;
+        z-index: 10;
+    }
+
+    .progress-steps {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        position: relative;
+    }
+
+    .step {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        flex: 1;
+        position: relative;
+    }
+
+    .step-number {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #e0e0e0;
+        color: #999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        font-size: 16px;
+        transition: all 0.3s ease;
+        margin-bottom: 8px;
+    }
+
+    .step.active .step-number {
+        background: #667eea;
+        color: white;
+    }
+
+    .step.completed .step-number {
+        background: #27ae60;
+        color: white;
+    }
+
+    .step-title {
+        font-size: 12px;
+        color: #666;
+        font-weight: 500;
+    }
+
+    .step.active .step-title {
+        color: #667eea;
+        font-weight: 600;
+    }
+
+    .step.completed .step-title {
+        color: #27ae60;
+    }
+
+    .step-connector {
+        position: absolute;
+        top: 20px;
+        left: 50%;
+        width: calc(100% - 40px);
+        height: 2px;
+        background: #e0e0e0;
+        z-index: 1;
+        transform: translateX(20px);
+    }
+
+    .step.completed .step-connector {
+        background: #27ae60;
+    }
+
+    .step:last-child .step-connector {
+        display: none;
+    }
+
+    .form-step {
+        display: none !important;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+        position: relative;
+    }
+
+    .form-step.active {
+        display: block !important;
+        opacity: 1;
+        visibility: visible;
+        animation: slideIn 0.3s ease-in-out;
+    }
+
+    /* Force hide step 2 initially */
+    #step2 {
+        display: none !important;
+    }
+
+    #step2.active {
+        display: block !important;
+    }
+
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateX(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    .step-navigation {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 30px;
+        gap: 15px;
+    }
+
+    .btn-previous {
+        background: #6c757d;
+        color: white;
+        border: none;
+        padding: 12px 25px;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        flex: 1;
+    }
+
+    .btn-previous:hover {
+        background: #5a6268;
+        transform: translateY(-1px);
+    }
+
+    .btn-next {
+        background: #667eea;
+        color: white;
+        border: none;
+        padding: 12px 25px;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        flex: 2;
+    }
+
+    .btn-next:hover {
+        background: #5a67d8;
+        transform: translateY(-1px);
+    }
+
+    .btn-submit {
+        background: #27ae60;
+        color: white;
+        border: none;
+        padding: 12px 25px;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        flex: 2;
+    }
+
+    .btn-submit:hover {
+        background: #219a52;
+        transform: translateY(-1px);
+    }
+
+    .btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none !important;
+    }
+
     .back-to-home {
         position: absolute;
         top: -15px;
@@ -261,49 +441,15 @@
         to { transform: rotate(360deg); }
     }
 
-    .email-verification-alert {
-        background: rgba(255, 193, 7, 0.1);
-        border: 1px solid rgba(255, 193, 7, 0.3);
-        border-radius: 10px;
-        padding: 15px;
-        margin-bottom: 20px;
-        display: none;
-    }
-
-    .email-verification-alert.show {
-        display: block;
-    }
-
-    .alert-title {
-        font-weight: 600;
-        color: #f39c12;
-        margin-bottom: 8px;
-    }
-
-    .alert-text {
-        color: #e67e22;
-        font-size: 14px;
-        margin-bottom: 12px;
-    }
-
-    .resend-btn {
-        background: #f39c12;
+        .email-verification-alert {
+        background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
         color: white;
-        border: none;
-        padding: 8px 16px;
-        border-radius: 6px;
-        font-size: 13px;
-        cursor: pointer;
-        transition: all 0.3s ease;
-    }
-
-    .resend-btn:hover:not(:disabled) {
-        background: #e67e22;
-    }
-
-    .resend-btn:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
+        padding: 20px;
+        border-radius: 12px;
+        margin: 20px 0;
+        text-align: center;
+        box-shadow: 0 8px 25px rgba(255, 107, 107, 0.3);
+        display: none; /* Hidden by default */
     }
 
     @media (max-width: 768px) {
@@ -327,9 +473,24 @@
             <i class="fas fa-arrow-left"></i>
         </a>
         
-        <div class="register-header">
+                <div class="register-header">
             <h1 class="register-title">Create Account</h1>
             <p class="register-subtitle">Join PayPerViews and start earning</p>
+            
+            <!-- Progress Steps -->
+            <div class="progress-container">
+                <div class="progress-steps">
+                    <div class="step active" data-step="1">
+                        <div class="step-number">1</div>
+                        <div class="step-title">Basic Info</div>
+                        <div class="step-connector"></div>
+                    </div>
+                    <div class="step" data-step="2">
+                        <div class="step-number">2</div>
+                        <div class="step-title">Security</div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Email Verification Alert -->
@@ -344,77 +505,84 @@
         <form id="registerForm" action="{{ route('register') }}" method="POST">
             @csrf
 
-            <!-- Sponsor ID -->
-            <div class="form-group">
-                <label for="sponsor" class="form-label">Sponsor ID (Optional)</label>
-                <input type="text" id="sponsor" name="sponsor" class="form-input" 
-                       placeholder="Enter sponsor username"
-                       value="{{ request('ref') ?? old('sponsor') }}">
-                <div class="validation-message" id="sponsorValidation"></div>
-            </div>
-
-            <!-- Username -->
-            <div class="form-group">
-                <label for="username" class="form-label">Username *</label>
-                <input type="text" id="username" name="username" class="form-input" 
-                       placeholder="Choose a unique username" 
-                       value="{{ old('username') }}" required>
-                <div class="validation-message" id="usernameValidation"></div>
-            </div>
-
-            <!-- Email -->
-            <div class="form-group">
-                <label for="email" class="form-label">Email Address *</label>
-                <input type="email" id="email" name="email" class="form-input" 
-                       placeholder="Enter your email address" 
-                       value="{{ old('email') }}" required>
-                <div class="validation-message" id="emailValidation"></div>
-            </div>
-
-            <!-- Password -->
-            <div class="form-group" style="position: relative;">
-                <label for="password" class="form-label">Password *</label>
-                <input type="password" id="password" name="password" class="form-input" 
-                       placeholder="Create a strong password" required>
-                <span class="password-toggle" onclick="togglePassword('password')">
-                    <i class="fas fa-eye" id="passwordIcon"></i>
-                </span>
-                <div class="validation-message" id="passwordValidation"></div>
-            </div>
-
-            <!-- Confirm Password -->
-            <div class="form-group" style="position: relative;">
-                <label for="password_confirmation" class="form-label">Confirm Password *</label>
-                <input type="password" id="password_confirmation" name="password_confirmation" class="form-input" 
-                       placeholder="Confirm your password" required>
-                <span class="password-toggle" onclick="togglePassword('password_confirmation')">
-                    <i class="fas fa-eye" id="passwordConfirmIcon"></i>
-                </span>
-                <div class="validation-message" id="passwordConfirmValidation"></div>
-            </div>
-
-            <!-- Terms and Conditions -->
-            <div class="checkbox-container">
-                <input type="checkbox" id="agree" name="agree" class="checkbox-input" required>
-                <label for="agree" class="checkbox-label">
-                    I agree to the <a href="/policies/terms-of-service" target="_blank">Terms of Service</a> 
-                    and <a href="/policies/privacy-policy" target="_blank">Privacy Policy</a> *
-                </label>
-                <div class="validation-message" id="agreeValidation"></div>
-            </div>
-
-            <!-- Display Server Errors -->
-            @if ($errors->any())
-                <div class="validation-message error" style="display: block; margin-bottom: 15px;">
-                    @foreach ($errors->all() as $error)
-                        • {{ $error }}<br>
-                    @endforeach
+            <!-- Step 1: Basic Information -->
+            <div class="form-step active" id="step1">
+                <!-- Sponsor ID -->
+                <div class="form-group">
+                    <label for="sponsor" class="form-label">Sponsor ID (Optional)</label>
+                    <input type="text" id="sponsor" name="sponsor" class="form-input" 
+                           placeholder="Enter sponsor username or referral code"
+                           value="{{ request('ref') ?? old('sponsor') }}">
+                    <div class="validation-message" id="sponsorValidation"></div>
                 </div>
-            @endif
 
-            <button type="submit" class="submit-btn" id="submitBtn">
-                Create Account
-            </button>
+                <!-- Username -->
+                <div class="form-group">
+                    <label for="username" class="form-label">Username *</label>
+                    <input type="text" id="username" name="username" class="form-input" 
+                           placeholder="Choose a unique username (3-20 characters)" 
+                           value="{{ old('username') }}" required>
+                    <div class="validation-message" id="usernameValidation"></div>
+                </div>
+
+                <!-- Email -->
+                <div class="form-group">
+                    <label for="email" class="form-label">Email Address *</label>
+                    <input type="email" id="email" name="email" class="form-input" 
+                           placeholder="Enter your email address" 
+                           value="{{ old('email') }}" required>
+                    <div class="validation-message" id="emailValidation"></div>
+                </div>
+
+                <div class="step-navigation">
+                    <div></div> <!-- Empty div for spacing -->
+                    <button type="button" class="btn-next" id="nextStep1">
+                        Next Step <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Step 2: Security & Agreement -->
+            <div class="form-step" id="step2">
+                <!-- Password -->
+                <div class="form-group" style="position: relative;">
+                    <label for="password" class="form-label">Password *</label>
+                    <input type="password" id="password" name="password" class="form-input" 
+                           placeholder="Enter a strong password (min. 8 characters)" required>
+                    <span class="password-toggle" onclick="togglePassword('password')">
+                        <i class="fas fa-eye" id="passwordIcon"></i>
+                    </span>
+                    <div class="validation-message" id="passwordValidation"></div>
+                </div>
+
+                <!-- Confirm Password -->
+                <div class="form-group" style="position: relative;">
+                    <label for="password_confirmation" class="form-label">Confirm Password *</label>
+                    <input type="password" id="password_confirmation" name="password_confirmation" class="form-input" 
+                           placeholder="Confirm your password" required>
+                    <span class="password-toggle" onclick="togglePassword('password_confirmation')">
+                        <i class="fas fa-eye" id="passwordConfirmIcon"></i>
+                    </span>
+                    <div class="validation-message" id="passwordConfirmValidation"></div>
+                </div>
+
+                <!-- Terms & Conditions -->
+                <div class="checkbox-container">
+                    <input type="checkbox" id="agree" name="agree" class="checkbox-input" required>
+                    <label for="agree" class="checkbox-label">
+                        I agree to the <a href="#" class="terms-link">Terms & Conditions</a> and <a href="#" class="privacy-link">Privacy Policy</a>
+                    </label>
+                </div>
+
+                <div class="step-navigation">
+                    <button type="button" class="btn-previous" id="prevStep2">
+                        <i class="fas fa-arrow-left"></i> Previous
+                    </button>
+                    <button type="submit" class="btn-submit" id="submitForm">
+                        Create Account <i class="fas fa-user-plus"></i>
+                    </button>
+                </div>
+            </div>
         </form>
 
         <div class="login-link">
@@ -886,6 +1054,207 @@ document.addEventListener('DOMContentLoaded', function() {
 
     console.log('Registration page initialized successfully');
     console.log('Available test function: testForgotPassword()');
+
+    // ========================================
+    // Two-Step Form Navigation
+    // ========================================
+    
+    let currentStep = 1;
+    const totalSteps = 2;
+    
+    // Step navigation buttons
+    const nextStep1Btn = document.getElementById('nextStep1');
+    const prevStep2Btn = document.getElementById('prevStep2');
+    const submitFormBtn = document.getElementById('submitForm');
+    
+    // Step elements
+    const step1 = document.getElementById('step1');
+    const step2 = document.getElementById('step2');
+    const stepIndicators = document.querySelectorAll('.step');
+    
+    // Debug: Check if elements exist
+    console.log('Step elements found:', {
+        step1: !!step1,
+        step2: !!step2,
+        nextStep1Btn: !!nextStep1Btn,
+        prevStep2Btn: !!prevStep2Btn,
+        submitFormBtn: !!submitFormBtn,
+        stepIndicators: stepIndicators.length
+    });
+    
+    // Initialize the form properly
+    function initializeSteps() {
+        console.log('Initializing steps...');
+        
+        // Force hide all steps first
+        document.querySelectorAll('.form-step').forEach(step => {
+            step.classList.remove('active');
+            step.style.display = 'none';
+        });
+        
+        // Force show only step 1
+        if (step1) {
+            step1.style.display = 'block';
+            step1.classList.add('active');
+            console.log('Step 1 set to active and visible');
+        }
+        
+        // Make sure step 2 is hidden
+        if (step2) {
+            step2.style.display = 'none';
+            step2.classList.remove('active');
+            console.log('Step 2 set to hidden');
+        }
+        
+        // Set initial step indicators
+        updateStepIndicators();
+        console.log('Step indicators updated');
+    }
+    
+    // Call initialization
+    initializeSteps();
+    
+    // Step validation
+    function validateStep1() {
+        const username = document.getElementById('username').value.trim();
+        const email = document.getElementById('email').value.trim();
+        
+        if (!username || username.length < 3) {
+            showValidation('username', 'Username must be at least 3 characters', 'error');
+            return false;
+        }
+        
+        if (!email || !isValidEmail(email)) {
+            showValidation('email', 'Please enter a valid email address', 'error');
+            return false;
+        }
+        
+        return true;
+    }
+    
+    function validateStep2() {
+        const password = document.getElementById('password').value;
+        const confirmPassword = document.getElementById('password_confirmation').value;
+        const agree = document.getElementById('agree').checked;
+        
+        if (!password || password.length < 8) {
+            showValidation('password', 'Password must be at least 8 characters', 'error');
+            return false;
+        }
+        
+        if (password !== confirmPassword) {
+            showValidation('passwordConfirm', 'Passwords do not match', 'error');
+            return false;
+        }
+        
+        if (!agree) {
+            Swal.fire({
+                title: 'Terms Required',
+                text: 'You must agree to the Terms & Conditions to continue.',
+                icon: 'warning',
+                confirmButtonText: 'OK'
+            });
+            return false;
+        }
+        
+        return true;
+    }
+    
+    function isValidEmail(email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
+    }
+    
+    function updateStepIndicators() {
+        stepIndicators.forEach((indicator, index) => {
+            const stepNum = index + 1;
+            
+            if (stepNum < currentStep) {
+                indicator.classList.remove('active');
+                indicator.classList.add('completed');
+            } else if (stepNum === currentStep) {
+                indicator.classList.remove('completed');
+                indicator.classList.add('active');
+            } else {
+                indicator.classList.remove('active', 'completed');
+            }
+        });
+    }
+    
+    function showStep(stepNumber) {
+        console.log('Switching to step:', stepNumber);
+        
+        // Hide all steps with force
+        document.querySelectorAll('.form-step').forEach(step => {
+            step.classList.remove('active');
+            step.style.display = 'none';
+        });
+        
+        // Show current step with force
+        const currentStepElement = document.getElementById('step' + stepNumber);
+        if (currentStepElement) {
+            currentStepElement.style.display = 'block';
+            currentStepElement.classList.add('active');
+            console.log('Step', stepNumber, 'is now active');
+        }
+        
+        // Update step indicators
+        currentStep = stepNumber;
+        updateStepIndicators();
+    }
+    
+    // Next Step 1 button
+    if (nextStep1Btn) {
+        nextStep1Btn.addEventListener('click', function() {
+            if (validateStep1()) {
+                showStep(2);
+                
+                // Add a smooth scroll to top for better UX
+                document.querySelector('.register-card').scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'start' 
+                });
+            }
+        });
+    }
+    
+    // Previous Step 2 button
+    if (prevStep2Btn) {
+        prevStep2Btn.addEventListener('click', function() {
+            showStep(1);
+        });
+    }
+    
+    // Enhanced form submission
+    if (submitFormBtn) {
+        submitFormBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            if (validateStep2()) {
+                // Show loading state
+                submitFormBtn.disabled = true;
+                submitFormBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating Account...';
+                
+                // Submit the form
+                form.submit();
+            }
+        });
+    }
+    
+    // Allow Enter key to navigate steps
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            
+            if (currentStep === 1 && nextStep1Btn) {
+                nextStep1Btn.click();
+            } else if (currentStep === 2 && submitFormBtn) {
+                submitFormBtn.click();
+            }
+        }
+    });
+    
+    console.log('Two-step registration initialized successfully');
 });
 </script>
 
