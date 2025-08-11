@@ -305,6 +305,24 @@
                                 @endif
                             </ol>
                         </div>
+                        
+                        <!-- Transaction Password for Non-OTP Mode -->
+                        @if(!isset($withdrawalConditions) || !$withdrawalConditions['deposit_otp_required'])
+                        <div class="mb-4">
+                            <label for="password" class="form-label fs-14 text-dark fw-semibold">
+                                <i class="ri-shield-keyhole-line me-2 text-danger"></i>Transaction Password:
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light"><i class="ri-lock-line text-muted"></i></span>
+                                <input type="password" name="password" class="form-control" id="password" 
+                                       placeholder="Enter your transaction password" required {{ $formDisabled ? 'disabled' : '' }}>
+                            </div>
+                            @error('password')
+                                <div class="text-danger small mt-1"><i class="ri-error-warning-line me-1"></i>{{ $message }}</div>
+                            @enderror
+                            <small class="text-muted">Your transaction password is required for security verification.</small>
+                        </div>
+                        @endif
                         @endif
                         
                         <!-- OTP Verification Section -->
@@ -558,6 +576,7 @@
                 const details = $('#account_details').val();
                 const methodName = $('#withdraw_method option:selected').text();
                 const isOtpMode = $('#otpSection').length > 0 && $('#otpSection').is(':visible');
+                const isDirectMode = !isOtpMode && $('#password').length > 0 && $('#password').is(':visible');
                 
                 if (!method || !details) {
                     Swal.fire({
@@ -611,6 +630,40 @@
                     }).then((result) => {
                         if (result.isConfirmed) {
                             $('#withdrawBtn').html('<i class="ri-loader-4-line me-2 spin"></i>Completing Withdrawal...').prop('disabled', true);
+                            this.submit();
+                        }
+                    });
+                } else if (isDirectMode) {
+                    // Direct withdrawal mode (OTP disabled) - require password
+                    const password = $('#password').val();
+                    
+                    if (!password) {
+                        Swal.fire({
+                            title: 'Password Required!',
+                            text: 'Please enter your transaction password',
+                            icon: 'warning',
+                            confirmButtonText: 'OK'
+                        });
+                        $('#password').focus();
+                        return false;
+                    }
+                    
+                    Swal.fire({
+                        title: 'Submit Withdrawal Request',
+                        html: `Submit withdrawal request for <strong>${methodName}</strong>?<br><br>
+                               <small class="text-muted">• A 20% processing fee will be deducted<br>
+                               • Request will be processed by admin<br>
+                               • No email verification required</small>`,
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonColor: '#28a745',
+                        cancelButtonColor: '#6c757d',
+                        confirmButtonText: 'Submit Request',
+                        cancelButtonText: 'Cancel',
+                        reverseButtons: true
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            $('#withdrawBtn').html('<i class="ri-loader-4-line me-2 spin"></i>Submitting Request...').prop('disabled', true);
                             this.submit();
                         }
                     });

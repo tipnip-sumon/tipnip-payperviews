@@ -303,6 +303,23 @@
                                     @endif
                                 </div>
 
+                                <!-- Transaction Password for Non-OTP Mode -->
+                                @if(!isset($withdrawalConditions) || !$withdrawalConditions['wallet_otp_required'])
+                                <div class="mb-3">
+                                    <label for="password" class="form-label">Transaction Password <span class="text-danger">*</span></label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fe fe-lock"></i></span>
+                                        <input type="password" class="form-control @error('password') is-invalid @enderror" 
+                                               id="password" name="password" required {{ $formDisabled ? 'disabled' : '' }}
+                                               placeholder="Enter your transaction password">
+                                    </div>
+                                    @error('password')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                    <small class="text-muted">Your transaction password is required for security verification.</small>
+                                </div>
+                                @endif
+
                                 @if(!$formDisabled)
                                     @if(isset($withdrawalConditions) && $withdrawalConditions['wallet_otp_required'])
                                         <button type="submit" class="btn btn-primary">

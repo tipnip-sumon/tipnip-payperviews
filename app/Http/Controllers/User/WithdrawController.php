@@ -113,7 +113,18 @@ class WithdrawController extends Controller
             return $this->verifyDepositWithdrawOtp($request);
         }
         
-        // First step: Basic validation (NO PASSWORD YET) and send OTP
+        // Get withdrawal conditions to check if OTP is required
+        if (!function_exists('getWithdrawalConditions')) {
+            require_once app_path('helpers/ConditionHelper.php');
+        }
+        $withdrawalConditions = getWithdrawalConditions();
+        
+        // If OTP is NOT required, process withdrawal directly with password
+        if (!($withdrawalConditions['deposit_otp_required'] ?? true)) {
+            return $this->processDirectDepositWithdrawal($request);
+        }
+        
+        // OTP is required - First step: Basic validation (NO PASSWORD YET) and send OTP
         $request->validate([
             'method_id' => 'required|exists:withdraw_methods,id',
             'account_details' => 'required|string|max:500'
@@ -443,6 +454,174 @@ class WithdrawController extends Controller
     }
     
     /**
+     * Process direct deposit withdrawal without OTP (when OTP is disabled)
+     */
+    private function processDirectDepositWithdrawal(Request $request)
+    {
+        $user = Auth::user();
+        
+        // Validate form data including password
+        $request->validate([
+            'method_id' => 'required|exists:withdraw_methods,id',
+            'account_details' => 'required|string|max:500',
+            'password' => 'required|string'
+        ], [
+            'method_id.required' => 'Please select a withdrawal method',
+            'method_id.exists' => 'Invalid withdrawal method selected',
+            'account_details.required' => 'Account details are required',
+            'password.required' => 'Transaction password is required'
+        ]);
+        
+        // Verify password first
+        if (!Auth::attempt(['username' => $user->username, 'password' => $request->password])) {
+            return back()->with('swal_error', [
+                'title' => 'Authentication Failed!',
+                'text' => 'Invalid transaction password',
+                'icon' => 'error'
+            ])->withInput();
+        }
+        
+        // Get the selected withdrawal method for validation
+        $withdrawMethod = WithdrawMethod::where('id', $request->method_id)->where('status', 1)->first();
+        
+        if (!$withdrawMethod) {
+            return back()->with('swal_error', [
+                'title' => 'Invalid Method!',
+                'text' => 'Selected withdrawal method is not available',
+                'icon' => 'error'
+            ]);
+        }
+        
+        // Check if user has active deposit
+        $activeDeposit = $user->invests()->where('status', 1)->first();
+        if (!$activeDeposit) {
+            return back()->with('swal_error', [
+                'title' => 'No Active Deposit!',
+                'text' => 'You don\'t have any active deposit to withdraw',
+                'icon' => 'warning'
+            ]);
+        }
+        
+        // Check for pending withdrawals
+        $pendingWithdrawal = Withdrawal::where('user_id', $user->id)
+            ->where('status', 2)
+            ->exists();
+            
+        if ($pendingWithdrawal) {
+            return back()->with('swal_error', [
+                'title' => 'Pending Request Exists!',
+                'text' => 'You already have a pending withdrawal request',
+                'icon' => 'warning'
+            ]);
+        }
+        
+        // Check withdrawal conditions
+        if (!function_exists('checkWithdrawalConditions')) {
+            require_once app_path('helpers/ConditionHelper.php');
+        }
+        
+        $conditionCheck = checkWithdrawalConditions($user);
+        
+        if (!$conditionCheck['allowed']) {
+            // Check if profile completion is the specific issue
+            $failures = $conditionCheck['failures'];
+            if (count($failures) === 1 && strpos($failures[0], 'Profile completion') !== false) {
+                return redirect()->back()->with('swal_error', [
+                    'title' => 'Profile Incomplete!',
+                    'text' => 'Please complete your profile information before making withdrawals. Update your profile with all required details including name, mobile, country, and address.',
+                    'icon' => 'warning'
+                ]);
+            }
+            
+            return redirect()->back()->with('swal_error', [
+                'title' => 'Requirements Not Met!',
+                'text' => 'Withdrawal requirements not met: ' . implode(', ', $conditionCheck['failures']),
+                'icon' => 'error'
+            ]);
+        }
+        
+        try {
+            DB::beginTransaction();
+            
+            // Calculate withdrawal amounts (deposit withdrawals use 20% fee)
+            $depositAmount = $activeDeposit->amount;
+            $withdrawalFee = $depositAmount * 0.20; // Fixed 20% fee for deposit withdrawals
+            $netAmount = $depositAmount - $withdrawalFee;
+            
+            // Create withdrawal request
+            $withdrawal = Withdrawal::create([
+                'user_id' => $user->id,
+                'method_id' => $request->method_id,
+                'amount' => $netAmount,
+                'charge' => $withdrawalFee,
+                'final_amount' => $netAmount,
+                'currency' => $withdrawMethod->currency ?? 'USD',
+                'rate' => $withdrawMethod->rate ?? 1,
+                'trx' => getTrx(),
+                'withdraw_type' => 'deposit',
+                'withdraw_information' => json_encode([
+                    'method' => $withdrawMethod->name,
+                    'details' => $request->account_details,
+                    'deposit_info' => [
+                        'plan_name' => $activeDeposit->plan->name ?? 'Unknown Plan',
+                        'deposit_amount' => $depositAmount,
+                        'withdrawal_fee' => $withdrawalFee,
+                        'fee_percentage' => 20
+                    ],
+                    'method_info' => [
+                        'processing_time' => $withdrawMethod->processing_time,
+                        'instructions' => $withdrawMethod->instructions,
+                        'min_amount' => $withdrawMethod->min_amount,
+                        'max_amount' => $withdrawMethod->max_amount
+                    ],
+                    'direct_withdrawal' => [
+                        'processed_at' => now()->toDateTimeString(),
+                        'processed_ip' => request()->ip()
+                    ]
+                ]),
+                'status' => 2, // Pending
+            ]);
+            
+            // Update deposit status to withdrawn (status = 2)
+            $activeDeposit->status = 2;
+            $activeDeposit->save();
+            
+            // Create transaction record for deposit deactivation
+            Transaction::create([
+                'user_id' => $user->id,
+                'amount' => $depositAmount,
+                'main_amo' => $user->balance,
+                'charge' => 0,
+                'type' => '-',
+                'title' => 'Deposit Withdrawn',
+                'details' => 'Deposit withdrawal processed - Amount: $' . number_format($netAmount, 2) . ' via ' . $withdrawMethod->name,
+                'trx' => $withdrawal->trx,
+            ]);
+            
+            DB::commit();
+            
+            // Clear any residual session data
+            session()->forget(['deposit_withdrawal_data', 'show_deposit_otp_form']);
+            
+            return redirect()->route('user.withdraw.index')->with('swal_success', [
+                'title' => 'Withdrawal Submitted!',
+                'text' => 'Withdrawal request submitted successfully! You will receive $' . number_format($netAmount, 2) . ' via ' . $withdrawMethod->name . ' after admin approval.',
+                'icon' => 'success'
+            ]);
+            
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Direct deposit withdrawal request error: ' . $e->getMessage());
+            
+            return back()->with('swal_error', [
+                'title' => 'Processing Error!',
+                'text' => 'An error occurred while processing your withdrawal request. Please try again.',
+                'icon' => 'error'
+            ])->withInput();
+        }
+    }
+    
+    /**
      * Display withdrawal history (deposit withdrawals only)
      */
     public function history()
@@ -574,7 +753,18 @@ class WithdrawController extends Controller
             return $this->verifyWalletWithdrawOtp($request);
         }
 
-        // Initial wallet withdrawal request - validate form data
+        // Get withdrawal conditions to check if OTP is required
+        if (!function_exists('getWithdrawalConditions')) {
+            require_once app_path('helpers/ConditionHelper.php');
+        }
+        $withdrawalConditions = getWithdrawalConditions();
+        
+        // If OTP is NOT required, process withdrawal directly with password
+        if (!($withdrawalConditions['wallet_otp_required'] ?? true)) {
+            return $this->processDirectWalletWithdrawal($request);
+        }
+
+        // OTP is required - Initial wallet withdrawal request - validate form data (NO PASSWORD YET)
         $request->validate([
             'amount' => 'required|numeric|min:0.01',
             'method_id' => 'required|exists:withdraw_methods,id',
@@ -971,6 +1161,250 @@ class WithdrawController extends Controller
                 'text' => 'An error occurred while processing your withdrawal request. Please try again.',
                 'icon' => 'error'
             ]);
+        }
+    }
+    
+    /**
+     * Process direct wallet withdrawal without OTP (when OTP is disabled)
+     */
+    private function processDirectWalletWithdrawal(Request $request)
+    {
+        $user = Auth::user();
+        
+        // Validate form data including password
+        $request->validate([
+            'amount' => 'required|numeric|min:0.01',
+            'method_id' => 'required|exists:withdraw_methods,id',
+            'account_details' => 'required|string|max:500',
+            'password' => 'required|string'
+        ], [
+            'amount.required' => 'Withdrawal amount is required',
+            'amount.numeric' => 'Withdrawal amount must be a valid number',
+            'amount.min' => 'Withdrawal amount must be greater than 0',
+            'method_id.required' => 'Please select a withdrawal method',
+            'method_id.exists' => 'Invalid withdrawal method selected',
+            'account_details.required' => 'Account details are required',
+            'password.required' => 'Transaction password is required'
+        ]);
+
+        // Verify password first
+        if (!Auth::attempt(['username' => $user->username, 'password' => $request->password])) {
+            return back()->with('swal_error', [
+                'title' => 'Authentication Failed!',
+                'text' => 'Invalid transaction password',
+                'icon' => 'error'
+            ])->withInput();
+        }
+
+        // Get the selected withdrawal method for validation
+        $withdrawMethod = WithdrawMethod::findOrFail($request->method_id);
+
+        // Validate amount against method limits
+        if ($request->amount < ($withdrawMethod->min_amount ?? 1)) {
+            return back()->with('swal_error', [
+                'title' => 'Amount Too Low!',
+                'text' => 'Minimum withdrawal amount for ' . $withdrawMethod->name . ' is $' . number_format($withdrawMethod->min_amount ?? 1, 2),
+                'icon' => 'error'
+            ])->withInput();
+        }
+
+        if ($request->amount > ($withdrawMethod->max_amount ?? 999999)) {
+            return back()->with('swal_error', [
+                'title' => 'Amount Too High!',
+                'text' => 'Maximum withdrawal amount for ' . $withdrawMethod->name . ' is $' . number_format($withdrawMethod->max_amount ?? 999999, 2),
+                'icon' => 'error'
+            ])->withInput();
+        }
+
+        // Calculate wallet balance
+        $depositWallet = $user->deposit_wallet ?? 0;
+        $interestWallet = $user->interest_wallet ?? 0;
+        $totalWalletBalance = $depositWallet + $interestWallet;
+        
+        // Check if user has sufficient balance
+        if ($request->amount > $totalWalletBalance) {
+            return back()->with('swal_error', [
+                'title' => 'Insufficient Balance!',
+                'text' => 'Insufficient wallet balance. Available: $' . number_format($totalWalletBalance, 2),
+                'icon' => 'error'
+            ])->withInput();
+        }
+
+        // Check daily withdrawal limit for this method
+        if ($withdrawMethod->daily_limit && $withdrawMethod->daily_limit > 0) {
+            $todayWithdrawals = Withdrawal::where('user_id', $user->id)
+                ->where('method_id', $request->method_id)
+                ->where('withdraw_type', 'wallet')
+                ->where('status', '!=', 3) // Exclude rejected withdrawals
+                ->whereDate('created_at', today())
+                ->sum('amount');
+                
+            $totalTodayAmount = $todayWithdrawals + $request->amount;
+            
+            if ($totalTodayAmount > $withdrawMethod->daily_limit) {
+                $remainingLimit = max(0, $withdrawMethod->daily_limit - $todayWithdrawals);
+                return back()->with('swal_error', [
+                    'title' => 'Daily Limit Exceeded!',
+                    'text' => 'Daily withdrawal limit exceeded for ' . $withdrawMethod->name . '. Remaining limit: $' . number_format($remainingLimit, 2),
+                    'icon' => 'error'
+                ])->withInput();
+            }
+        }
+        
+        // Check if there's already a pending wallet withdrawal
+        $pendingWithdrawal = Withdrawal::where('user_id', $user->id)
+            ->where('withdraw_type', 'wallet')
+            ->where('status', 2)
+            ->exists();
+            
+        if ($pendingWithdrawal) {
+            return back()->with('swal_error', [
+                'title' => 'Pending Request Exists!',
+                'text' => 'You already have a pending wallet withdrawal request',
+                'icon' => 'warning'
+            ])->withInput();
+        }
+
+        // Check withdrawal conditions
+        if (!function_exists('checkWithdrawalConditions')) {
+            require_once app_path('helpers/ConditionHelper.php');
+        }
+        
+        $conditionCheck = checkWithdrawalConditions($user);
+        
+        if (!$conditionCheck['allowed']) {
+            // Check if profile completion is the specific issue
+            $failures = $conditionCheck['failures'];
+            if (count($failures) === 1 && strpos($failures[0], 'Profile completion') !== false) {
+                return back()->with('swal_error', [
+                    'title' => 'Profile Incomplete!',
+                    'text' => 'Please complete your profile information before making withdrawals. Update your profile with all required details including name, mobile, country, and address.',
+                    'icon' => 'warning'
+                ])->withInput();
+            }
+            
+            return back()->with('swal_error', [
+                'title' => 'Requirements Not Met!',
+                'text' => 'Withdrawal requirements not met: ' . implode(', ', $conditionCheck['failures']),
+                'icon' => 'error'
+            ])->withInput();
+        }
+
+        try {
+            DB::beginTransaction();
+            
+            // Calculate withdrawal fees using both fixed_charge and percent_charge
+            $withdrawalAmount = $request->amount;
+            $fixedCharge = $withdrawMethod->fixed_charge ?? 0;
+            $percentCharge = ($withdrawMethod->percent_charge ?? 0) / 100;
+            
+            // Calculate total charge: fixed charge + percentage charge
+            $percentageFee = $withdrawalAmount * $percentCharge;
+            $totalCharge = $fixedCharge + $percentageFee;
+            $netAmount = $withdrawalAmount - $totalCharge;
+            
+            // Ensure net amount is not negative
+            if ($netAmount <= 0) {
+                return back()->with('swal_error', [
+                    'title' => 'Amount Too Low!',
+                    'text' => 'Withdrawal amount is too low after charges. Minimum required: $' . number_format($totalCharge + 0.01, 2),
+                    'icon' => 'error'
+                ])->withInput();
+            }
+            
+            // Create withdrawal request
+            $withdrawal = Withdrawal::create([
+                'user_id' => $user->id,
+                'method_id' => $request->method_id,
+                'amount' => $withdrawalAmount,
+                'charge' => $totalCharge,
+                'final_amount' => $netAmount,
+                'currency' => $withdrawMethod->currency ?? 'USD',
+                'rate' => $withdrawMethod->rate ?? 1,
+                'trx' => getTrx(),
+                'withdraw_type' => 'wallet',
+                'withdraw_information' => json_encode([
+                    'method' => $withdrawMethod->name,
+                    'details' => $request->account_details,
+                    'wallet_breakdown' => [
+                        'deposit_wallet' => $depositWallet,
+                        'interest_wallet' => $interestWallet,
+                        'total_balance' => $totalWalletBalance
+                    ],
+                    'charges' => [
+                        'fixed_charge' => $fixedCharge,
+                        'percent_charge' => $withdrawMethod->percent_charge,
+                        'total_charge' => $totalCharge
+                    ],
+                    'method_info' => [
+                        'processing_time' => $withdrawMethod->processing_time,
+                        'instructions' => $withdrawMethod->instructions,
+                        'min_amount' => $withdrawMethod->min_amount,
+                        'max_amount' => $withdrawMethod->max_amount
+                    ],
+                    'direct_withdrawal' => [
+                        'processed_at' => now()->toDateTimeString(),
+                        'processed_ip' => request()->ip()
+                    ]
+                ]),
+                'status' => 2, // Pending
+            ]);
+            
+            // Deduct from user wallets (temporarily, will be restored if withdrawal is rejected)
+            $remainingAmount = $withdrawalAmount;
+            
+            // Get fresh user instance to ensure we have the latest data
+            $freshUser = User::find($user->id);
+            
+            // First deduct from deposit wallet
+            if ($remainingAmount > 0 && $depositWallet > 0) {
+                $deductFromDeposit = min($remainingAmount, $depositWallet);
+                $freshUser->deposit_wallet -= $deductFromDeposit;
+                $remainingAmount -= $deductFromDeposit;
+            }
+            
+            // Then deduct from interest wallet if needed
+            if ($remainingAmount > 0 && $interestWallet > 0) {
+                $deductFromInterest = min($remainingAmount, $interestWallet);
+                $freshUser->interest_wallet -= $deductFromInterest;
+                $remainingAmount -= $deductFromInterest;
+            }
+            
+            $freshUser->save();
+            
+            // Create transaction record
+            $transaction = new Transaction();
+            $transaction->user_id = $user->id;
+            $transaction->amount = $withdrawalAmount;
+            $transaction->charge = $totalCharge;
+            $transaction->trx_type = '-';
+            $transaction->trx = $withdrawal->trx;
+            $transaction->wallet_type = 'wallet_withdrawal';
+            $transaction->remark = 'wallet_withdrawal';
+            $transaction->details = 'Direct wallet withdrawal request: $' . number_format($withdrawalAmount, 2) . ' via ' . $withdrawMethod->name . ' (Charge: $' . number_format($totalCharge, 2) . ')';
+            $transaction->post_balance = ($freshUser->deposit_wallet ?? 0) + ($freshUser->interest_wallet ?? 0);
+            $transaction->save();
+            
+            DB::commit();
+            
+            // Clear any residual session data
+            session()->forget(['wallet_withdrawal_data', 'show_wallet_otp_form']);
+            
+            return redirect()->route('user.withdraw.wallet')->with('swal_success', [
+                'title' => 'Withdrawal Submitted!',
+                'text' => 'Wallet withdrawal request submitted successfully! You will receive $' . number_format($netAmount, 2) . ' via ' . $withdrawMethod->name . ' after admin approval.',
+                'icon' => 'success'
+            ]);
+            
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Direct wallet withdrawal request error: ' . $e->getMessage());
+            
+            return back()->with('swal_error', [
+                'title' => 'Processing Error!',
+                'text' => 'An error occurred while processing your withdrawal request. Please try again.',
+                'icon' => 'error'
+            ])->withInput();
         }
     }
     
