@@ -1721,7 +1721,7 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="btn btn-gradient btn-modern" href="{{ route('register') }}">
+                        <a class="btn btn-gradient btn-modern" href="{{ route('register') }}"> 
                             <i class="fas fa-user-plus"></i> Join Now
                         </a>
                     </li>

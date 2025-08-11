@@ -172,12 +172,12 @@
                                                             <i class="fe fe-check"></i>
                                                         </button>
                                                     @endif
-                                                    @if($notification->action_url)
+                                                    {{-- @if($notification->action_url)
                                                         <a href="{{ route('user.notifications.redirect', $notification->id) }}" 
                                                            class="btn btn-outline-info" title="View Details">
                                                             <i class="fe fe-external-link"></i>
                                                         </a>
-                                                    @endif
+                                                    @endif --}}
                                                     <button type="button" class="btn btn-outline-danger" 
                                                             onclick="deleteNotification({{ $notification->id }})"
                                                             title="Delete">

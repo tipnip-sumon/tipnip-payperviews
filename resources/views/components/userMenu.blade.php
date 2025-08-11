@@ -302,7 +302,7 @@
     <li class="slide has-sub">
     <a href="javascript:void(0);" class="side-menu__item">
         <i class="fe fe-sliders side-menu__icon"></i>
-                    <span class="side-menu__label">Account Center</span>
+                    <span class="side-menu__label">Profile</span>
         @if(auth()->check() && !auth()->user()->hasVerifiedEmail())
             <span class="badge badge-warning ms-2">Unverified</span>
         @elseif(auth()->check())
@@ -488,7 +488,7 @@
     <li class="slide has-sub">
         <a href="javascript:void(0);" class="side-menu__item">
             <i class="fe fe-layers side-menu__icon"></i>
-            <span class="side-menu__label">Investment Security</span>
+            <span class="side-menu__label">Security Package</span>
             @auth
                 @php
                     $currentDeposit = auth()->user()->invests()->where('status', 1)->first();
@@ -503,12 +503,12 @@
         </a>
         <ul class="slide-menu child1">
             <li class="slide side-menu__label1">
-                <a href="javascript:void(0)">Investment Security</a>
+                <a href="javascript:void(0)">Security Package</a>
             </li>
             <li class="slide">
                 <a href="{{route('invest.index')}}" class="side-menu__item">
                     <i class="fe fe-shield me-2"></i>
-                    <span class="side-menu__label">Investment Security Plan</span>
+                    <span class="side-menu__label">Security Package Plan</span>
                     @auth
                         @if(!$currentDeposit)
                             <span class="badge badge-primary ms-auto">Start</span>
@@ -521,7 +521,7 @@
             <li class="slide">
                 <a href="{{ route('invest.history')}}" class="side-menu__item">
                     <i class="fe fe-file-text me-2"></i>
-                    <span class="side-menu__label">Investment Security Report</span>
+                    <span class="side-menu__label">Security Package Report</span>
                 </a>
             </li>
             @auth
@@ -529,7 +529,7 @@
                     <li class="slide">
                         <a href="{{ route('user.withdraw') }}" class="side-menu__item">
                             <i class="fe fe-download me-2"></i>
-                            <span class="side-menu__label">Withdraw Investment</span>
+                            <span class="side-menu__label">Withdraw Security Package</span>
                             <span class="badge badge-warning ms-auto">20% Fee</span>
                         </a>
                     </li>
@@ -540,7 +540,7 @@
     <li class="slide has-sub">
         <a href="javascript:void(0);" class="side-menu__item">
             <i class="fe fe-layers side-menu__icon"></i>
-            <span class="side-menu__label">My Team</span>
+            <span class="side-menu__label">Team Views</span>
             <i class="fe fe-chevron-right side-menu__angle"></i>
         </a>
         <ul class="slide-menu child1">
@@ -549,12 +549,12 @@
             </li>
             <li class="slide">
                 <a href="{{ route('user.sponsor-list') }}" class="side-menu__item">
-                    <span class="side-menu__label">Sponsor List</span>
+                    <span class="side-menu__label">Referral List</span>
                 </a>
             </li>
             <li class="slide">
                 <a href="{{route('user.team-tree')}}" class="side-menu__item">
-                    <span class="side-menu__label">My Team</span>
+                    <span class="side-menu__label">Team Tree</span>
                 </a>
             </li>
         </ul>
@@ -917,12 +917,12 @@
     </li>
 
     <!-- Cache Management Tools (for development/admin) -->
-    @if(auth()->check() && auth()->user()->isAdmin())
+    {{-- @if(auth()->check() && auth()->user()->isAdmin())
     <li class="slide">
         <a href="javascript:void(0);" class="side-menu__item" onclick="showCacheManagementModal();">
             <i class="fe fe-trash-2 side-menu__icon"></i>
             <span class="side-menu__label">Cache Manager</span>
         </a>
     </li>
-    @endif
+    @endif --}}
 </ul>
