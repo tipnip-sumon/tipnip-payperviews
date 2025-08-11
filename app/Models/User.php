@@ -55,6 +55,13 @@ class User extends Authenticatable implements MustVerifyEmail
         'pending_username_change',
         'username_change_token',
         'username_change_requested_at',
+        // Two-step email verification fields
+        'current_email_otp',
+        'current_email_otp_sent_at',
+        'current_email_verified',
+        'new_email_verification_token',
+        'new_email_token_sent_at',
+        'email_change_step',
         'identity_verified_at', // Identity verification timestamp
         'two_fa_status', // 2FA status
         'two_fa_enabled_at', // 2FA enabled timestamp
@@ -98,6 +105,10 @@ class User extends Authenticatable implements MustVerifyEmail
         'last_login_at' => 'datetime',
         'session_created_at' => 'datetime',
         'last_activity_at' => 'datetime',
+        'email_change_requested_at' => 'datetime',
+        'username_change_requested_at' => 'datetime',
+        'current_email_otp_sent_at' => 'datetime',
+        'new_email_token_sent_at' => 'datetime',
         'password' => 'hashed',
         'notification_settings' => 'array', // Cast notification settings to array
     ];

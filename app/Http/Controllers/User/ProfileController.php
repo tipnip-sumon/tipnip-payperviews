@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Support\Facades\Log;
+use Carbon\Carbon;
 
 class ProfileController extends Controller
 {
@@ -283,7 +284,8 @@ class ProfileController extends Controller
     }
 
     /**
-     * Request paid email change with verification
+     * Request paid email change with two-step verification
+     * Step 1: Send OTP to current email for identity verification
      */
     public function requestEmailChange(Request $request)
     {
@@ -313,36 +315,36 @@ class ProfileController extends Controller
         }
 
         // Check if there's already a pending email change
-        if ($user->pending_email_change) {
+        if ($user->pending_email_change && $user->email_change_step !== 'initial') {
             return back()->with('error', 'You already have a pending email change request. Please complete or cancel it first.');
         }
 
         try {
-            // Generate verification code
-            $verificationCode = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+            // Generate OTP for current email verification (Step 1)
+            $currentEmailOtp = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
             
             // Store pending change data
             $user->pending_email_change = $request->new_email;
-            $user->email_change_token = $verificationCode;
+            $user->current_email_otp = $currentEmailOtp;
+            $user->current_email_otp_sent_at = now();
+            $user->current_email_verified = false;
+            $user->email_change_step = 'awaiting_current_verification';
             $user->email_change_requested_at = now();
             $user->save();
 
-            // Send verification email to NEW email address
-            $this->sendEmailChangeVerification($request->new_email, $verificationCode, $user);
+            // Send OTP to CURRENT email address for identity verification
+            $this->sendCurrentEmailVerification($user->email, $currentEmailOtp, $user, $request->new_email);
 
-            return back()->with('success', 'Verification code sent to your new email address. Please check ' . $request->new_email . ' and enter the code to complete the change. Fee of $' . number_format($emailChangeFee, 2) . ' will be deducted upon verification.');
+            return back()->with('success', 'Security verification required! We have sent a 6-digit verification code to your current email address (' . $user->email . '). Please check your email and enter the code to verify your identity before we can proceed with the email change.');
             
         } catch (\Exception $e) {
             // Clear pending change data since email failed
-            $user->pending_email_change = null;
-            $user->email_change_token = null;
-            $user->email_change_requested_at = null;
-            $user->save();
+            $this->clearEmailChangeData($user);
             
             Log::error('Email change request error: ' . $e->getMessage());
             
             // Check if it's an email-specific error
-            $errorMessage = 'Unable to send verification email to ' . $request->new_email . '. ';
+            $errorMessage = 'Unable to send verification code to your current email address (' . $user->email . '). ';
             
             if (str_contains($e->getMessage(), 'Connection') || str_contains($e->getMessage(), 'timeout')) {
                 $errorMessage .= 'Email server connection failed. Please check your internet connection and try again.';
@@ -359,36 +361,97 @@ class ProfileController extends Controller
     }
 
     /**
-     * Verify and complete email change
+     * Verify email change - handles both steps of verification
      */
     public function verifyEmailChange(Request $request)
     {
         $user = Auth::user();
         
         $request->validate([
-            'verification_code' => 'required|digits:6'
+            'verification_code' => 'required|string|min:6'
         ]);
 
-        if (!$user->pending_email_change || !$user->email_change_token) {
+        if (!$user->pending_email_change) {
             return back()->with('error', 'No pending email change found.');
         }
 
-        // Check if verification code is correct
-        if ($user->email_change_token !== $request->verification_code) {
-            return back()->with('error', 'Invalid verification code.');
+        // Determine which step we're in
+        if ($user->email_change_step === 'awaiting_current_verification') {
+            return $this->verifyCurrentEmail($request, $user);
+        } elseif ($user->email_change_step === 'awaiting_new_verification') {
+            return $this->verifyNewEmail($request, $user);
+        } else {
+            return back()->with('error', 'Invalid email change state. Please start the process again.');
+        }
+    }
+
+    /**
+     * Step 1: Verify current email OTP
+     */
+    private function verifyCurrentEmail(Request $request, $user)
+    {
+        // Check if OTP is correct
+        if ($user->current_email_otp !== $request->verification_code) {
+            return back()->with('error', 'Invalid verification code for current email.');
         }
 
-        // Check if token is not expired (valid for 30 minutes)
-        if ($user->email_change_requested_at->addMinutes(30)->isPast()) {
-            // Clear expired token
-            $user->pending_email_change = null;
-            $user->email_change_token = null;
-            $user->email_change_requested_at = null;
-            $user->save();
+        // Check if OTP is not expired (valid for 10 minutes)
+        $otpSentTime = $user->current_email_otp_sent_at;
+        if (!$otpSentTime || Carbon::parse($otpSentTime)->addMinutes(10)->isPast()) {
+            $this->clearEmailChangeData($user);
+            return back()->with('error', 'Verification code has expired. Please start the process again.');
+        }
+
+        try {
+            // Generate verification token for new email (Step 2)
+            $newEmailToken = hash('sha256', $user->id . $user->pending_email_change . now()->timestamp . random_bytes(32));
             
-            return back()->with('error', 'Verification code has expired. Please request a new one.');
+            // Update user state to Step 2
+            $user->current_email_verified = true;
+            $user->new_email_verification_token = $newEmailToken;
+            $user->new_email_token_sent_at = now();
+            $user->email_change_step = 'awaiting_new_verification';
+            $user->save();
+
+            // Send verification link to NEW email address
+            $this->sendNewEmailVerification($user->pending_email_change, $newEmailToken, $user);
+
+            return back()->with('success', 'Current email verified successfully! 🎉 We have now sent a verification link to your new email address (' . $user->pending_email_change . '). Please check your new email and click the verification link to complete the email change process.');
+            
+        } catch (\Exception $e) {
+            Log::error('New email verification sending failed: ' . $e->getMessage());
+            return back()->with('error', 'Failed to send verification to new email. Please try again.');
+        }
+    }
+
+    /**
+     * Step 2: Verify new email via verification link (this will be called from email link)
+     */
+    public function verifyNewEmailLink($token)
+    {
+        $user = User::where('new_email_verification_token', $token)
+                  ->where('email_change_step', 'awaiting_new_verification')
+                  ->first();
+
+        if (!$user) {
+            return redirect()->route('profile.security')->with('error', 'Invalid or expired verification link.');
         }
 
+        // Check if token is not expired (valid for 24 hours)
+        $tokenSentTime = $user->new_email_token_sent_at;
+        if (!$tokenSentTime || Carbon::parse($tokenSentTime)->addHours(24)->isPast()) {
+            $this->clearEmailChangeData($user);
+            return redirect()->route('profile.security')->with('error', 'Verification link has expired. Please start the email change process again.');
+        }
+
+        return $this->completeEmailChange($user);
+    }
+
+    /**
+     * Complete the email change process
+     */
+    private function completeEmailChange($user)
+    {
         try {
             DB::beginTransaction();
             
@@ -409,12 +472,10 @@ class ProfileController extends Controller
                 $freshUser->interest_wallet = $interestWallet;
             }
 
-            // Update email and clear pending change
+            // Update email and clear all pending change data
             $freshUser->email = $newEmail;
-            $freshUser->email_verified_at = null; // Reset email verification
-            $freshUser->pending_email_change = null;
-            $freshUser->email_change_token = null;
-            $freshUser->email_change_requested_at = null;
+            $freshUser->email_verified_at = now(); // Mark new email as verified
+            $this->clearEmailChangeData($freshUser);
             $freshUser->save();
 
             // Create transaction record
@@ -432,12 +493,12 @@ class ProfileController extends Controller
 
             DB::commit();
 
-            return back()->with('success', 'Email address changed successfully! Please verify your new email address. Fee of $' . number_format($emailChangeFee, 2) . ' has been deducted from your account.');
+            return redirect()->route('profile.security')->with('success', '🎉 Email address changed successfully! Your new email (' . $newEmail . ') is now active and verified. Fee of $' . number_format($emailChangeFee, 2) . ' has been deducted from your account.');
             
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Email change verification error: ' . $e->getMessage());
-            return back()->with('error', 'Failed to change email address. Please try again.');
+            Log::error('Email change completion error: ' . $e->getMessage());
+            return redirect()->route('profile.security')->with('error', 'Failed to complete email change. Please contact support.');
         }
     }
 
@@ -540,7 +601,8 @@ class ProfileController extends Controller
         }
 
         // Check if token is not expired (valid for 30 minutes)
-        if ($user->username_change_requested_at->addMinutes(30)->isPast()) {
+        $requestTime = $user->username_change_requested_at;
+        if (!$requestTime || Carbon::parse($requestTime)->addMinutes(30)->isPast()) {
             // Clear expired token
             $user->pending_username_change = null;
             $user->username_change_token = null;
@@ -607,13 +669,26 @@ class ProfileController extends Controller
     public function cancelEmailChange()
     {
         $user = Auth::user();
-        
-        $user->pending_email_change = null;
-        $user->email_change_token = null;
-        $user->email_change_requested_at = null;
+        $this->clearEmailChangeData($user);
         $user->save();
 
         return back()->with('success', 'Email change request cancelled.');
+    }
+
+    /**
+     * Clear all email change related data
+     */
+    private function clearEmailChangeData($user)
+    {
+        $user->pending_email_change = null;
+        $user->email_change_token = null;
+        $user->email_change_requested_at = null;
+        $user->current_email_otp = null;
+        $user->current_email_otp_sent_at = null;
+        $user->current_email_verified = false;
+        $user->new_email_verification_token = null;
+        $user->new_email_token_sent_at = null;
+        $user->email_change_step = 'initial';
     }
 
     /**
@@ -632,21 +707,19 @@ class ProfileController extends Controller
     }
 
     /**
-     * Send email change verification email
+     * Send OTP to current email for identity verification (Step 1)
      */
-    private function sendEmailChangeVerification($email, $code, $user)
+    private function sendCurrentEmailVerification($email, $otp, $user, $newEmail)
     {
         try {
-            // Simple email approach using basic HTML
-            $subject = 'Email Change Verification - ' . config('app.name');
-            $emailBody = $this->createChangeEmailContent($user, $code, 'Email Change Verification', $email);
+            $subject = 'Email Change Security Verification - ' . config('app.name');
+            $emailBody = $this->createCurrentEmailOtpContent($user, $otp, $newEmail);
             
             // Try to send email
             $emailSent = false;
             try {
                 Mail::html($emailBody, function($message) use ($email, $subject) {
-                    $message->to($email)
-                            ->subject($subject);
+                    $message->to($email)->subject($subject);
                 });
                 $emailSent = true;
             } catch (\Exception $e) {
@@ -656,11 +729,10 @@ class ProfileController extends Controller
                 try {
                     Mail::send('emails.verification-code', [
                         'user' => $user,
-                        'code' => $code,
-                        'type' => 'Email Change Verification'
+                        'code' => $otp,
+                        'type' => 'Email Change Security Verification'
                     ], function($message) use ($email, $subject) {
-                        $message->to($email)
-                                ->subject($subject);
+                        $message->to($email)->subject($subject);
                     });
                     $emailSent = true;
                 } catch (\Exception $e2) {
@@ -670,23 +742,204 @@ class ProfileController extends Controller
             }
             
             if (!$emailSent) {
-                throw new \Exception('Email delivery failed - both primary and fallback methods unsuccessful. Please check email configuration.');
+                throw new \Exception('Email delivery failed - both primary and fallback methods unsuccessful.');
             }
             
         } catch (\Exception $e) {
-            Log::error('Email change verification sending failed: ' . $e->getMessage());
-            
-            // Provide more specific error details
-            if (str_contains($e->getMessage(), 'Connection') || str_contains($e->getMessage(), 'timeout')) {
-                throw new \Exception('Email server connection timeout. Please check your internet connection.');
-            } elseif (str_contains($e->getMessage(), 'authentication') || str_contains($e->getMessage(), 'login')) {
-                throw new \Exception('Email authentication failed. Server configuration issue.');
-            } elseif (str_contains($e->getMessage(), 'invalid') || str_contains($e->getMessage(), 'rejected')) {
-                throw new \Exception('Email address rejected by server. Please verify the email address.');
-            } else {
-                throw new \Exception('Email service temporarily unavailable: ' . $e->getMessage());
-            }
+            Log::error('Current email verification sending failed: ' . $e->getMessage());
+            throw new \Exception('Email service temporarily unavailable: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Send verification link to new email (Step 2)
+     */
+    private function sendNewEmailVerification($email, $token, $user)
+    {
+        try {
+            $subject = 'Verify Your New Email Address - ' . config('app.name');
+            $verificationUrl = route('email.verify.new', ['token' => $token]);
+            $emailBody = $this->createNewEmailVerificationContent($user, $verificationUrl);
+            
+            // Try to send email
+            $emailSent = false;
+            try {
+                Mail::html($emailBody, function($message) use ($email, $subject) {
+                    $message->to($email)->subject($subject);
+                });
+                $emailSent = true;
+            } catch (\Exception $e) {
+                Log::error('Mail::html failed for new email verification: ' . $e->getMessage());
+                $emailSent = false;
+            }
+            
+            if (!$emailSent) {
+                throw new \Exception('Email delivery failed to new email address.');
+            }
+            
+        } catch (\Exception $e) {
+            Log::error('New email verification sending failed: ' . $e->getMessage());
+            throw new \Exception('Failed to send verification to new email: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Create OTP email content for current email verification
+     */
+    private function createCurrentEmailOtpContent($user, $otp, $newEmail)
+    {
+        $appName = config('app.name');
+        $userName = $user->name ?? $user->username;
+        
+        return "
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset='UTF-8'>
+            <title>Email Change Security Verification - {$appName}</title>
+            <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 20px; background: #f4f4f4; }
+                .container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+                .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #dc3545; padding-bottom: 20px; }
+                .logo { font-size: 24px; font-weight: bold; color: #dc3545; margin-bottom: 10px; }
+                .subtitle { color: #666; font-size: 16px; }
+                .otp-code { background: linear-gradient(135deg, #dc3545, #c82333); color: white; font-size: 32px; font-weight: bold; padding: 20px; border-radius: 10px; text-align: center; margin: 25px 0; letter-spacing: 4px; box-shadow: 0 4px 15px rgba(220,53,69,0.3); }
+                .security-box { background: #fff3cd; border-left: 4px solid #ffc107; padding: 20px; margin: 20px 0; border-radius: 5px; }
+                .info-box { background: #e3f2fd; border-left: 4px solid #2196f3; padding: 20px; margin: 20px 0; border-radius: 5px; }
+                .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #666; }
+                .highlight { color: #dc3545; font-weight: bold; }
+                ul { padding-left: 20px; }
+                li { margin: 8px 0; }
+            </style>
+        </head>
+        <body>
+            <div class='container'>
+                <div class='header'>
+                    <div class='logo'>{$appName}</div>
+                    <div class='subtitle'>🔐 Email Change Security Verification</div>
+                </div>
+                
+                <p>Hello <strong>{$userName}</strong>,</p>
+                
+                <p>You have requested to change your email address from <strong>" . $user->email . "</strong> to <strong class='highlight'>{$newEmail}</strong></p>
+                
+                <p>For security reasons, please verify your current email address by entering the code below:</p>
+                
+                <div class='otp-code'>{$otp}</div>
+                
+                <div class='security-box'>
+                    <strong>🛡️ Security Notice:</strong>
+                    <ul>
+                        <li>This is <strong>Step 1</strong> of the email change process</li>
+                        <li>This code verifies your identity using your current email</li>
+                        <li>After verification, we'll send a confirmation link to your new email</li>
+                        <li>The fee ($2.00) will be charged only after both verifications are complete</li>
+                    </ul>
+                </div>
+                
+                <div class='info-box'>
+                    <strong>⏰ Important:</strong>
+                    <ul>
+                        <li>This code is valid for <strong>10 minutes</strong></li>
+                        <li>Enter this code on the security settings page</li>
+                        <li>Never share this code with anyone</li>
+                        <li>If you didn't request this change, please ignore this email</li>
+                    </ul>
+                </div>
+                
+                <div class='footer'>
+                    <p>This is a security verification from <strong>{$appName}</strong>.</p>
+                    <p>Do not reply to this email.</p>
+                    <p>Generated: " . now()->format('M d, Y h:i A T') . "</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        ";
+    }
+
+    /**
+     * Create verification link email content for new email
+     */
+    private function createNewEmailVerificationContent($user, $verificationUrl)
+    {
+        $appName = config('app.name');
+        $userName = $user->name ?? $user->username;
+        
+        return "
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset='UTF-8'>
+            <title>Verify Your New Email Address - {$appName}</title>
+            <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 20px; background: #f4f4f4; }
+                .container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+                .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #28a745; padding-bottom: 20px; }
+                .logo { font-size: 24px; font-weight: bold; color: #28a745; margin-bottom: 10px; }
+                .subtitle { color: #666; font-size: 16px; }
+                .verify-button { background: linear-gradient(135deg, #28a745, #20c997); color: white; font-size: 18px; font-weight: bold; padding: 15px 30px; border-radius: 10px; text-align: center; margin: 25px 0; text-decoration: none; display: inline-block; box-shadow: 0 4px 15px rgba(40,167,69,0.3); }
+                .verify-button:hover { background: linear-gradient(135deg, #218838, #1e7e34); color: white; text-decoration: none; }
+                .success-box { background: #d4edda; border-left: 4px solid #28a745; padding: 20px; margin: 20px 0; border-radius: 5px; }
+                .info-box { background: #e3f2fd; border-left: 4px solid #2196f3; padding: 20px; margin: 20px 0; border-radius: 5px; }
+                .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #666; }
+                .url-backup { word-break: break-all; font-size: 12px; color: #666; margin: 10px 0; }
+                ul { padding-left: 20px; }
+                li { margin: 8px 0; }
+            </style>
+        </head>
+        <body>
+            <div class='container'>
+                <div class='header'>
+                    <div class='logo'>{$appName}</div>
+                    <div class='subtitle'>✅ Verify Your New Email Address</div>
+                </div>
+                
+                <p>Hello <strong>{$userName}</strong>,</p>
+                
+                <p>Great! You have successfully verified your current email address. Now we need to verify your new email address to complete the email change process.</p>
+                
+                <p style='text-align: center;'>
+                    <a href='{$verificationUrl}' class='verify-button'>
+                        🔗 Verify New Email Address
+                    </a>
+                </p>
+                
+                <div class='success-box'>
+                    <strong>✅ Step 2 of Email Change:</strong>
+                    <ul>
+                        <li>Click the verification button above to confirm this new email address</li>
+                        <li>Your email change will be completed automatically</li>
+                        <li>The $2.00 fee will be charged upon successful verification</li>
+                        <li>You will be redirected to your security settings page</li>
+                    </ul>
+                </div>
+                
+                <div class='info-box'>
+                    <strong>🔗 Can't click the button?</strong>
+                    <p>Copy and paste this link into your browser:</p>
+                    <div class='url-backup'>{$verificationUrl}</div>
+                </div>
+                
+                <div class='info-box'>
+                    <strong>⏰ Important:</strong>
+                    <ul>
+                        <li>This verification link is valid for <strong>24 hours</strong></li>
+                        <li>Click the link only once to complete verification</li>
+                        <li>After verification, this will become your new primary email</li>
+                        <li>If you didn't request this change, please ignore this email</li>
+                    </ul>
+                </div>
+                
+                <div class='footer'>
+                    <p>This is an email verification from <strong>{$appName}</strong>.</p>
+                    <p>Do not reply to this email.</p>
+                    <p>Generated: " . now()->format('M d, Y h:i A T') . "</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        ";
     }
 
     /**

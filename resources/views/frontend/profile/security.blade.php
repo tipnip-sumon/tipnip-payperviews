@@ -256,40 +256,67 @@
                             @endif
                         </p>
                         
-                        @if($user->pending_email_change)
-                            <!-- Pending Email Change -->
-                            <div class="alert alert-info">
-                                <i class="fas fa-clock me-2"></i>
-                                <strong>Pending Change:</strong> {{ $user->pending_email_change }}
-                                <br><small>Verification code sent to new email. Code expires in {{ $user->email_change_requested_at ? \Carbon\Carbon::parse($user->email_change_requested_at)->addMinutes(30)->diffForHumans() : 'unknown' }}</small>
-                            </div>
-                            
-                            <!-- Verification Form -->
-                            <form action="{{ route('profile.email.change.verify') }}" method="POST" class="mb-3">
-                                @csrf
-                                <div class="mb-3">
-                                    <label for="email_verification_code" class="form-label">Verification Code</label>
-                                    <input type="text" 
-                                           name="verification_code" 
-                                           id="email_verification_code" 
-                                           class="form-control @error('verification_code') is-invalid @enderror" 
-                                           placeholder="Enter 6-digit code"
-                                           maxlength="6"
-                                           required>
-                                    @error('verification_code')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
+                        @if($user->email_change_step)
+                            @if($user->email_change_step === 'current_email_verification')
+                                <!-- Step 1: Current Email OTP Verification -->
+                                <div class="alert alert-info">
+                                    <i class="fas fa-shield-alt me-2"></i>
+                                    <strong>Security Verification Required</strong>
+                                    <br>We've sent a verification code to your current email: <strong>{{ $user->email }}</strong>
+                                    <br><small>Code expires in {{ $user->current_email_otp_sent_at ? \Carbon\Carbon::parse($user->current_email_otp_sent_at)->addMinutes(10)->diffForHumans() : 'unknown' }}</small>
                                 </div>
+                                
+                                <!-- Current Email OTP Form -->
+                                <form action="{{ route('profile.email.verify.current') }}" method="POST" class="mb-3">
+                                    @csrf
+                                    <div class="mb-3">
+                                        <label for="current_email_otp" class="form-label">Verification Code (Current Email)</label>
+                                        <input type="text" 
+                                               name="otp" 
+                                               id="current_email_otp" 
+                                               class="form-control @error('otp') is-invalid @enderror" 
+                                               placeholder="Enter 6-digit code from your current email"
+                                               maxlength="6"
+                                               required>
+                                        @error('otp')
+                                            <div class="invalid-feedback">{{ $message }}</div>
+                                        @enderror
+                                    </div>
+                                    <div class="d-flex gap-2">
+                                        <button type="submit" class="btn btn-success">
+                                            <i class="fas fa-check"></i> Verify Current Email
+                                        </button>
+                                        <a href="{{ route('profile.email.change.cancel') }}" class="btn btn-outline-danger"
+                                           onclick="event.preventDefault(); document.getElementById('cancel-email-form').submit();">
+                                            <i class="fas fa-times"></i> Cancel
+                                        </a>
+                                    </div>
+                                </form>
+                                
+                            @elseif($user->email_change_step === 'new_email_verification')
+                                <!-- Step 2: Waiting for New Email Verification -->
+                                <div class="alert alert-warning">
+                                    <i class="fas fa-envelope me-2"></i>
+                                    <strong>New Email Verification Required</strong>
+                                    <br>Current email verified successfully! Now please check your new email: <strong>{{ $user->pending_email_change }}</strong>
+                                    <br>Click the verification link in the email to complete the change.
+                                    <br><small>Link expires in {{ $user->new_email_token_sent_at ? \Carbon\Carbon::parse($user->new_email_token_sent_at)->addMinutes(30)->diffForHumans() : 'unknown' }}</small>
+                                </div>
+                                
                                 <div class="d-flex gap-2">
-                                    <button type="submit" class="btn btn-success">
-                                        <i class="fas fa-check"></i> Verify & Change
-                                    </button>
+                                    <span class="btn btn-success disabled">
+                                        <i class="fas fa-check"></i> Current Email Verified
+                                    </span>
+                                    <span class="btn btn-warning disabled">
+                                        <i class="fas fa-clock"></i> Waiting for New Email Verification
+                                    </span>
                                     <a href="{{ route('profile.email.change.cancel') }}" class="btn btn-outline-danger"
                                        onclick="event.preventDefault(); document.getElementById('cancel-email-form').submit();">
                                         <i class="fas fa-times"></i> Cancel
                                     </a>
                                 </div>
-                            </form>
+                                
+                            @endif
                             
                             <form id="cancel-email-form" action="{{ route('profile.email.change.cancel') }}" method="POST" class="d-none">
                                 @csrf
