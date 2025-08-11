@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Support\Facades\Log;
 
@@ -278,5 +280,418 @@ class ProfileController extends Controller
             
             return redirect()->back()->with('error', 'Failed to delete avatar. Please try again.');
         }
+    }
+
+    /**
+     * Request paid email change with verification
+     */
+    public function requestEmailChange(Request $request)
+    {
+        $user = Auth::user();
+        
+        $request->validate([
+            'new_email' => 'required|email|unique:users,email,' . $user->id,
+            'password' => 'required|string'
+        ], [
+            'new_email.required' => 'New email address is required',
+            'new_email.email' => 'Please enter a valid email address',
+            'new_email.unique' => 'This email address is already in use',
+            'password.required' => 'Password is required for verification'
+        ]);
+
+        // Verify password
+        if (!Hash::check($request->password, $user->password)) {
+            return back()->with('error', 'Invalid password. Please try again.');
+        }
+
+        // Check if user has sufficient balance
+        $emailChangeFee = 2.00;
+        $userBalance = ($user->deposit_wallet ?? 0) + ($user->interest_wallet ?? 0);
+        
+        if ($userBalance < $emailChangeFee) {
+            return back()->with('error', 'Insufficient balance. You need $' . number_format($emailChangeFee, 2) . ' to change your email address.');
+        }
+
+        // Check if there's already a pending email change
+        if ($user->pending_email_change) {
+            return back()->with('error', 'You already have a pending email change request. Please complete or cancel it first.');
+        }
+
+        try {
+            // Generate verification code
+            $verificationCode = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+            
+            // Store pending change data
+            $user->pending_email_change = $request->new_email;
+            $user->email_change_token = $verificationCode;
+            $user->email_change_requested_at = now();
+            $user->save();
+
+            // Send verification email to NEW email address
+            $this->sendEmailChangeVerification($request->new_email, $verificationCode, $user);
+
+            return back()->with('success', 'Verification code sent to your new email address. Please check ' . $request->new_email . ' and enter the code to complete the change. Fee of $' . number_format($emailChangeFee, 2) . ' will be deducted upon verification.');
+            
+        } catch (\Exception $e) {
+            Log::error('Email change request error: ' . $e->getMessage());
+            return back()->with('error', 'Failed to send verification email. Please try again.');
+        }
+    }
+
+    /**
+     * Verify and complete email change
+     */
+    public function verifyEmailChange(Request $request)
+    {
+        $user = Auth::user();
+        
+        $request->validate([
+            'verification_code' => 'required|digits:6'
+        ]);
+
+        if (!$user->pending_email_change || !$user->email_change_token) {
+            return back()->with('error', 'No pending email change found.');
+        }
+
+        // Check if verification code is correct
+        if ($user->email_change_token !== $request->verification_code) {
+            return back()->with('error', 'Invalid verification code.');
+        }
+
+        // Check if token is not expired (valid for 30 minutes)
+        if ($user->email_change_requested_at->addMinutes(30)->isPast()) {
+            // Clear expired token
+            $user->pending_email_change = null;
+            $user->email_change_token = null;
+            $user->email_change_requested_at = null;
+            $user->save();
+            
+            return back()->with('error', 'Verification code has expired. Please request a new one.');
+        }
+
+        try {
+            DB::beginTransaction();
+            
+            $emailChangeFee = 2.00;
+            $oldEmail = $user->email;
+            $newEmail = $user->pending_email_change;
+
+            // Deduct fee from user's balance
+            $freshUser = User::find($user->id);
+            $depositWallet = $freshUser->deposit_wallet ?? 0;
+            $interestWallet = $freshUser->interest_wallet ?? 0;
+            
+            if ($depositWallet >= $emailChangeFee) {
+                $freshUser->deposit_wallet -= $emailChangeFee;
+            } else {
+                $interestWallet -= ($emailChangeFee - $depositWallet);
+                $freshUser->deposit_wallet = 0;
+                $freshUser->interest_wallet = $interestWallet;
+            }
+
+            // Update email and clear pending change
+            $freshUser->email = $newEmail;
+            $freshUser->email_verified_at = null; // Reset email verification
+            $freshUser->pending_email_change = null;
+            $freshUser->email_change_token = null;
+            $freshUser->email_change_requested_at = null;
+            $freshUser->save();
+
+            // Create transaction record
+            $transaction = new \App\Models\Transaction();
+            $transaction->user_id = $user->id;
+            $transaction->amount = $emailChangeFee;
+            $transaction->charge = 0;
+            $transaction->trx_type = '-';
+            $transaction->trx = getTrx();
+            $transaction->wallet_type = 'email_change';
+            $transaction->remark = 'email_change';
+            $transaction->details = 'Email change fee: ' . $oldEmail . ' → ' . $newEmail;
+            $transaction->post_balance = ($freshUser->deposit_wallet ?? 0) + ($freshUser->interest_wallet ?? 0);
+            $transaction->save();
+
+            DB::commit();
+
+            return back()->with('success', 'Email address changed successfully! Please verify your new email address. Fee of $' . number_format($emailChangeFee, 2) . ' has been deducted from your account.');
+            
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Email change verification error: ' . $e->getMessage());
+            return back()->with('error', 'Failed to change email address. Please try again.');
+        }
+    }
+
+    /**
+     * Request paid username change with verification
+     */
+    public function requestUsernameChange(Request $request)
+    {
+        $user = Auth::user();
+        
+        $request->validate([
+            'new_username' => 'required|string|min:3|max:50|unique:users,username,' . $user->id . '|regex:/^[a-zA-Z0-9_]+$/',
+            'password' => 'required|string'
+        ], [
+            'new_username.required' => 'New username is required',
+            'new_username.min' => 'Username must be at least 3 characters',
+            'new_username.max' => 'Username cannot exceed 50 characters',
+            'new_username.unique' => 'This username is already taken',
+            'new_username.regex' => 'Username can only contain letters, numbers, and underscores',
+            'password.required' => 'Password is required for verification'
+        ]);
+
+        // Verify password
+        if (!Hash::check($request->password, $user->password)) {
+            return back()->with('error', 'Invalid password. Please try again.');
+        }
+
+        // Check if user has sufficient balance
+        $usernameChangeFee = 5.00;
+        $userBalance = ($user->deposit_wallet ?? 0) + ($user->interest_wallet ?? 0);
+        
+        if ($userBalance < $usernameChangeFee) {
+            return back()->with('error', 'Insufficient balance. You need $' . number_format($usernameChangeFee, 2) . ' to change your username.');
+        }
+
+        // Check if there's already a pending username change
+        if ($user->pending_username_change) {
+            return back()->with('error', 'You already have a pending username change request. Please complete or cancel it first.');
+        }
+
+        try {
+            // Generate verification code
+            $verificationCode = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+            
+            // Store pending change data
+            $user->pending_username_change = $request->new_username;
+            $user->username_change_token = $verificationCode;
+            $user->username_change_requested_at = now();
+            $user->save();
+
+            // Send verification email
+            $this->sendUsernameChangeVerification($user->email, $verificationCode, $user, $request->new_username);
+
+            return back()->with('success', 'Verification code sent to your email address. Please check your email and enter the code to complete the username change. Fee of $' . number_format($usernameChangeFee, 2) . ' will be deducted upon verification.');
+            
+        } catch (\Exception $e) {
+            Log::error('Username change request error: ' . $e->getMessage());
+            return back()->with('error', 'Failed to send verification email. Please try again.');
+        }
+    }
+
+    /**
+     * Verify and complete username change
+     */
+    public function verifyUsernameChange(Request $request)
+    {
+        $user = Auth::user();
+        
+        $request->validate([
+            'verification_code' => 'required|digits:6'
+        ]);
+
+        if (!$user->pending_username_change || !$user->username_change_token) {
+            return back()->with('error', 'No pending username change found.');
+        }
+
+        // Check if verification code is correct
+        if ($user->username_change_token !== $request->verification_code) {
+            return back()->with('error', 'Invalid verification code.');
+        }
+
+        // Check if token is not expired (valid for 30 minutes)
+        if ($user->username_change_requested_at->addMinutes(30)->isPast()) {
+            // Clear expired token
+            $user->pending_username_change = null;
+            $user->username_change_token = null;
+            $user->username_change_requested_at = null;
+            $user->save();
+            
+            return back()->with('error', 'Verification code has expired. Please request a new one.');
+        }
+
+        try {
+            DB::beginTransaction();
+            
+            $usernameChangeFee = 5.00;
+            $oldUsername = $user->username;
+            $newUsername = $user->pending_username_change;
+
+            // Deduct fee from user's balance
+            $freshUser = User::find($user->id);
+            $depositWallet = $freshUser->deposit_wallet ?? 0;
+            $interestWallet = $freshUser->interest_wallet ?? 0;
+            
+            if ($depositWallet >= $usernameChangeFee) {
+                $freshUser->deposit_wallet -= $usernameChangeFee;
+            } else {
+                $interestWallet -= ($usernameChangeFee - $depositWallet);
+                $freshUser->deposit_wallet = 0;
+                $freshUser->interest_wallet = $interestWallet;
+            }
+
+            // Update username and clear pending change
+            $freshUser->username = $newUsername;
+            $freshUser->pending_username_change = null;
+            $freshUser->username_change_token = null;
+            $freshUser->username_change_requested_at = null;
+            $freshUser->save();
+
+            // Create transaction record
+            $transaction = new \App\Models\Transaction();
+            $transaction->user_id = $user->id;
+            $transaction->amount = $usernameChangeFee;
+            $transaction->charge = 0;
+            $transaction->trx_type = '-';
+            $transaction->trx = getTrx();
+            $transaction->wallet_type = 'username_change';
+            $transaction->remark = 'username_change';
+            $transaction->details = 'Username change fee: ' . $oldUsername . ' → ' . $newUsername;
+            $transaction->post_balance = ($freshUser->deposit_wallet ?? 0) + ($freshUser->interest_wallet ?? 0);
+            $transaction->save();
+
+            DB::commit();
+
+            return back()->with('success', 'Username changed successfully! Fee of $' . number_format($usernameChangeFee, 2) . ' has been deducted from your account.');
+            
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Username change verification error: ' . $e->getMessage());
+            return back()->with('error', 'Failed to change username. Please try again.');
+        }
+    }
+
+    /**
+     * Cancel pending email change
+     */
+    public function cancelEmailChange()
+    {
+        $user = Auth::user();
+        
+        $user->pending_email_change = null;
+        $user->email_change_token = null;
+        $user->email_change_requested_at = null;
+        $user->save();
+
+        return back()->with('success', 'Email change request cancelled.');
+    }
+
+    /**
+     * Cancel pending username change
+     */
+    public function cancelUsernameChange()
+    {
+        $user = Auth::user();
+        
+        $user->pending_username_change = null;
+        $user->username_change_token = null;
+        $user->username_change_requested_at = null;
+        $user->save();
+
+        return back()->with('success', 'Username change request cancelled.');
+    }
+
+    /**
+     * Send email change verification email
+     */
+    private function sendEmailChangeVerification($email, $code, $user)
+    {
+        $subject = 'Email Change Verification - ' . config('app.name');
+        $emailBody = $this->createChangeVerificationEmail($user, $code, 'Email Change', $email);
+        
+        try {
+            Mail::html($emailBody, function($message) use ($email, $subject) {
+                $message->to($email)->subject($subject);
+            });
+        } catch (\Exception $e) {
+            throw new \Exception('Failed to send verification email: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Send username change verification email
+     */
+    private function sendUsernameChangeVerification($email, $code, $user, $newUsername)
+    {
+        $subject = 'Username Change Verification - ' . config('app.name');
+        $emailBody = $this->createChangeVerificationEmail($user, $code, 'Username Change', $newUsername);
+        
+        try {
+            Mail::html($emailBody, function($message) use ($email, $subject) {
+                $message->to($email)->subject($subject);
+            });
+        } catch (\Exception $e) {
+            throw new \Exception('Failed to send verification email: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Create verification email content
+     */
+    private function createChangeVerificationEmail($user, $code, $type, $newValue)
+    {
+        $appName = config('app.name');
+        $userName = $user->name ?? $user->username;
+        
+        return "
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset='UTF-8'>
+            <title>{$type} Verification - {$appName}</title>
+            <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 20px; background: #f4f4f4; }
+                .container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+                .header { text-align: center; margin-bottom: 30px; }
+                .logo { font-size: 24px; font-weight: bold; color: #007bff; }
+                .otp-code { background: #007bff; color: white; font-size: 28px; font-weight: bold; padding: 15px 30px; border-radius: 8px; text-align: center; margin: 20px 0; letter-spacing: 3px; }
+                .warning { background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 15px; border-radius: 5px; margin: 20px 0; }
+                .info { background: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; padding: 15px; border-radius: 5px; margin: 20px 0; }
+                .footer { text-align: center; margin-top: 30px; font-size: 12px; color: #666; }
+            </style>
+        </head>
+        <body>
+            <div class='container'>
+                <div class='header'>
+                    <div class='logo'>{$appName}</div>
+                    <h2>{$type} Verification</h2>
+                </div>
+                
+                <p>Hello {$userName},</p>
+                
+                <p>You have requested to change your " . strtolower(str_replace(' Change', '', $type)) . " to: <strong>{$newValue}</strong></p>
+                
+                <p>Please use the code below to verify and complete this change:</p>
+                
+                <div class='otp-code'>{$code}</div>
+                
+                <div class='info'>
+                    <strong>Change Details:</strong>
+                    <ul>
+                        <li>Type: {$type}</li>
+                        <li>New Value: {$newValue}</li>
+                        <li>Fee: $" . ($type === 'Email Change' ? '2.00' : '5.00') . "</li>
+                        <li>Requested: " . now()->format('M d, Y h:i A') . "</li>
+                    </ul>
+                </div>
+                
+                <div class='warning'>
+                    <strong>Important:</strong>
+                    <ul>
+                        <li>This code is valid for 30 minutes only</li>
+                        <li>The fee will be deducted upon successful verification</li>
+                        <li>Never share this code with anyone</li>
+                        <li>If you didn't request this change, please ignore this email</li>
+                    </ul>
+                </div>
+                
+                <div class='footer'>
+                    <p>This is an automated message from {$appName}. Please do not reply to this email.</p>
+                    <p>Generated at: " . now()->format('M d, Y h:i A') . "</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        ";
     }
 }

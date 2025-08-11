@@ -235,6 +235,209 @@
             </div>
         </div>
 
+        <!-- Paid Email & Username Changes -->
+        <div class="row mt-4">
+            <!-- Email Change -->
+            <div class="col-lg-6 col-md-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-envelope text-primary"></i> Change Email Address
+                            <span class="badge bg-primary ms-2">$2.00</span>
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted mb-3">
+                            <strong>Current Email:</strong> {{ $user->email }}
+                            @if($user->hasVerifiedEmail())
+                                <span class="badge bg-success ms-2">Verified</span>
+                            @else
+                                <span class="badge bg-warning ms-2">Unverified</span>
+                            @endif
+                        </p>
+                        
+                        @if($user->pending_email_change)
+                            <!-- Pending Email Change -->
+                            <div class="alert alert-info">
+                                <i class="fas fa-clock me-2"></i>
+                                <strong>Pending Change:</strong> {{ $user->pending_email_change }}
+                                <br><small>Verification code sent to new email. Code expires in {{ $user->email_change_requested_at ? \Carbon\Carbon::parse($user->email_change_requested_at)->addMinutes(30)->diffForHumans() : 'unknown' }}</small>
+                            </div>
+                            
+                            <!-- Verification Form -->
+                            <form action="{{ route('profile.email.change.verify') }}" method="POST" class="mb-3">
+                                @csrf
+                                <div class="mb-3">
+                                    <label for="email_verification_code" class="form-label">Verification Code</label>
+                                    <input type="text" 
+                                           name="verification_code" 
+                                           id="email_verification_code" 
+                                           class="form-control @error('verification_code') is-invalid @enderror" 
+                                           placeholder="Enter 6-digit code"
+                                           maxlength="6"
+                                           required>
+                                    @error('verification_code')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button type="submit" class="btn btn-success">
+                                        <i class="fas fa-check"></i> Verify & Change
+                                    </button>
+                                    <a href="{{ route('profile.email.change.cancel') }}" class="btn btn-outline-danger"
+                                       onclick="event.preventDefault(); document.getElementById('cancel-email-form').submit();">
+                                        <i class="fas fa-times"></i> Cancel
+                                    </a>
+                                </div>
+                            </form>
+                            
+                            <form id="cancel-email-form" action="{{ route('profile.email.change.cancel') }}" method="POST" class="d-none">
+                                @csrf
+                            </form>
+                        @else
+                            <!-- Request Email Change Form -->
+                            <form action="{{ route('profile.email.change.request') }}" method="POST">
+                                @csrf
+                                <div class="mb-3">
+                                    <label for="new_email" class="form-label">New Email Address</label>
+                                    <input type="email" 
+                                           name="new_email" 
+                                           id="new_email" 
+                                           class="form-control @error('new_email') is-invalid @enderror" 
+                                           required>
+                                    @error('new_email')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="email_change_password" class="form-label">Current Password</label>
+                                    <input type="password" 
+                                           name="password" 
+                                           id="email_change_password" 
+                                           class="form-control @error('password') is-invalid @enderror" 
+                                           required>
+                                    @error('password')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                                
+                                <div class="alert alert-warning">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    <strong>Fee:</strong> $2.00 will be deducted from your account balance upon successful verification.
+                                    <br><strong>Current Balance:</strong> ${{ number_format(($user->deposit_wallet ?? 0) + ($user->interest_wallet ?? 0), 2) }}
+                                </div>
+                                
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-envelope"></i> Request Email Change
+                                </button>
+                            </form>
+                        @endif
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Username Change -->
+            <div class="col-lg-6 col-md-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-user text-warning"></i> Change Username
+                            <span class="badge bg-warning text-dark ms-2">$5.00</span>
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted mb-3">
+                            <strong>Current Username:</strong> {{ $user->username }}
+                        </p>
+                        
+                        @if($user->pending_username_change)
+                            <!-- Pending Username Change -->
+                            <div class="alert alert-info">
+                                <i class="fas fa-clock me-2"></i>
+                                <strong>Pending Change:</strong> {{ $user->pending_username_change }}
+                                <br><small>Verification code sent to {{ $user->email }}. Code expires in {{ $user->username_change_requested_at ? \Carbon\Carbon::parse($user->username_change_requested_at)->addMinutes(30)->diffForHumans() : 'unknown' }}</small>
+                            </div>
+                            
+                            <!-- Verification Form -->
+                            <form action="{{ route('profile.username.change.verify') }}" method="POST" class="mb-3">
+                                @csrf
+                                <div class="mb-3">
+                                    <label for="username_verification_code" class="form-label">Verification Code</label>
+                                    <input type="text" 
+                                           name="verification_code" 
+                                           id="username_verification_code" 
+                                           class="form-control @error('verification_code') is-invalid @enderror" 
+                                           placeholder="Enter 6-digit code"
+                                           maxlength="6"
+                                           required>
+                                    @error('verification_code')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button type="submit" class="btn btn-success">
+                                        <i class="fas fa-check"></i> Verify & Change
+                                    </button>
+                                    <a href="{{ route('profile.username.change.cancel') }}" class="btn btn-outline-danger"
+                                       onclick="event.preventDefault(); document.getElementById('cancel-username-form').submit();">
+                                        <i class="fas fa-times"></i> Cancel
+                                    </a>
+                                </div>
+                            </form>
+                            
+                            <form id="cancel-username-form" action="{{ route('profile.username.change.cancel') }}" method="POST" class="d-none">
+                                @csrf
+                            </form>
+                        @else
+                            <!-- Request Username Change Form -->
+                            <form action="{{ route('profile.username.change.request') }}" method="POST">
+                                @csrf
+                                <div class="mb-3">
+                                    <label for="new_username" class="form-label">New Username</label>
+                                    <input type="text" 
+                                           name="new_username" 
+                                           id="new_username" 
+                                           class="form-control @error('new_username') is-invalid @enderror" 
+                                           pattern="[a-zA-Z0-9_]+"
+                                           title="Username can only contain letters, numbers, and underscores"
+                                           required>
+                                    @error('new_username')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                    <div class="form-text">
+                                        Username can only contain letters, numbers, and underscores. Min 3, Max 50 characters.
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="username_change_password" class="form-label">Current Password</label>
+                                    <input type="password" 
+                                           name="password" 
+                                           id="username_change_password" 
+                                           class="form-control @error('password') is-invalid @enderror" 
+                                           required>
+                                    @error('password')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                                
+                                <div class="alert alert-warning">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    <strong>Fee:</strong> $5.00 will be deducted from your account balance upon successful verification.
+                                    <br><strong>Current Balance:</strong> ${{ number_format(($user->deposit_wallet ?? 0) + ($user->interest_wallet ?? 0), 2) }}
+                                </div>
+                                
+                                <button type="submit" class="btn btn-warning">
+                                    <i class="fas fa-user"></i> Request Username Change
+                                </button>
+                            </form>
+                        @endif
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Account Information -->
         <div class="row mt-4">
             <div class="col-12">

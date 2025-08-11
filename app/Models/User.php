@@ -48,6 +48,13 @@ class User extends Authenticatable implements MustVerifyEmail
         'kv', // KYC verification status
         'email_verified_at', // Add this to fillable
         'identity_verified', // Identity verification status
+        // Paid change tracking fields
+        'pending_email_change',
+        'email_change_token',
+        'email_change_requested_at',
+        'pending_username_change',
+        'username_change_token',
+        'username_change_requested_at',
         'identity_verified_at', // Identity verification timestamp
         'two_fa_status', // 2FA status
         'two_fa_enabled_at', // 2FA enabled timestamp

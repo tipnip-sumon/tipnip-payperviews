@@ -980,6 +980,14 @@ Route::middleware(['auth','prevent-back'])->group(function () {
         Route::put('/profile/password', 'updatePassword')->name('profile.password.update');
         Route::get('/profile/security', 'security')->name('profile.security');
         Route::delete('/profile/avatar', 'deleteAvatar')->name('profile.avatar.delete');
+        
+        // Paid Email & Username Change Routes
+        Route::post('/profile/request-email-change', 'requestEmailChange')->name('profile.email.change.request');
+        Route::post('/profile/verify-email-change', 'verifyEmailChange')->name('profile.email.change.verify');
+        Route::post('/profile/cancel-email-change', 'cancelEmailChange')->name('profile.email.change.cancel');
+        Route::post('/profile/request-username-change', 'requestUsernameChange')->name('profile.username.change.request');
+        Route::post('/profile/verify-username-change', 'verifyUsernameChange')->name('profile.username.change.verify');
+        Route::post('/profile/cancel-username-change', 'cancelUsernameChange')->name('profile.username.change.cancel');
     });
 });
 
