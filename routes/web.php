@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\LandController;
 use App\Http\Controllers\PaymentController;
@@ -145,9 +146,9 @@ Route::get('/home', function () {
     return redirect()->route('user.dashboard');
 })->name('home');
 
-// User Dashboard Route - Optimized for faster loading
+// User Dashboard Route - Optimized for faster loading (removed fresh.login middleware to fix logout issue)
 Route::get('/user/dashboard', [App\Http\Controllers\User\UserController::class, 'home'])
-    ->name('user.dashboard')->middleware(['auth', 'fresh.login']);
+    ->name('user.dashboard')->middleware(['auth']);
 
 // Dashboard Performance Metrics API
 Route::get('/user/dashboard/performance', [App\Http\Controllers\User\UserController::class, 'getPerformanceMetrics'])
@@ -169,6 +170,17 @@ Route::post('/simple-login', [App\Http\Controllers\Auth\LoginController::class, 
 Route::get('/login', [App\Http\Controllers\Auth\LoginController::class, 'showLoginForm'])
     ->name('login')
     ->middleware('clear.login.cache');
+
+// Debug route to check CSRF token status
+Route::get('/debug-csrf', function() {
+    return response()->json([
+        'session_id' => session()->getId(),
+        'csrf_token' => csrf_token(),
+        'session_driver' => config('session.driver'),
+        'session_count' => DB::table('sessions')->count(),
+        'current_session_exists' => DB::table('sessions')->where('id', session()->getId())->exists(),
+    ]);
+})->name('debug.csrf');
 
 Route::get('/register', [App\Http\Controllers\Auth\RegisterController::class, 'showRegistrationForm'])
     ->name('register');
@@ -206,9 +218,31 @@ Route::get('/auth-status', function(\Illuminate\Http\Request $request) {
         'user_id' => \Illuminate\Support\Facades\Auth::id(),
         'session_id' => $request->session()->getId(),
         'session_data' => $request->session()->all(),
-        'timestamp' => now()->toDateTimeString()
+        'timestamp' => now()->toDateTimeString(),
+        'url' => $request->fullUrl(),
+        'cookies' => $request->cookies->all()
     ]);
 })->name('auth.status');
+
+// Debug route for session flow
+Route::get('/debug-session', function(\Illuminate\Http\Request $request) {
+    $user = \Illuminate\Support\Facades\Auth::user();
+    return response()->json([
+        'step' => 'debug-session',
+        'authenticated' => \Illuminate\Support\Facades\Auth::check(),
+        'user_id' => \Illuminate\Support\Facades\Auth::id(),
+        'username' => $user ? $user->username : null,
+        'session_id' => $request->session()->getId(),
+        'session_lifetime' => config('session.lifetime'),
+        'session_driver' => config('session.driver'),
+        'user_agent' => $request->userAgent(),
+        'ip' => $request->ip(),
+        'session_exists_in_db' => \Illuminate\Support\Facades\DB::table('sessions')->where('id', $request->session()->getId())->exists(),
+        'session_count' => \Illuminate\Support\Facades\DB::table('sessions')->count(),
+        'user_sessions' => $user ? \Illuminate\Support\Facades\DB::table('sessions')->where('user_id', $user->id)->count() : 0,
+        'timestamp' => now()->toDateTimeString()
+    ]);
+})->name('debug.session');
 
 // Logout test page (for debugging logout behavior)
 Route::get('/logout-test', function() {

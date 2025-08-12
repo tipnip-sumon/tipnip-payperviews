@@ -33,12 +33,8 @@ class UserController extends Controller
         // Enable query logging for this request
         DB::enableQueryLog();
         
-        // Enhanced authentication check with proper redirect
+        // Enhanced authentication check with proper redirect (fixed session clearing)
         if (!Auth::check()) {
-            // Clear any existing session data to prevent confusion
-            session()->flush();
-            session()->regenerateToken();
-            
             // Log the unauthorized access attempt
             Log::info('Unauthenticated dashboard access attempt', [
                 'ip' => request()->ip(),
@@ -47,7 +43,8 @@ class UserController extends Controller
                 'session_id' => session()->getId()
             ]);
             
-            // Redirect with clear cache headers
+            // Don't clear session aggressively - let Laravel handle it
+            // Just redirect to login which will handle session properly
             return redirect()->route('login', ['from' => 'dashboard', 't' => time()])
                 ->with('info', 'Please log in to access your dashboard.')
                 ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
@@ -63,9 +60,8 @@ class UserController extends Controller
                 'auth_id' => Auth::id()
             ]);
             
+            // Only logout, don't flush session as it might be in the process of being established
             Auth::logout();
-            session()->flush();
-            session()->regenerateToken();
             
             return redirect()->route('login')->with(['error' => 'Session error. Please log in again.']);
         }
