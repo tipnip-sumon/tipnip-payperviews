@@ -193,10 +193,11 @@ Route::post('/resend-verification', [App\Http\Controllers\Auth\LoginController::
     ->name('resend.verification')
     ->middleware('throttle:3,1'); // Allow max 3 attempts per minute
 
-// Main logout route - properly configured with session handling
+// Main logout route - properly configured with session handling (bypasses CSRF)
 Route::match(['GET', 'POST'], '/logout', [App\Http\Controllers\Auth\LoginController::class, 'logout'])
     ->name('logout')
-    ->middleware(['web']);
+    ->middleware(['logout'])
+    ->withoutMiddleware(['web']); // Explicitly remove web middleware to avoid CSRF
 
 // Test route to check authentication status (for debugging)
 Route::get('/auth-status', function(\Illuminate\Http\Request $request) {
