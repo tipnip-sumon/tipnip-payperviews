@@ -56,6 +56,37 @@ class LotteryDraw extends Model
     ];
 
     /**
+     * Boot method to set default values
+     */
+    protected static function boot()
+    {
+        parent::boot();
+        
+        static::creating(function ($draw) {
+            // Set default prize distribution if not already set
+            if (empty($draw->prize_distribution)) {
+                $draw->prize_distribution = [
+                    "1" => [
+                        "name" => "1st Prize",
+                        "type" => "fixed_amount",
+                        "amount" => "1000"
+                    ],
+                    "2" => [
+                        "name" => "2nd Prize", 
+                        "type" => "fixed_amount",
+                        "amount" => "300"
+                    ],
+                    "3" => [
+                        "name" => "3rd Prize",
+                        "type" => "fixed_amount", 
+                        "amount" => "100"
+                    ]
+                ];
+            }
+        });
+    }
+
+    /**
      * Get tickets for this draw
      */
     public function tickets()
@@ -134,10 +165,19 @@ class LotteryDraw extends Model
      */
     public function calculatePrizePool()
     {
-        $settings = LotterySetting::getSettings();
-        $totalRevenue = $this->total_tickets_sold * $settings->ticket_price;
-        $adminCommission = $totalRevenue * ($settings->admin_commission_percentage / 100);
-        return $totalRevenue - $adminCommission;
+        // Calculate total prize pool from prize_distribution amounts
+        if (!empty($this->prize_distribution) && is_array($this->prize_distribution)) {
+            $total = 0;
+            foreach ($this->prize_distribution as $prize) {
+                if (isset($prize['type']) && $prize['type'] === 'fixed_amount' && isset($prize['amount'])) {
+                    $total += floatval($prize['amount']);
+                }
+            }
+            return $total;
+        }
+        
+        // Fallback to default prize distribution if not set
+        return 1400.00; // Default: 1000 + 300 + 100
     }
 
     /**
@@ -531,6 +571,14 @@ class LotteryDraw extends Model
     public function getFormattedDrawNumberAttribute()
     {
         return 'Draw #' . $this->display_draw_number;
+    }
+
+    /**
+     * Get total prize pool calculated from prize distribution
+     */
+    public function getTotalPrizePoolAttribute()
+    {
+        return $this->calculatePrizePool();
     }
 
     /**
