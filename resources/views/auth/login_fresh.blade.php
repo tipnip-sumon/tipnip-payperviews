@@ -1315,12 +1315,18 @@ document.addEventListener('DOMContentLoaded', function() {
                     $('input[name="_token"]').val(newToken);
                     console.log('CSRF token refreshed successfully');
                     
+                    // Don't show session expired alert for successful CSRF refresh
+                    // This was causing false positives when users came from protected routes
+                    console.log('CSRF token refreshed - ready for retry');
+                    
+                    /* REMOVED - This was showing session expired even when token refresh succeeded
                     Swal.fire({
                         title: 'Session Expired!',
                         text: 'Please try logging in again.',
                         icon: 'warning',
                         confirmButtonText: 'Try Again'
                     });
+                    */
                 } else {
                     console.error('Failed to refresh CSRF token');
                     Swal.fire({
@@ -1372,7 +1378,10 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('session_expired param:', urlParams.get('session_expired'));
     console.log('csrf_error param:', urlParams.get('csrf_error'));
     console.log('Current URL:', window.location.href);
+    console.log('Document referrer:', document.referrer);
     
+    // Only show session expired if explicitly indicated by URL parameters
+    // Do NOT show it just because user came from a protected route
     if (urlParams.get('session_expired') === '1' || urlParams.get('csrf_error') === '1') {
         console.log('Showing session expired alert due to URL parameters');
         Swal.fire({
@@ -1381,6 +1390,8 @@ document.addEventListener('DOMContentLoaded', function() {
             icon: 'warning',
             confirmButtonText: 'OK'
         });
+    } else {
+        console.log('No explicit session expired parameters found - not showing alert');
     }
     
     // Also check if we're coming from a logout redirect (no parameter)
