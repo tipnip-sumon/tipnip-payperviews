@@ -13,7 +13,8 @@
     
     <div>
         <button onclick="checkAuthStatus()">Check Auth Status</button>
-        <button onclick="performLogout()">Test Logout</button>
+        <button onclick="performLogout()">Test Logout (CSRF)</button>
+        <button onclick="forceLogout()">Force Logout (No CSRF)</button>
         <button onclick="accessDashboard()">Try Dashboard Access</button>
         <button onclick="clearBrowserCache()">Clear Browser Cache</button>
     </div>
@@ -55,24 +56,40 @@
             try {
                 log('Attempting logout...');
                 
-                // Get CSRF token
+                // Get CSRF token from meta tag
                 const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+                log(`Using CSRF token: ${token.substring(0, 10)}...`);
+                
+                // Try logout with form data instead of JSON
+                const formData = new FormData();
+                formData.append('_token', token);
+                formData.append('_method', 'POST');
                 
                 const response = await fetch('/logout', {
                     method: 'POST',
+                    body: formData,
+                    credentials: 'same-origin',
                     headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': token,
-                        'Accept': 'application/json'
-                    },
-                    credentials: 'same-origin'
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
                 });
+                
+                log(`Logout response status: ${response.status}`);
                 
                 if (response.redirected) {
                     log(`Logout redirected to: ${response.url}`);
+                } else if (response.ok) {
+                    try {
+                        const data = await response.json();
+                        log(`Logout response: ${JSON.stringify(data)}`);
+                    } catch (e) {
+                        const text = await response.text();
+                        log(`Logout response (text): ${text.substring(0, 200)}...`);
+                    }
                 } else {
-                    const data = await response.json();
-                    log(`Logout response: ${JSON.stringify(data)}`);
+                    const errorText = await response.text();
+                    log(`Logout error (${response.status}): ${errorText.substring(0, 200)}...`);
                 }
                 
                 // Check auth status after logout
@@ -80,6 +97,44 @@
                 
             } catch (error) {
                 log(`Logout error: ${error.message}`);
+                
+                // Try alternative logout method (simple GET request)
+                log('Trying alternative logout method...');
+                try {
+                    window.location.href = '/simple-logout';
+                } catch (altError) {
+                    log(`Alternative logout error: ${altError.message}`);
+                }
+            }
+        }
+
+        async function forceLogout() {
+            try {
+                log('Attempting force logout (no CSRF)...');
+                
+                const response = await fetch('/force-logout', {
+                    method: 'GET',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                log(`Force logout response: ${JSON.stringify(data)}`);
+                
+                if (data.success) {
+                    log('Force logout successful!');
+                    // Clear browser storage
+                    clearBrowserCache();
+                    // Check auth status
+                    setTimeout(checkAuthStatus, 500);
+                } else {
+                    log(`Force logout failed: ${data.error}`);
+                }
+                
+            } catch (error) {
+                log(`Force logout error: ${error.message}`);
             }
         }
 

@@ -214,6 +214,39 @@ Route::get('/logout-test', function() {
     return view('logout-test');
 })->name('logout.test');
 
+// Force logout route for testing (bypasses CSRF)
+Route::get('/force-logout', function(\Illuminate\Http\Request $request) {
+    try {
+        $userId = \Illuminate\Support\Facades\Auth::id();
+        
+        // Force logout regardless of session state
+        \Illuminate\Support\Facades\Auth::logout();
+        
+        // Clear current session
+        $request->session()->flush();
+        $request->session()->regenerate();
+        
+        // Clear database sessions for this user
+        if ($userId) {
+            \Illuminate\Support\Facades\DB::table('sessions')
+                ->where('user_id', $userId)
+                ->delete();
+        }
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Force logout completed',
+            'redirect' => route('login', ['from' => 'force_logout'])
+        ]);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage()
+        ]);
+    }
+})->name('force.logout');
+
 // Enhanced simple logout route with security validation
 Route::get('/simple-logout', function(\Illuminate\Http\Request $request) {
     try {

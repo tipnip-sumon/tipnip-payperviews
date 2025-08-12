@@ -20,6 +20,8 @@ class VerifyCsrfToken extends Middleware
         '/admin/emergency-logout',
         'logout',
         '/logout',
+        'simple-logout',
+        '/simple-logout',
         'api/*', // API routes typically don't need CSRF
         'user/withdraw', // Temporarily exclude withdrawal POST to test CSRF issues
         '/user/withdraw', // Temporarily exclude withdrawal POST to test CSRF issues
