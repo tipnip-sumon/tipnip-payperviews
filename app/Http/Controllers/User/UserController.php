@@ -110,6 +110,7 @@ class UserController extends Controller
             'activePlan' => $dashboardData['video_system']['active_plan'],
             'dailyLimit' => $dashboardData['video_system']['daily_limit'],
             'todayViews' => $dashboardData['video_system']['today_views'],
+            'todayEarnings' => $dashboardData['video_system']['today_earnings'] ?? 0,
             'remainingViews' => $dashboardData['video_system']['remaining_views'],
             'totalVideosWatched' => $dashboardData['video_system']['total_videos_watched'],
             'videoRate' => $dashboardData['video_system']['video_rate'],
