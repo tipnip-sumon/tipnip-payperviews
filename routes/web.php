@@ -17,6 +17,7 @@ use App\Http\Controllers\User\SupportController;
 use App\Http\Controllers\User\WithdrawController;
 use App\Http\Controllers\admin\AdminKycController;
 use App\Http\Controllers\User\VideoViewController;
+use App\Http\Controllers\User\BalanceController;
 
 use App\Http\Controllers\admin\AnalyticsController;
 use App\Http\Controllers\admin\VideoLinkController;
@@ -763,6 +764,12 @@ Route::controller(UserController::class)->middleware('auth','prevent-back')->gro
     Route::post('/user/send-message','sendMessage')->name('user.send-message');
     Route::get('/user/details/{userId}','getUserDetails')->name('user.details');
     Route::post('/user/dismiss-install-suggestion','dismissInstallSuggestion')->name('user.dismiss-install-suggestion');
+});
+
+// Balance API routes for real-time updates
+Route::controller(BalanceController::class)->middleware('auth','prevent-back')->group(function () {
+    Route::get('/api/user/balance','getBalanceData')->name('user.balance.data');
+    Route::post('/api/user/balance/refresh','refreshBalance')->name('user.balance.refresh');
 });
 
 Route::controller(HomeController::class)->middleware('auth','prevent-back')->group(function () {

@@ -2249,12 +2249,6 @@
             const newPassword = newPasswordInput.value;
             const confirmPassword = confirmPasswordInput.value;
             
-            console.log('Validating form:', {
-                currentPassword: currentPassword ? 'provided' : 'missing',
-                newPassword: newPassword ? 'provided' : 'missing',
-                confirmPassword: confirmPassword ? 'provided' : 'missing'
-            });
-            
             // Check if current password is provided
             if (!currentPassword) {
                 showPasswordError('current_password_error', 'Current password is required');
@@ -2300,18 +2294,15 @@
                 }
             })
             .then(response => {
-                console.log('Response status:', response.status);
                 if (!response.ok) {
                     // Try to get error details
                     return response.text().then(text => {
-                        console.log('Error response:', text);
                         throw new Error(`HTTP error! status: ${response.status} - ${text}`);
                     });
                 }
                 return response.json();
             })
             .then(data => {
-                console.log('Response data:', data);
                 
                 if (data.success) {
                     if (typeof Swal !== 'undefined') {
@@ -2357,7 +2348,6 @@
                 }
             })
             .catch(error => {
-                console.error('Password change error:', error);
                 if (typeof Swal !== 'undefined') {
                     Swal.fire({
                         title: 'Error',
@@ -2434,6 +2424,266 @@
     // This comment serves as documentation that desktop notifications are handled
     // by the mobile layout's unified function.
     @endauth
+
+    // ========================================
+    // REAL-TIME BALANCE UPDATE SYSTEM
+    // ========================================
+    
+    // Real-time balance update configuration
+    let balanceUpdateInterval;
+    let isUpdatingBalances = false;
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        initializeRealTimeUpdates();
+    });
+    
+    function initializeRealTimeUpdates() {
+        // Start real-time balance updates every 30 seconds
+        startBalanceUpdates();
+        
+        // Update balances when window gains focus
+        window.addEventListener('focus', function() {
+            updateAllBalances();
+        });
+        
+        // Update balances after successful transactions
+        window.addEventListener('transactionComplete', function() {
+            updateAllBalances();
+        });
+    }
+    
+    function startBalanceUpdates() {
+        // Clear existing interval
+        if (balanceUpdateInterval) {
+            clearInterval(balanceUpdateInterval);
+        }
+        
+        // Update immediately on start
+        updateAllBalances();
+        
+        // Set interval for periodic updates (every 30 seconds)
+        balanceUpdateInterval = setInterval(function() {
+            updateAllBalances();
+        }, 30000);
+    }
+    
+    function stopBalanceUpdates() {
+        if (balanceUpdateInterval) {
+            clearInterval(balanceUpdateInterval);
+            balanceUpdateInterval = null;
+        }
+    }
+    
+    async function updateAllBalances() {
+        if (isUpdatingBalances) {
+            return; // Prevent multiple simultaneous updates
+        }
+        
+        isUpdatingBalances = true;
+        
+        try {
+            // Show loading indicators
+            showBalanceLoadingIndicators();
+            
+            // Fetch fresh balance data
+            const response = await fetch('/api/user/balance', {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                updateBalanceElements(data.balances);
+            }
+            
+        } catch (error) {
+            // Show error indicator briefly
+            showBalanceError();
+        } finally {
+            hideBalanceLoadingIndicators();
+            isUpdatingBalances = false;
+        }
+    }
+    
+    function updateBalanceElements(balances) {
+        // Update all elements with real-time update attributes
+        const elementsToUpdate = {
+            'sidebar-total-balance': balances.total_balance,
+            'sidebar-deposit': balances.deposit_wallet,
+            'sidebar-interest': balances.interest_wallet,
+            'profile-balance': balances.total_balance,
+            'navbar-balance': balances.total_balance,
+            'dashboard-total-balance': balances.total_balance,
+            'dashboard-deposit-balance': balances.deposit_wallet,
+            'dashboard-interest-balance': balances.interest_wallet
+        };
+        
+        Object.keys(elementsToUpdate).forEach(key => {
+            const elements = document.querySelectorAll(`[data-realtime-update="${key}"]`);
+            
+            elements.forEach(element => {
+                const newValue = elementsToUpdate[key];
+                if (newValue !== undefined) {
+                    // Format the balance value
+                    const formattedValue = key.includes('balance') ? `$${newValue}` : newValue;
+                    
+                    // Animate the change
+                    animateBalanceChange(element, formattedValue);
+                }
+            });
+        });
+    }
+    
+    function animateBalanceChange(element, newValue) {
+        const currentValue = element.textContent.trim();
+        
+        // Only animate if value has actually changed
+        if (currentValue !== newValue) {
+            // Add update animation class
+            element.classList.add('balance-updating');
+            
+            // Update the value
+            setTimeout(() => {
+                element.textContent = newValue;
+                element.classList.remove('balance-updating');
+                element.classList.add('balance-updated');
+                
+                // Remove the updated class after animation
+                setTimeout(() => {
+                    element.classList.remove('balance-updated');
+                }, 1000);
+            }, 150);
+        }
+    }
+    
+    function showBalanceLoadingIndicators() {
+        const loadingElements = document.querySelectorAll('[data-realtime-update] .realtime-loading');
+        loadingElements.forEach(element => {
+            element.classList.remove('d-none');
+        });
+        
+        // Add subtle loading animation to balance elements
+        const balanceElements = document.querySelectorAll('[data-realtime-update]');
+        balanceElements.forEach(element => {
+            element.classList.add('balance-loading');
+        });
+    }
+    
+    function hideBalanceLoadingIndicators() {
+        const loadingElements = document.querySelectorAll('[data-realtime-update] .realtime-loading');
+        loadingElements.forEach(element => {
+            element.classList.add('d-none');
+        });
+        
+        // Remove loading animation
+        const balanceElements = document.querySelectorAll('[data-realtime-update]');
+        balanceElements.forEach(element => {
+            element.classList.remove('balance-loading');
+        });
+    }
+    
+    function showBalanceError() {
+        const balanceElements = document.querySelectorAll('[data-realtime-update]');
+        balanceElements.forEach(element => {
+            element.classList.add('balance-error');
+            setTimeout(() => {
+                element.classList.remove('balance-error');
+            }, 2000);
+        });
+    }
+    
+    // Manual balance refresh function (can be called from buttons)
+    window.refreshBalances = function() {
+        updateAllBalances();
+    };
+    
+    // Force balance update function (for after transactions)
+    window.forceBalanceUpdate = function() {
+        setTimeout(() => {
+            updateAllBalances();
+        }, 1000); // Wait 1 second for server to process
+    };
+    
+    // Stop updates when user logs out or navigates away
+    window.addEventListener('beforeunload', function() {
+        stopBalanceUpdates();
+    });
+    
+    // ========================================
+    // CSS ANIMATIONS FOR BALANCE UPDATES
+    // ========================================
+    
+    // Add CSS for balance update animations
+    const balanceUpdateStyles = `
+        <style>
+        .balance-loading {
+            opacity: 0.7;
+            transition: opacity 0.3s ease;
+        }
+        
+        .balance-updating {
+            transform: scale(1.05);
+            transition: transform 0.15s ease;
+        }
+        
+        .balance-updated {
+            background: rgba(40, 167, 69, 0.1);
+            border-radius: 4px;
+            animation: balanceGlow 1s ease;
+        }
+        
+        .balance-error {
+            background: rgba(220, 53, 69, 0.1);
+            border-radius: 4px;
+            animation: balanceErrorGlow 2s ease;
+        }
+        
+        @keyframes balanceGlow {
+            0% { 
+                background: rgba(40, 167, 69, 0.3);
+                transform: scale(1.02);
+            }
+            50% { 
+                background: rgba(40, 167, 69, 0.2);
+            }
+            100% { 
+                background: rgba(40, 167, 69, 0.1);
+                transform: scale(1);
+            }
+        }
+        
+        @keyframes balanceErrorGlow {
+            0%, 100% { 
+                background: rgba(220, 53, 69, 0.1);
+            }
+            50% { 
+                background: rgba(220, 53, 69, 0.2);
+            }
+        }
+        
+        .realtime-loading {
+            display: inline-block;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        </style>
+    `;
+    
+    // Inject the styles
+    document.head.insertAdjacentHTML('beforeend', balanceUpdateStyles);
     </script>
 
 </body>
