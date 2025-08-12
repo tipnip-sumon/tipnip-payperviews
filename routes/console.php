@@ -11,6 +11,27 @@ Schedule::command('cronJob')
 Schedule::command('app:payment-status')
     ->everySecond();
 
+// Clean up guest sessions every hour
+Schedule::command('session:clean-guests --hours=1')
+    ->hourly()
+    ->onSuccess(function () {
+        Log::info('Guest session cleanup completed successfully.');
+    })
+    ->onFailure(function () {
+        Log::error('Guest session cleanup failed.');
+    });
+
+// Clean up orphaned and old sessions daily
+Schedule::command('session:clean-orphaned --days=1')
+    ->dailyAt('03:00')
+    ->timezone('Asia/Dhaka')
+    ->onSuccess(function () {
+        Log::info('Orphaned session cleanup completed successfully.');
+    })
+    ->onFailure(function () {
+        Log::error('Orphaned session cleanup failed.');
+    });
+
 Schedule::command('app:daily-video-assignments')
     ->dailyAt('00:00')
     ->timezone('Asia/Dhaka')
