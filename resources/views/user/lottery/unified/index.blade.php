@@ -21,7 +21,7 @@
                                 <small class="opacity-75">Total Wallet Balance</small>
                             </div>
                         </div>
-                    </div>
+                    </div> 
                 </div>
             </div>
         </div>

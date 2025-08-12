@@ -100,7 +100,7 @@
                                 Current Lottery Draw
                             </h4>
                             @if(isset($currentDraw))
-                                <span class="badge badge-primary ms-2">Draw #{{ $currentDraw->id }}</span>
+                                <span class="badge badge-primary ms-2">{{ $currentDraw->formatted_draw_number }}</span>
                             @endif
                         </div>
                         <div class="card-body">
@@ -608,7 +608,7 @@
                         <div class="card-header bg-success text-white">
                             <h5 class="card-title mb-0">
                                 <i class="fas fa-trophy me-2"></i>
-                                Current Draw Winners - Draw #{{ $currentDraw->id }}
+                                Current Draw Winners - {{ $currentDraw->formatted_draw_number }}
                             </h5>
                         </div>
                         <div class="card-body">

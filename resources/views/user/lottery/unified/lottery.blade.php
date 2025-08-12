@@ -26,7 +26,7 @@
                 @if($currentDraw)
                     <div class="row">
                         <div class="col-6">
-                            <strong>Draw #{{ $currentDraw->id }}</strong>
+                            <strong>{{ $currentDraw->formatted_draw_number }}</strong>
                             <p class="mb-1">Total Prize Pool</p>
                             <h4 class="text-success">${{ number_format($currentDraw->total_prize_pool, 2) }}</h4>
                         </div>
@@ -131,15 +131,15 @@
                                 @foreach($recentTickets as $ticket)
                                     <tr>
                                         <td><strong>#{{ $ticket->ticket_number }}</strong></td>
-                                        <td>Draw #{{ $ticket->draw->id ?? 'N/A' }}</td>
+                                        <td>{{ $ticket->draw->formatted_draw_number ?? 'N/A' }}</td>
                                         <td>{{ $ticket->created_at->format('M j, Y') }}</td>
                                         <td>
                                             @if($ticket->draw && $ticket->draw->status == 'completed')
-                                                <span class="badge badge-success">Completed</span>
+                                                <span class="badge bg-success">Completed</span>
                                             @elseif($ticket->draw && $ticket->draw->status == 'pending')
-                                                <span class="badge badge-warning">Pending</span>
+                                                <span class="badge bg-warning">Pending</span>
                                             @else
-                                                <span class="badge badge-secondary">Unknown</span>
+                                                <span class="badge bg-secondary">Unknown</span>
                                             @endif
                                         </td>
                                         <td>
@@ -147,7 +147,7 @@
                                                 $isWinner = $ticket->draw && $ticket->draw->winners()->where('lottery_ticket_id', $ticket->id)->exists();
                                             @endphp
                                             @if($isWinner)
-                                                <span class="badge badge-warning"><i class="fe fe-trophy"></i> Winner!</span>
+                                                <span class="badge bg-warning"><i class="fe fe-trophy"></i> Winner!</span>
                                             @elseif($ticket->draw && $ticket->draw->status == 'completed')
                                                 <span class="text-muted">No prize</span>
                                             @else

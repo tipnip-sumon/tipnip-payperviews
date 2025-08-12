@@ -410,7 +410,7 @@ class LotteryController extends Controller
             $draws = LotteryDraw::whereHas('tickets', function($q) use ($user) {
                             $q->where('user_id', $user->id);
                         })
-                        ->orderBy('draw_date', 'desc')
+                        ->orderBy('draw_date', 'desc') 
                         ->get();
 
             // Get winning history - Only from completed draws

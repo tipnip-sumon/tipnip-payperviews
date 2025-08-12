@@ -64,7 +64,7 @@
                     <div class="card-header bg-primary text-white">
                         <h4 class="card-title mb-0">
                             <i class="fas fa-star me-2"></i>
-                            Latest Draw Results - Draw #{{ $latestDraw->id }}
+                            Latest Draw Results - {{ $latestDraw->formatted_draw_number }}
                         </h4>
                     </div>
                     <div class="card-body">
