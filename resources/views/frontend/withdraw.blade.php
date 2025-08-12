@@ -543,7 +543,7 @@
         }
         
         .amount-highlight {
-            font-size: 1.25rem;
+            font-size: 1.25rem; 
             font-weight: 700;
         }
     </style>
@@ -685,7 +685,69 @@
                     }).then((result) => {
                         if (result.isConfirmed) {
                             $('#withdrawBtn').html('<i class="ri-loader-4-line me-2 spin"></i>Sending Code...').prop('disabled', true);
-                            this.submit();
+                            
+                            // Use AJAX to send OTP instead of form submission
+                            $.ajax({
+                                url: '{{ route("user.withdraw.submit") }}',
+                                method: 'POST',
+                                data: {
+                                    _token: $('meta[name="csrf-token"]').attr('content'),
+                                    method_id: method,
+                                    account_details: details,
+                                    send_otp: 1
+                                },
+                                success: function(response) {
+                                    if (response.success) {
+                                        // Show success message
+                                        Swal.fire({
+                                            title: 'OTP Sent!',
+                                            text: 'Verification code has been sent to your email. Please check your inbox.',
+                                            icon: 'success',
+                                            confirmButtonText: 'OK'
+                                        });
+                                        
+                                        // Show OTP section dynamically
+                                        showOtpSection();
+                                        
+                                        // Reset button
+                                        $('#withdrawBtn')
+                                            .html('<i class="ri-shield-check-line me-2"></i>Verify OTP & Password - Complete Withdrawal')
+                                            .removeClass('btn-primary')
+                                            .addClass('btn-success')
+                                            .prop('disabled', false);
+                                    } else {
+                                        Swal.fire({
+                                            title: 'Error!',
+                                            text: response.message || 'Failed to send OTP. Please try again.',
+                                            icon: 'error',
+                                            confirmButtonText: 'OK'
+                                        });
+                                        
+                                        // Reset button
+                                        $('#withdrawBtn')
+                                            .html('<i class="ri-mail-send-line me-2"></i>Send Verification Code')
+                                            .prop('disabled', false);
+                                    }
+                                },
+                                error: function(xhr) {
+                                    let errorMessage = 'Failed to send OTP. Please try again.';
+                                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                                        errorMessage = xhr.responseJSON.message;
+                                    }
+                                    
+                                    Swal.fire({
+                                        title: 'Error!',
+                                        text: errorMessage,
+                                        icon: 'error',
+                                        confirmButtonText: 'OK'
+                                    });
+                                    
+                                    // Reset button
+                                    $('#withdrawBtn')
+                                        .html('<i class="ri-mail-send-line me-2"></i>Send Verification Code')
+                                        .prop('disabled', false);
+                                }
+                            });
                         }
                     });
                 }
@@ -698,6 +760,76 @@
                     this.value = this.value.slice(0, 6);
                 }
             });
+
+            // Function to dynamically show OTP section
+            function showOtpSection() {
+                // Create OTP section HTML if it doesn't exist
+                if ($('#otpSection').length === 0) {
+                    const otpHtml = `
+                        <div class="mb-4" id="otpSection" style="display: none;">
+                            <div class="card border-warning">
+                                <div class="card-header bg-warning text-dark">
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-shield-alt me-2"></i>Email Verification Required
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <!-- OTP Code -->
+                                        <div class="col-12">
+                                            <label for="otp_code" class="form-label fs-14 text-dark fw-semibold">
+                                                <i class="fas fa-key me-1"></i>
+                                                Verification Code (6 digits)
+                                                <span class="text-danger">*</span>
+                                            </label>
+                                            <div class="input-group">
+                                                <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                                                <input type="text" name="otp_code" class="form-control text-center fs-16" 
+                                                       id="otp_code" placeholder="000000" maxlength="6" 
+                                                       pattern="[0-9]{6}" title="Please enter 6 digits" 
+                                                       autocomplete="one-time-code" inputmode="numeric">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mt-3 text-center">
+                                        <small class="text-muted">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            Check your email for the verification code.
+                                            <br>
+                                            Didn't receive it? 
+                                            <a href="javascript:void(0)" onclick="resendOtp()" class="text-primary">
+                                                Resend Code
+                                            </a>
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>`;
+                    
+                    // Insert OTP section after withdrawal method selection
+                    $('#withdraw_method').closest('.mb-4').after(otpHtml);
+                }
+                
+                // Show OTP section with animation
+                $('#otpSection').slideDown(400, function() {
+                    // Focus on OTP input
+                    $('#otp_code').focus();
+                });
+                
+                // Show password field if it's hidden
+                if ($('#password').closest('.mb-4').is(':hidden')) {
+                    $('#password').closest('.mb-4').slideDown(400);
+                }
+                
+                // Add OTP input validation
+                $('#otp_code').on('input', function() {
+                    this.value = this.value.replace(/[^0-9]/g, '');
+                    if (this.value.length > 6) {
+                        this.value = this.value.slice(0, 6);
+                    }
+                });
+            }
             
             // Auto-focus OTP field when shown
             @if($isDepositOtpSession ?? false)
