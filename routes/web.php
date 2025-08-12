@@ -156,8 +156,8 @@ Route::get('/user/dashboard/performance', [App\Http\Controllers\User\UserControl
 // AUTHENTICATION ROUTES  
 // =============================================================================
 
-// Using Laravel's built-in auth routes for login
-Auth::routes(['verify' => true]);
+// Using Laravel's built-in auth routes for login (excluding logout to use our custom one)
+Auth::routes(['verify' => true, 'logout' => false]);
 
 // Simple login route that handles CSRF gracefully (no CSRF issues)
 Route::post('/simple-login', [App\Http\Controllers\Auth\LoginController::class, 'simpleLogin'])
