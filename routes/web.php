@@ -147,7 +147,7 @@ Route::get('/home', function () {
 
 // User Dashboard Route - Optimized for faster loading
 Route::get('/user/dashboard', [App\Http\Controllers\User\UserController::class, 'home'])
-    ->name('user.dashboard')->middleware(['auth', 'fresh.login', 'session.security']);
+    ->name('user.dashboard')->middleware(['auth', 'fresh.login']);
 
 // Dashboard Performance Metrics API
 Route::get('/user/dashboard/performance', [App\Http\Controllers\User\UserController::class, 'getPerformanceMetrics'])
