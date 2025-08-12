@@ -1367,6 +1367,16 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 100);
     }
     
+    // Check if we need to show session expired message (only if explicitly indicated)
+    if (urlParams.get('session_expired') === '1' || urlParams.get('csrf_error') === '1') {
+        Swal.fire({
+            title: 'Session Expired!',
+            text: 'Your session has expired. Please try logging in again.',
+            icon: 'warning',
+            confirmButtonText: 'OK'
+        });
+    }
+    
     // Also check if we're coming from a logout redirect (no parameter)
     const referrer = document.referrer;
     if (referrer && (referrer.includes('/logout') || referrer.includes('/simple-logout'))) {
