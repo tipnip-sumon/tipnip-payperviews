@@ -767,37 +767,48 @@
                 if ($('#otpSection').length === 0) {
                     const otpHtml = `
                         <div class="mb-4" id="otpSection" style="display: none;">
-                            <div class="card border-warning">
-                                <div class="card-header bg-warning text-dark">
+                            <div class="card border-primary">
+                                <div class="card-header bg-primary text-white">
                                     <h6 class="mb-0">
-                                        <i class="fas fa-shield-alt me-2"></i>Email Verification Required
+                                        <i class="ri-shield-check-line me-2"></i>Complete Verification
                                     </h6>
                                 </div>
                                 <div class="card-body">
-                                    <div class="row">
-                                        <!-- OTP Code -->
-                                        <div class="col-12">
-                                            <label for="otp_code" class="form-label fs-14 text-dark fw-semibold">
-                                                <i class="fas fa-key me-1"></i>
-                                                Verification Code (6 digits)
-                                                <span class="text-danger">*</span>
-                                            </label>
-                                            <div class="input-group">
-                                                <span class="input-group-text"><i class="fas fa-lock"></i></span>
-                                                <input type="text" name="otp_code" class="form-control text-center fs-16" 
-                                                       id="otp_code" placeholder="000000" maxlength="6" 
-                                                       pattern="[0-9]{6}" title="Please enter 6 digits" 
-                                                       autocomplete="one-time-code" inputmode="numeric">
-                                            </div>
+                                    <p class="mb-3">
+                                        <i class="ri-mail-line me-2 text-primary"></i>
+                                        We've sent a 6-digit verification code to your email address. Please enter the code and your transaction password below to complete withdrawal.
+                                    </p>
+                                    
+                                    <!-- OTP Code -->
+                                    <div class="mb-3">
+                                        <label for="otp_code_dynamic" class="form-label fs-14 text-dark fw-semibold">
+                                            Verification Code:
+                                        </label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-light">
+                                                <i class="ri-key-line text-primary"></i>
+                                            </span>
+                                            <input type="text" name="otp_code" class="form-control text-center fs-16" 
+                                                   id="otp_code_dynamic" placeholder="000000" maxlength="6" 
+                                                   pattern="[0-9]{6}" title="Please enter a 6-digit verification code" required>
                                         </div>
                                     </div>
                                     
-                                    <div class="mt-3 text-center">
+                                    <!-- Transaction Password -->
+                                    <div class="mb-3">
+                                        <label for="password_dynamic" class="form-label fs-14 text-dark fw-semibold">
+                                            <i class="ri-shield-keyhole-line me-2 text-danger"></i>Transaction Password:
+                                        </label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-light"><i class="ri-lock-line text-muted"></i></span>
+                                            <input type="password" name="password" class="form-control" id="password_dynamic" 
+                                                   placeholder="Enter your transaction password" required>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="text-center">
                                         <small class="text-muted">
-                                            <i class="fas fa-info-circle me-1"></i>
-                                            Check your email for the verification code.
-                                            <br>
-                                            Didn't receive it? 
+                                            Didn't receive the code? 
                                             <a href="javascript:void(0)" onclick="resendOtp()" class="text-primary">
                                                 Resend Code
                                             </a>
@@ -807,27 +818,76 @@
                             </div>
                         </div>`;
                     
-                    // Insert OTP section after withdrawal method selection
-                    $('#withdraw_method').closest('.mb-4').after(otpHtml);
+                    // Insert OTP section after account details
+                    $('#account_details').closest('.mb-4').after(otpHtml);
                 }
                 
                 // Show OTP section with animation
                 $('#otpSection').slideDown(400, function() {
                     // Focus on OTP input
-                    $('#otp_code').focus();
+                    $('#otp_code_dynamic').focus();
                 });
                 
-                // Show password field if it's hidden
-                if ($('#password').closest('.mb-4').is(':hidden')) {
-                    $('#password').closest('.mb-4').slideDown(400);
-                }
+                // Hide any existing password fields to avoid confusion
+                $('#password').closest('.mb-4').hide();
                 
-                // Add OTP input validation
-                $('#otp_code').on('input', function() {
+                // Add OTP input validation for the dynamic field
+                $('#otp_code_dynamic').on('input', function() {
                     this.value = this.value.replace(/[^0-9]/g, '');
                     if (this.value.length > 6) {
                         this.value = this.value.slice(0, 6);
                     }
+                });
+                
+                // Update form submission to handle the dynamic OTP field
+                $('#withdrawForm').off('submit').on('submit', function(e) {
+                    e.preventDefault();
+                    
+                    const otpCode = $('#otp_code_dynamic').val();
+                    const password = $('#password_dynamic').val();
+                    
+                    if (!otpCode || otpCode.length !== 6) {
+                        Swal.fire({
+                            title: 'Invalid OTP!',
+                            text: 'Please enter a valid 6-digit verification code',
+                            icon: 'warning',
+                            confirmButtonText: 'OK'
+                        });
+                        $('#otp_code_dynamic').focus();
+                        return false;
+                    }
+                    
+                    if (!password) {
+                        Swal.fire({
+                            title: 'Password Required!',
+                            text: 'Please enter your transaction password',
+                            icon: 'warning',
+                            confirmButtonText: 'OK'
+                        });
+                        $('#password_dynamic').focus();
+                        return false;
+                    }
+                    
+                    const methodName = $('#withdraw_method option:selected').text();
+                    
+                    Swal.fire({
+                        title: 'Complete Withdrawal',
+                        html: `Verify OTP and complete withdrawal via <strong>${methodName}</strong>.<br><br>
+                               <small class="text-muted">• OTP Code: ${otpCode}<br>
+                               • This will finalize your withdrawal request</small>`,
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonColor: '#28a745',
+                        cancelButtonColor: '#6c757d',
+                        confirmButtonText: 'Complete Withdrawal',
+                        cancelButtonText: 'Cancel',
+                        reverseButtons: true
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            $('#withdrawBtn').html('<i class="ri-loader-4-line me-2 spin"></i>Completing Withdrawal...').prop('disabled', true);
+                            this.submit();
+                        }
+                    });
                 });
             }
             
