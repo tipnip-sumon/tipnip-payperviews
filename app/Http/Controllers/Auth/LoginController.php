@@ -828,10 +828,14 @@ class LoginController extends Controller
             'logout_completed' => true
         ]);
         
-        // Add basic cache control headers (less aggressive to prevent white screen)
-        $response->headers->set('Cache-Control', 'no-cache, no-store, must-revalidate');
+        // Add comprehensive cache control headers to prevent caching issues
+        $response->headers->set('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
         $response->headers->set('Pragma', 'no-cache');
         $response->headers->set('Expires', 'Thu, 01 Jan 1970 00:00:00 GMT');
+        $response->headers->set('Last-Modified', gmdate('D, d M Y H:i:s T'));
+        
+        // Add a custom header to help with debugging
+        $response->headers->set('X-Logout-Completed', 'true');
 
         return $response;
     }

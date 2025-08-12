@@ -1453,6 +1453,7 @@
                                 </a>
                             </li>
 
+                            @auth
                             <!-- Logout Section - Always visible and prominent -->
                             <li class="dropdown-section logout-section">
                                 <div class="border-top pt-2">
@@ -1473,6 +1474,7 @@
                                     </form>
                                 </div>
                             </li>
+                            @endauth
                         </ul>
                         @else
                         <!-- Guest User - Login Button -->
@@ -2685,6 +2687,9 @@
     // Inject the styles
     document.head.insertAdjacentHTML('beforeend', balanceUpdateStyles);
     </script>
+
+    <!-- Post-logout session manager -->
+    <script src="{{ asset('js/post-logout-manager.js') }}"></script>
 
 </body>
 </html>

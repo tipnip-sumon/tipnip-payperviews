@@ -1694,8 +1694,16 @@
             })
             .then(async response => {
                 if (response.status === 419) {
-                    // CSRF token expired - show error and reload page
-                    throw new Error('Session expired. Please refresh the page and try again.');
+                    // CSRF token expired - refresh page to get new token
+                    Swal.fire({
+                        title: 'Session Expired',
+                        text: 'Your session has expired. The page will be refreshed to get a new session.',
+                        icon: 'warning',
+                        confirmButtonText: 'Refresh Page'
+                    }).then(() => {
+                        window.location.reload();
+                    });
+                    return Promise.reject('CSRF token expired');
                 }
                 return response;
             })

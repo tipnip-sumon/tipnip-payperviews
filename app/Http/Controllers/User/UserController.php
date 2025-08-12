@@ -33,15 +33,41 @@ class UserController extends Controller
         // Enable query logging for this request
         DB::enableQueryLog();
         
-        // Check if user is authenticated, if not redirect to login
+        // Enhanced authentication check with proper redirect
         if (!Auth::check()) {
-            return redirect()->route('login', ['t' => time()])
-                ->with('info', 'Please log in to access your dashboard.');
+            // Clear any existing session data to prevent confusion
+            session()->flush();
+            session()->regenerateToken();
+            
+            // Log the unauthorized access attempt
+            Log::info('Unauthenticated dashboard access attempt', [
+                'ip' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+                'from_url' => request()->fullUrl(),
+                'session_id' => session()->getId()
+            ]);
+            
+            // Redirect with clear cache headers
+            return redirect()->route('login', ['from' => 'dashboard', 't' => time()])
+                ->with('info', 'Please log in to access your dashboard.')
+                ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
+                ->header('Pragma', 'no-cache')
+                ->header('Expires', 'Thu, 01 Jan 1970 00:00:00 GMT');
         }
         
         $user = Auth::user();
         if (!$user) {
-            return redirect()->route('login')->with(['error' => 'You need to login first']);
+            // Double-check: if Auth::check() passed but user is null
+            Log::warning('Auth check passed but user is null', [
+                'session_data' => session()->all(),
+                'auth_id' => Auth::id()
+            ]);
+            
+            Auth::logout();
+            session()->flush();
+            session()->regenerateToken();
+            
+            return redirect()->route('login')->with(['error' => 'Session error. Please log in again.']);
         }
 
         // Cached concurrent users count (refreshed every 30 seconds)

@@ -1347,7 +1347,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Check for logout success message
+    // Check for logout success message and refresh CSRF token
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('logout') === '1') {
         Swal.fire({
@@ -1357,6 +1357,25 @@ document.addEventListener('DOMContentLoaded', function() {
             timer: 3000,
             showConfirmButton: false
         });
+        
+        // Refresh CSRF token after logout to prevent session expired errors
+        setTimeout(() => {
+            refreshCSRFToken().catch(() => {
+                // If CSRF refresh fails, just reload the page
+                window.location.href = '/login';
+            });
+        }, 100);
+    }
+    
+    // Also check if we're coming from a logout redirect (no parameter)
+    const referrer = document.referrer;
+    if (referrer && (referrer.includes('/logout') || referrer.includes('/simple-logout'))) {
+        // Refresh CSRF token silently
+        setTimeout(() => {
+            refreshCSRFToken().catch(() => {
+                console.log('CSRF token refresh failed after logout redirect');
+            });
+        }, 100);
     }
 
     console.log('Login page initialized successfully');

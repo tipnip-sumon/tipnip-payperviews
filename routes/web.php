@@ -201,28 +201,6 @@ Route::match(['GET', 'POST'], '/logout', [App\Http\Controllers\Auth\LoginControl
 // Enhanced simple logout route with security validation
 Route::get('/simple-logout', function(\Illuminate\Http\Request $request) {
     try {
-        // Security validation - prevent cross-user access
-        $userVerify = $request->get('user_verify');
-        $currentUserId = \Illuminate\Support\Facades\Auth::id();
-        
-        // If user verification parameter doesn't match current user, force security logout
-        if ($userVerify && $userVerify !== 'guest' && $currentUserId && $userVerify != $currentUserId) {
-            \Illuminate\Support\Facades\Log::warning('Logout security violation - user mismatch', [
-                'expected_user' => $userVerify,
-                'actual_user' => $currentUserId,
-                'ip' => $request->ip()
-            ]);
-            
-            // Force complete logout and redirect
-            \Illuminate\Support\Facades\Auth::logout();
-            $request->session()->flush();
-            $request->session()->invalidate();
-            $request->session()->regenerateToken();
-            
-            return redirect('/login?security_logout=1&t=' . time())
-                ->with('warning', 'Security logout performed due to session mismatch.');
-        }
-        
         if (\Illuminate\Support\Facades\Auth::check()) {
             $user = \Illuminate\Support\Facades\Auth::user();
             
@@ -242,29 +220,20 @@ Route::get('/simple-logout', function(\Illuminate\Http\Request $request) {
                 \Illuminate\Support\Facades\Log::warning('Session cleanup error during logout: ' . $e->getMessage());
             }
             
-            // Clear all session data first
-            $request->session()->flush();
-            $request->session()->invalidate();
-            $request->session()->regenerateToken();
-            
-            // Then logout
-            \Illuminate\Support\Facades\Auth::logout();
-            
-            \Illuminate\Support\Facades\Log::info('Secure logout successful', [
+            \Illuminate\Support\Facades\Log::info('User logout successful', [
                 'user_id' => $user->id,
-                'ip' => $request->ip(),
-                'session_token' => $request->get('session_token', 'none')
+                'ip' => $request->ip()
             ]);
         }
         
-        // Comprehensive redirect with cache busting
-        return redirect('/login?logout=1&t=' . time())
-            ->with('success', 'You have been logged out successfully.')
-            ->withCookies([
-                // Clear any auth cookies
-                cookie('laravel_session', '', -1),
-                cookie('remember_web', '', -1),
-            ]);
+        // Clear all session data and logout
+        \Illuminate\Support\Facades\Auth::logout();
+        $request->session()->flush();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+        
+        // Simple redirect without complex messages that might cause issues
+        return redirect('/login')->with('success', 'You have been logged out successfully.');
             
     } catch (\Exception $e) {
         \Illuminate\Support\Facades\Log::error('Logout error: ' . $e->getMessage(), [
@@ -278,8 +247,7 @@ Route::get('/simple-logout', function(\Illuminate\Http\Request $request) {
         $request->session()->invalidate();
         $request->session()->regenerateToken();
         
-        return redirect('/login?emergency_logout=1&t=' . time())
-            ->with('warning', 'Emergency logout performed due to system error.');
+        return redirect('/login')->with('info', 'Logout completed.');
     }
 })->name('simple.logout');
 

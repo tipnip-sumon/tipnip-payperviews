@@ -16,7 +16,6 @@
             </div>
         </div>
     @endif 
-@endauth 
 
 <ul class="main-menu">
     <!-- 🏠 DASHBOARD -->
@@ -591,3 +590,26 @@
         </a>
     </li>
 </ul>
+@else
+<!-- Guest User Menu -->
+<ul class="main-menu">
+    <li class="slide">
+        <a href="{{route('login')}}" class="side-menu__item">
+            <i class="fe fe-log-in side-menu__icon"></i>
+            <span class="side-menu__label">🔐 Login</span>
+        </a>
+    </li>
+    <li class="slide">
+        <a href="{{route('register')}}" class="side-menu__item">
+            <i class="fe fe-user-plus side-menu__icon"></i>
+            <span class="side-menu__label">📝 Register</span>
+        </a>
+    </li>
+    <li class="slide">
+        <a href="/" class="side-menu__item">
+            <i class="fe fe-home side-menu__icon"></i>
+            <span class="side-menu__label">🏠 Home</span>
+        </a>
+    </li>
+</ul>
+@endauth
