@@ -100,9 +100,46 @@ Route::get('get-countries', function () {
 // ADMIN ROUTES
 // =============================================================================
 
-Route::get('/admin', [AdminController::class, 'index'])->name('admin.index')->middleware('clear.login.cache');
-Route::get('/admin/login', [AdminController::class, 'index'])->name('admin.login.form')->middleware('clear.login.cache');
+// Enhanced admin entry point with authentication check
+Route::get('/admin', function(Request $request) {
+    // Check if admin is already authenticated
+    if (Auth::guard('admin')->check()) {
+        // Redirect authenticated admin to dashboard
+        return redirect()->route('admin.dashboard')->with('info', 'Welcome back! You are already logged in.');
+    }
+    
+    // Show login form for non-authenticated users
+    return app(AdminController::class)->index($request);
+})->name('admin.index')->middleware('clear.login.cache');
+
+Route::get('/admin/login', function(Request $request) {
+    // Redirect to main admin route for consistency
+    return redirect()->route('admin.index');
+})->name('admin.login.form')->middleware('clear.login.cache');
+
 Route::post('admin/login', [AdminController::class, 'login'])->name('admin.login')->middleware('throttle:5,1');
+
+// Catch admin URL manipulation attempts outside the group
+Route::any('/admin/{any}', function($any) {
+    // Common invalid admin URLs that should be redirected
+    $invalidPaths = ['1', '2', '3', 'test', 'admin', 'panel', 'cp'];
+    
+    if (in_array($any, $invalidPaths) || is_numeric($any)) {
+        // Suspicious URL manipulation attempt
+        return response()->view('errors.admin-404', [
+            'message' => 'Invalid admin URL detected. Please use the proper admin panel access.',
+            'attempted_url' => '/admin/' . $any,
+            'suggestions' => [
+                ['url' => route('admin.index'), 'text' => 'Admin Login'],
+                ['url' => url('/'), 'text' => 'Return to Homepage'],
+            ]
+        ], 404);
+    }
+    
+    // For other paths, let the normal admin group handle it
+    return abort(404);
+})->where('any', '[^/]+')->name('admin.invalid.catch');
+
 Route::get('/admin/video-leaderboard', [VideoLinkController::class, 'leaderboard'])->name('video.leaderboard')->middleware(['admin-optimized']);
 
 // Newsletter Routes
@@ -153,6 +190,17 @@ Route::get('/user/dashboard', [App\Http\Controllers\User\UserController::class, 
 // Dashboard Performance Metrics API
 Route::get('/user/dashboard/performance', [App\Http\Controllers\User\UserController::class, 'getPerformanceMetrics'])
     ->name('dashboard.performance')->middleware(['auth']);
+
+// Block any attempts to access user dashboard with parameters (URL manipulation)
+Route::get('/user/dashboard/{any}', function($any) {
+    \Illuminate\Support\Facades\Log::warning('User dashboard URL manipulation attempt', [
+        'parameter' => $any,
+        'user_id' => Auth::id(),
+        'ip' => request()->ip(),
+        'full_url' => request()->fullUrl()
+    ]);
+    abort(403, 'URL manipulation detected. Parameters are not allowed in dashboard URLs.');
+})->where('any', '.*')->middleware(['auth']);
 
 // =============================================================================
 // AUTHENTICATION ROUTES  
@@ -785,6 +833,26 @@ Route::prefix('admin')->group(function () {
         Route::get('/popups/{popup}/analytics', 'analytics')->name('admin.popups.analytics');
         Route::post('/popups/{popup}/duplicate', 'duplicate')->name('admin.popups.duplicate');
     });
+    
+    // Catch-all route for admin URL manipulation attempts
+    Route::any('/{any}', function($any) {
+        // Check if admin is authenticated
+        if (!Auth::guard('admin')->check()) {
+            return redirect()->route('admin.index')->with('error', 'Access denied. Please log in to access the admin panel.');
+        }
+        
+        // For authenticated admins, show a proper error page
+        return response()->view('errors.admin-404', [
+            'message' => 'The admin page you are looking for does not exist.',
+            'attempted_url' => '/admin/' . $any,
+            'suggestions' => [
+                ['url' => route('admin.dashboard'), 'text' => 'Admin Dashboard'],
+                ['url' => route('admin.profile'), 'text' => 'Admin Profile'],
+                ['url' => route('admin.users.index'), 'text' => 'User Management'],
+                ['url' => route('admin.deposits.index'), 'text' => 'Deposit Management'],
+            ]
+        ], 404);
+    })->where('any', '.*')->name('admin.catch-all');
 });
 
 Route::get('admin/payment', [AdminPaymentController::class, 'index'])->name('admin.payment');
@@ -1311,15 +1379,90 @@ Route::middleware(['admin-optimized'])->prefix('admin/email-campaigns')->name('a
 });
 
 // =============================================================================
-// FALLBACK ROUTE - Redirect unauthenticated users to login
+// ENHANCED FALLBACK ROUTE - Handle URL manipulation and unauthorized access
 // =============================================================================
 
-// Catch all undefined routes and redirect unauthenticated users to login
+// Catch all undefined routes and handle them appropriately
 Route::fallback(function () {
+    $currentUrl = request()->fullUrl();
+    $path = request()->path();
+    
+    // Log potential URL manipulation attempts
+    \Illuminate\Support\Facades\Log::info('Fallback route accessed', [
+        'url' => $currentUrl,
+        'path' => $path,
+        'method' => request()->method(),
+        'user_id' => Auth::id(),
+        'ip' => request()->ip(),
+        'user_agent' => request()->userAgent()
+    ]);
+    
+    // Check if user is trying to access user areas without authentication
     if (!Auth::check()) {
+        // Check if it's a user area URL
+        if (str_contains($path, 'user/') || str_contains($path, 'dashboard')) {
+            return redirect()->route('login')->with('info', 'Please login to access your dashboard.');
+        }
+        
+        // Check if it's an admin area URL
+        if (str_contains($path, 'admin/')) {
+            return redirect()->route('admin.login.form')->with('error', 'Please login as admin to access this area.');
+        }
+        
+        // For other undefined routes, redirect to login with message
         return redirect()->route('login')->with('error', 'You must be logged in to access this page.');
     }
     
-    // If authenticated but page doesn't exist, show 404
-    abort(404);
+    // User is authenticated but trying to access non-existent or unauthorized page
+    
+    // Check for potential URL manipulation patterns
+    $suspiciousPatterns = [
+        '/\d+$/',           // URLs ending with numbers (like /user/dashboard/1)
+        '/\/\d+\//',        // URLs with numbers in the middle
+        '/\?.*id=\d+/',     // Query parameters with ID manipulation
+        '/admin/',          // Regular users trying to access admin areas
+        '/edit/',           // Direct edit attempts
+        '/delete/',         // Direct delete attempts
+        '/create/',         // Direct create attempts
+    ];
+    
+    $isSuspicious = false;
+    foreach ($suspiciousPatterns as $pattern) {
+        if (preg_match($pattern, $path)) {
+            $isSuspicious = true;
+            break;
+        }
+    }
+    
+    // Log suspicious activity
+    if ($isSuspicious) {
+        \Illuminate\Support\Facades\Log::warning('Potential URL manipulation detected', [
+            'user_id' => Auth::id(),
+            'url' => $currentUrl,
+            'ip' => request()->ip(),
+            'user_agent' => request()->userAgent()
+        ]);
+    }
+    
+    // For admin area access by regular users, show 403
+    if (str_contains($path, 'admin/')) {
+        $user = Auth::user();
+        if (!$user) {
+            abort(403, 'Authentication required to access admin area.');
+        }
+        
+        // Check if user is admin by checking admin table
+        $isAdmin = \App\Models\Admin::where('email', $user->email)->exists();
+        if (!$isAdmin) {
+            abort(403, 'You do not have permission to access the admin area.');
+        }
+    }
+    
+    // For suspicious patterns, show 403 with security message
+    if ($isSuspicious) {
+        abort(403, 'URL manipulation detected. Access denied for security reasons.');
+    }
+    
+    // For other cases, show 404
+    abort(404, 'The requested page could not be found.');
 });

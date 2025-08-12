@@ -78,6 +78,47 @@ return Application::configure(basePath: dirname(__DIR__))
         
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        //
+        // Custom error page handling
+        $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\NotFoundHttpException $e, $request) {
+            if ($request->is('api/*')) {
+                return response()->json([
+                    'error' => 'Not Found',
+                    'message' => 'The requested resource was not found.',
+                    'status' => 404
+                ], 404);
+            }
+            
+            return response()->view('errors.404', [
+                'exception' => $e
+            ], 404);
+        });
+        
+        $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException $e, $request) {
+            if ($request->is('api/*')) {
+                return response()->json([
+                    'error' => 'Access Denied',
+                    'message' => 'You do not have permission to access this resource.',
+                    'status' => 403
+                ], 403);
+            }
+            
+            return response()->view('errors.403', [
+                'exception' => $e
+            ], 403);
+        });
+        
+        // Log security-related 403 errors
+        $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\HttpException $e, $request) {
+            if ($e->getStatusCode() === 403) {
+                \Illuminate\Support\Facades\Log::warning('403 Access Denied', [
+                    'url' => $request->fullUrl(),
+                    'method' => $request->method(),
+                    'user_id' => \Illuminate\Support\Facades\Auth::id(),
+                    'ip' => $request->ip(),
+                    'user_agent' => $request->userAgent(),
+                    'message' => $e->getMessage()
+                ]);
+            }
+        });
     })->create();
 
