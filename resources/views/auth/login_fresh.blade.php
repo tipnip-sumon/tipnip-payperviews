@@ -6,6 +6,11 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Login - PayPerViews</title>
     
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="{{ \App\Models\GeneralSetting::getFavicon() }}">
+    <link rel="alternate icon" href="{{ \App\Models\GeneralSetting::getFavicon() }}">
+    <link rel="apple-touch-icon" href="{{ \App\Models\GeneralSetting::getLogo() }}">
+    
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
