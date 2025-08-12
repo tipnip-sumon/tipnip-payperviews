@@ -55,15 +55,25 @@ class UserController extends Controller
         $user = Auth::user();
         if (!$user) {
             // Double-check: if Auth::check() passed but user is null
-            Log::warning('Auth check passed but user is null', [
-                'session_data' => session()->all(),
-                'auth_id' => Auth::id()
+            // This might be a session loading issue, so let's be conservative
+            Log::warning('Auth check passed but user is null - potential session loading issue', [
+                'auth_check' => Auth::check(),
+                'auth_id' => Auth::id(),
+                'session_id' => session()->getId(),
+                'request_path' => request()->path(),
+                'session_keys' => array_keys(session()->all())
             ]);
             
-            // Only logout, don't flush session as it might be in the process of being established
-            Auth::logout();
+            // Instead of logging out immediately, give the session a chance to load properly
+            // Only logout if this is clearly not a session loading issue
+            if (!Auth::check()) {
+                Auth::logout();
+                return redirect()->route('login')->with(['error' => 'Authentication required. Please log in.']);
+            }
             
-            return redirect()->route('login')->with(['error' => 'Session error. Please log in again.']);
+            // If Auth::check() is true but user is null, this might be a temporary loading issue
+            // Redirect without logging out to preserve the session
+            return redirect()->route('login')->with(['info' => 'Session loading issue. Please try logging in again.']);
         }
 
         // Cached concurrent users count (refreshed every 30 seconds)
