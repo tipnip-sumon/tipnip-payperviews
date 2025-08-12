@@ -26,7 +26,7 @@ class Authenticate extends Middleware
             'session_id' => $request->session()->getId()
         ]);
         
-        return route('login', ['from' => 'auth_middleware', 't' => time()]);
+        return route('login'); // Simple redirect without parameters
     }
 
     /**

@@ -1368,7 +1368,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Check if we need to show session expired message (only if explicitly indicated)
+    console.log('Checking URL parameters for session expired...');
+    console.log('session_expired param:', urlParams.get('session_expired'));
+    console.log('csrf_error param:', urlParams.get('csrf_error'));
+    console.log('Current URL:', window.location.href);
+    
     if (urlParams.get('session_expired') === '1' || urlParams.get('csrf_error') === '1') {
+        console.log('Showing session expired alert due to URL parameters');
         Swal.fire({
             title: 'Session Expired!',
             text: 'Your session has expired. Please try logging in again.',
