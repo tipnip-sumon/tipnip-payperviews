@@ -219,6 +219,15 @@ class WithdrawController extends Controller
             }
             
             if ($emailSent) {
+                // Handle AJAX requests with JSON response
+                if ($request->ajax() || $request->wantsJson()) {
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'Verification code has been sent to your email address. Please check your email and enter the 6-digit code below.',
+                        'title' => 'OTP Sent!'
+                    ]);
+                }
+                
                 return back()->withInput()->with([
                     'swal_success' => [
                         'title' => 'OTP Sent!',
@@ -234,6 +243,15 @@ class WithdrawController extends Controller
                 $freshUser->save();
                 session()->forget(['deposit_withdrawal_data', 'show_deposit_otp_form']);
                 
+                // Handle AJAX requests with JSON response
+                if ($request->ajax() || $request->wantsJson()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Could not send verification code. Please check your email settings or try again later.',
+                        'title' => 'Email Error!'
+                    ]);
+                }
+                
                 return back()->withInput()->with('swal_error', [
                     'title' => 'Email Error!',
                     'text' => 'Could not send verification code. Please check your email settings or try again later.',
@@ -243,6 +261,16 @@ class WithdrawController extends Controller
             
         } catch (\Exception $e) {
             Log::error('OTP email sending failed: ' . $e->getMessage());
+            
+            // Handle AJAX requests with JSON response
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Could not send verification code. Please try again.',
+                    'title' => 'Email Error!'
+                ]);
+            }
+            
             return back()->with('swal_error', [
                 'title' => 'Email Error!',
                 'text' => 'Could not send verification code. Please try again.',
