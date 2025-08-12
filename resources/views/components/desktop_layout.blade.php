@@ -1885,17 +1885,37 @@
         window.location.href = "{{ route('login') }}?emergency_logout=1&user_check={{ auth()->check() ? auth()->id() : 'none' }}&t=" + Math.floor(Date.now() / 1000);
     }
     
-    // Session security validator - prevents cross-user access
+    // Session security validator - prevents cross-user access (fixed to be less aggressive)
     function validateSessionSecurity() {
         @auth
         const expectedUserId = {{ auth()->id() }};
         const userVerification = localStorage.getItem('current_user_id');
         
-        // If user verification doesn't match, force logout
-        if (userVerification && parseInt(userVerification) !== expectedUserId) {
-            console.warn('Session security violation detected - user mismatch');
-            performEmergencyLogout();
-            return false;
+        // Only check for mismatch if userVerification exists and is different
+        // Don't force logout if userVerification is null (fresh login)
+        if (userVerification && userVerification !== 'null' && parseInt(userVerification) !== expectedUserId) {
+            console.warn('Session security violation detected - user mismatch', {
+                expected: expectedUserId,
+                stored: userVerification
+            });
+            
+            // Give it one chance - clear localStorage and reload instead of immediate logout
+            localStorage.removeItem('current_user_id');
+            console.log('Cleared stored user ID, giving session a fresh start');
+            
+            // Only force logout if this is a repeated violation
+            const violationKey = 'security_violation_' + expectedUserId;
+            if (localStorage.getItem(violationKey)) {
+                console.warn('Repeated security violation - forcing logout');
+                performEmergencyLogout();
+                return false;
+            } else {
+                localStorage.setItem(violationKey, Date.now());
+                // Clear the violation flag after 5 minutes
+                setTimeout(() => {
+                    localStorage.removeItem(violationKey);
+                }, 300000);
+            }
         }
         
         // Store current user for verification
@@ -1915,13 +1935,18 @@
     
     // Comprehensive session monitoring
     document.addEventListener('DOMContentLoaded', function() {
+        console.log('Desktop layout loaded - validating session security');
+        
         // Validate session security on page load
         validateSessionSecurity();
         
         // Monitor for session changes via storage events
         window.addEventListener('storage', function(e) {
             if (e.key === 'current_user_id' && e.newValue !== e.oldValue) {
-                console.warn('User session change detected in another tab');
+                console.warn('User session change detected in another tab', {
+                    oldValue: e.oldValue,
+                    newValue: e.newValue
+                });
                 validateSessionSecurity();
             }
         });
