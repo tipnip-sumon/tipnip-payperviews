@@ -32,7 +32,7 @@ return [
     |
     */
 
-    'lifetime' => (int) env('SESSION_LIFETIME', 120), // Changed from 15 to 120 minutes (2 hours)
+    'lifetime' => (int) env('SESSION_LIFETIME', 60), // Changed from 120 to 60 minutes to reduce bloat
 
     'expire_on_close' => env('SESSION_EXPIRE_ON_CLOSE', false),
 
@@ -114,7 +114,7 @@ return [
     |
     */
 
-    'lottery' => [2, 100],
+    'lottery' => [5, 100], // Increased frequency for session cleanup (5% instead of 2%)
 
     /*
     |--------------------------------------------------------------------------

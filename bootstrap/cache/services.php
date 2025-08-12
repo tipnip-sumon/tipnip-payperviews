@@ -25,20 +25,17 @@
     21 => 'Illuminate\\Validation\\ValidationServiceProvider',
     22 => 'Illuminate\\View\\ViewServiceProvider',
     23 => 'Barryvdh\\DomPDF\\ServiceProvider',
-    24 => 'Laravel\\Sail\\SailServiceProvider',
-    25 => 'Laravel\\Sanctum\\SanctumServiceProvider',
-    26 => 'Laravel\\Tinker\\TinkerServiceProvider',
-    27 => 'Laravel\\Ui\\UiServiceProvider',
-    28 => 'Carbon\\Laravel\\ServiceProvider',
-    29 => 'NunoMaduro\\Collision\\Adapters\\Laravel\\CollisionServiceProvider',
-    30 => 'Termwind\\Laravel\\TermwindServiceProvider',
-    31 => 'Pest\\Laravel\\PestServiceProvider',
-    32 => 'PrevailExcel\\Nowpayments\\NowpaymentsServiceProvider',
+    24 => 'Laravel\\Sanctum\\SanctumServiceProvider',
+    25 => 'Laravel\\Tinker\\TinkerServiceProvider',
+    26 => 'Laravel\\Ui\\UiServiceProvider',
+    27 => 'Carbon\\Laravel\\ServiceProvider',
+    28 => 'Termwind\\Laravel\\TermwindServiceProvider',
+    29 => 'PrevailExcel\\Nowpayments\\NowpaymentsServiceProvider',
+    30 => 'Yajra\\DataTables\\DataTablesServiceProvider',
+    31 => 'App\\Providers\\AppServiceProvider',
+    32 => 'App\\Providers\\MailConfigServiceProvider',
     33 => 'Yajra\\DataTables\\DataTablesServiceProvider',
-    34 => 'App\\Providers\\AppServiceProvider',
-    35 => 'App\\Providers\\MailConfigServiceProvider',
-    36 => 'Yajra\\DataTables\\DataTablesServiceProvider',
-    37 => 'PrevailExcel\\Nowpayments\\NowpaymentsServiceProvider',
+    34 => 'PrevailExcel\\Nowpayments\\NowpaymentsServiceProvider',
   ),
   'eager' => 
   array (
@@ -56,15 +53,13 @@
     11 => 'Laravel\\Sanctum\\SanctumServiceProvider',
     12 => 'Laravel\\Ui\\UiServiceProvider',
     13 => 'Carbon\\Laravel\\ServiceProvider',
-    14 => 'NunoMaduro\\Collision\\Adapters\\Laravel\\CollisionServiceProvider',
-    15 => 'Termwind\\Laravel\\TermwindServiceProvider',
-    16 => 'Pest\\Laravel\\PestServiceProvider',
-    17 => 'PrevailExcel\\Nowpayments\\NowpaymentsServiceProvider',
-    18 => 'Yajra\\DataTables\\DataTablesServiceProvider',
-    19 => 'App\\Providers\\AppServiceProvider',
-    20 => 'App\\Providers\\MailConfigServiceProvider',
-    21 => 'Yajra\\DataTables\\DataTablesServiceProvider',
-    22 => 'PrevailExcel\\Nowpayments\\NowpaymentsServiceProvider',
+    14 => 'Termwind\\Laravel\\TermwindServiceProvider',
+    15 => 'PrevailExcel\\Nowpayments\\NowpaymentsServiceProvider',
+    16 => 'Yajra\\DataTables\\DataTablesServiceProvider',
+    17 => 'App\\Providers\\AppServiceProvider',
+    18 => 'App\\Providers\\MailConfigServiceProvider',
+    19 => 'Yajra\\DataTables\\DataTablesServiceProvider',
+    20 => 'PrevailExcel\\Nowpayments\\NowpaymentsServiceProvider',
   ),
   'deferred' => 
   array (
@@ -218,8 +213,6 @@
     'validator' => 'Illuminate\\Validation\\ValidationServiceProvider',
     'validation.presence' => 'Illuminate\\Validation\\ValidationServiceProvider',
     'Illuminate\\Contracts\\Validation\\UncompromisedVerifier' => 'Illuminate\\Validation\\ValidationServiceProvider',
-    'Laravel\\Sail\\Console\\InstallCommand' => 'Laravel\\Sail\\SailServiceProvider',
-    'Laravel\\Sail\\Console\\PublishCommand' => 'Laravel\\Sail\\SailServiceProvider',
     'command.tinker' => 'Laravel\\Tinker\\TinkerServiceProvider',
   ),
   'when' => 
@@ -261,9 +254,6 @@
     array (
     ),
     'Illuminate\\Validation\\ValidationServiceProvider' => 
-    array (
-    ),
-    'Laravel\\Sail\\SailServiceProvider' => 
     array (
     ),
     'Laravel\\Tinker\\TinkerServiceProvider' => 

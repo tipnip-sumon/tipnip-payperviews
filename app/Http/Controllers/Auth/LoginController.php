@@ -39,40 +39,31 @@ class LoginController extends Controller
      */
     protected function authenticated(\Illuminate\Http\Request $request, $user)
     {
-        // Set session security validation
+        // Clear any existing session data that might cause conflicts
+        session()->forget(['login_attempts', 'lockout_time', 'temp_session_data']);
+        
+        // Regenerate session ID to prevent session fixation
+        session()->regenerate();
+        
+        // Set minimal essential session data only
         session([
-            'login_success' => true,
-            'fresh_login' => true,
-            'user_id' => $user->id,
             'auth_user_id' => $user->id, // For session security validation
             'login_timestamp' => time(),
-            'session_created_at' => now()->toDateTimeString()
+            'last_activity' => time()
         ]);
         
-        // Store current session ID in user model for single session enforcement
+        // Update user login information
         try {
             $user->update([
-                'current_session_id' => session()->getId(),
                 'last_login_at' => now(),
                 'last_login_ip' => $request->ip()
             ]);
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::warning('Could not update user session info: ' . $e->getMessage());
+            \Illuminate\Support\Facades\Log::warning('Could not update user login info: ' . $e->getMessage());
         }
         
-        // Create response with basic cache control
-        $response = redirect()->intended($this->redirectPath());
-        
-        // Add basic cache-clearing headers (less aggressive)
-        $response->headers->add([
-            'Cache-Control' => 'no-cache, no-store, must-revalidate',
-            'Pragma' => 'no-cache',
-            'Expires' => 'Thu, 01 Jan 1970 00:00:00 GMT',
-            'X-Fresh-Login' => 'true',
-            'X-Session-Security' => 'enabled'
-        ]);
-        
-        return $response;
+        // Clean redirect without excessive headers
+        return redirect()->intended($this->redirectPath());
     }
 
     /**

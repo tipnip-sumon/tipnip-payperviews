@@ -14,30 +14,10 @@ class FreshLogin
      */
     public function handle(Request $request, Closure $next): Response
     {
-        // Only apply to authenticated users accessing specific routes
-        if (Auth::check()) {
-            $response = $next($request);
-            
-            // Check if this is a fresh login - only on first dashboard access
-            $isFreshLogin = session('fresh_login');
-            
-            if ($isFreshLogin && $request->routeIs('user.dashboard')) {
-                // Clear the flag immediately to prevent repeated processing
-                session()->forget('fresh_login');
-                
-                // Add light cache-clearing headers (non-aggressive)
-                $response->headers->add([
-                    'Cache-Control' => 'no-cache, no-store, must-revalidate',
-                    'Pragma' => 'no-cache',
-                    'Expires' => 'Thu, 01 Jan 1970 00:00:00 GMT',
-                    'X-Fresh-Session' => 'true'
-                ]);
-                
-                // Set a flag that fresh login processing is complete
-                session(['fresh_login_processed' => true]);
-            }
-            
-            return $response;
+        // Simplified fresh login handling
+        if (Auth::check() && $request->routeIs('user.dashboard')) {
+            // Clear any login-related flags to prevent session bloat
+            session()->forget(['fresh_login', 'fresh_login_processed', 'login_success']);
         }
         
         return $next($request);
