@@ -2,7 +2,7 @@
 
 use App\Http\Middleware\AdminAuth;
 use App\Http\Middleware\ValidUser;
-use App\Http\Middleware\PreventBack;
+// use App\Http\Middleware\PreventBack;
 use App\Http\Middleware\AdminOptimized;
 use App\Http\Middleware\AdminPermissionMiddleware;
 use App\Http\Middleware\PermissionMiddleware;
@@ -40,7 +40,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
         $middleware->alias([
             'auth' => Authenticate::class,
-            'prevent-back' => PreventBack::class,
+            // 'prevent-back' => PreventBack::class,
             'admin.permission' => AdminPermissionMiddleware::class,
             'permission' => PermissionMiddleware::class,
             'cache.control' => CacheControlMiddleware::class,
