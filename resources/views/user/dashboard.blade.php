@@ -360,7 +360,7 @@
                                     <h6 class="balance-card-text-header mb-0">💎 Video Access Vault</h6>
                                 </div>
                                 <h3 class="mb-0 balance-card-text-amount d-flex align-items-center" id="video-access-amount">
-                                    <span class="balance-value" data-realtime-update="dashboard-deposit-balance">${{ showAmount($totalInvest) }}</span>
+                                    <span class="balance-value" data-realtime-update="dashboard-active-package">${{ showAmount($runningInvests ?? 0) }}</span>
                                     <span class="balance-hidden" style="display: none;">••••••••</span>
                                     <button class="btn btn-sm btn-link balance-card-text ms-2 p-0 balance-quick-toggle" onclick="toggleBalanceVisibility('video-access-vault')" style="font-size: 0.8rem; opacity: 0.7;">
                                         <i class="fas fa-eye balance-quick-icon"></i>
@@ -369,7 +369,7 @@
                                 <div class="d-flex align-items-center mt-1">
                                     <small class="balance-card-text-small">
                                         <i class="fas fa-play-circle me-1"></i>
-                                        Active Plans: ${{ showAmount($runningInvests ?? 0) }}
+                                        Total Invested: ${{ showAmount($totalInvest ?? 0) }}
                                     </small>
                                     <div class="loading-indicator ms-2" style="display: none;">
                                         <i class="fas fa-spinner fa-spin balance-card-text"></i>
