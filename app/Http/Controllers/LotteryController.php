@@ -69,7 +69,7 @@ class LotteryController extends Controller
                                               ->get();
                 }
                 
-                // Calculate user statistics
+                // Calculate user statistics 
                 $userStats = [
                     'total_tickets' => LotteryTicket::where('user_id', $user->id)->where('status','active')->count(),
                     'total_wins' => LotteryWinner::where('user_id', $user->id)->count(),

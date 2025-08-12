@@ -473,8 +473,19 @@
                         <div class="card-body">
                             @if(isset($currentDraw))
                                 @php
-                                    // Use actual prize distribution from database
+                                    // Use actual prize distribution from database - ensure it's an array
                                     $prizeDistribution = $currentDraw->prize_distribution ?? [];
+                                    
+                                    // If prize_distribution is a JSON string, decode it
+                                    if (is_string($prizeDistribution)) {
+                                        $prizeDistribution = json_decode($prizeDistribution, true) ?? [];
+                                    }
+                                    
+                                    // Ensure we have an array
+                                    if (!is_array($prizeDistribution)) {
+                                        $prizeDistribution = [];
+                                    }
+                                    
                                     $activeTicketsForDraw = $currentDraw->tickets()->where('status', 'active')->count();
                                     
                                     // Group prizes by position to show consolidated amounts
