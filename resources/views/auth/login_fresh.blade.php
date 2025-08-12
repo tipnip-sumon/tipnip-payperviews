@@ -613,63 +613,18 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // CSRF Token Refresh Function - Fixed to prevent session invalidation
+    // CSRF Token Refresh Function - Simplified
     async function refreshCSRFToken() {
         try {
-            // Use the debug route to get fresh CSRF token without creating new session
-            const response = await fetch('/debug-csrf', {
-                method: 'GET',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'Accept': 'application/json'
-                },
-                credentials: 'same-origin'
-            });
+            console.log('Refreshing CSRF token by reloading page...');
+            window.location.reload();
+            return null; // Page will reload, so this return won't be reached
             
-            if (response.ok) {
-                const data = await response.json();
-                const newToken = data.csrf_token;
-                
-                if (newToken) {
-                    // Update meta tag
-                    const metaTag = document.querySelector('meta[name="csrf-token"]');
-                    if (metaTag) {
-                        metaTag.setAttribute('content', newToken);
-                    }
-                    
-                    // Update form token
-                    const tokenInput = document.querySelector('input[name="_token"]');
-                    if (tokenInput) {
-                        tokenInput.value = newToken;
-                    }
-                    
-                    console.log('CSRF token refreshed successfully', {
-                        newToken: newToken.substring(0, 10) + '...',
-                        sessionId: data.session_id,
-                        sessionExists: data.current_session_exists
-                    });
-                    return newToken;
-                }
-            }
-            throw new Error('Failed to get new token from response');
         } catch (error) {
             console.error('CSRF token refresh failed:', error);
-            
-            // Fallback: try to regenerate token by calling a simple route
-            try {
-                const fallbackResponse = await fetch(window.location.href, {
-                    method: 'HEAD',
-                    credentials: 'same-origin'
-                });
-                
-                if (fallbackResponse.ok) {
-                    console.log('Fallback session refresh completed');
-                }
-            } catch (fallbackError) {
-                console.error('Fallback refresh also failed:', fallbackError);
-            }
-            
-            throw error;
+            // Force page reload as fallback
+            window.location.reload();
+            return null;
         }
     }
 
@@ -973,12 +928,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 setCookie('saved_email', usernameInput.value.trim(), 30);
             }
 
-            // Simplified CSRF token handling - let Laravel handle it naturally
+            // Get fresh CSRF token before submission
+            const currentToken = getCSRFToken();
+            console.log('Current CSRF token:', currentToken ? 'Present' : 'Missing');
+            
             const formData = new FormData(form);
+            
+            // Ensure we have the latest token
+            if (currentToken) {
+                formData.set('_token', currentToken);
+            }
             
             console.log('Submitting login form...');
             
-            const response = await fetch(form.action, {
+            let response = await fetch(form.action, {
                 method: 'POST',
                 body: formData,
                 headers: {
@@ -990,19 +953,26 @@ document.addEventListener('DOMContentLoaded', function() {
             
             console.log('Login response status:', response.status);
             
-            // Handle CSRF token mismatch with one retry
+            // Handle CSRF token mismatch with ONE retry only
             if (response.status === 419) {
                 console.log('CSRF token mismatch (419) - attempting refresh and retry...');
                 
                 try {
                     const newToken = await refreshCSRFToken();
                     if (newToken) {
-                        formData.set('_token', newToken);
+                        // Create completely fresh form data with new token
+                        const retryFormData = new FormData();
+                        retryFormData.append('_token', newToken);
+                        retryFormData.append('username', usernameInput.value.trim());
+                        retryFormData.append('password', passwordInput.value);
+                        if (rememberCheckbox.checked) {
+                            retryFormData.append('remember', '1');
+                        }
                         
                         console.log('Retrying login with refreshed token...');
-                        const retryResponse = await fetch(form.action, {
+                        response = await fetch(form.action, {
                             method: 'POST',
-                            body: formData,
+                            body: retryFormData,
                             headers: {
                                 'X-Requested-With': 'XMLHttpRequest',
                                 'Accept': 'application/json'
@@ -1010,12 +980,38 @@ document.addEventListener('DOMContentLoaded', function() {
                             credentials: 'same-origin'
                         });
                         
-                        // Use the retry response
-                        response = retryResponse;
+                        console.log('Retry response status:', response.status);
+                        
+                        // If still 419 after retry, reload page
+                        if (response.status === 419) {
+                            console.log('CSRF token still invalid after retry, reloading page...');
+                            Swal.fire({
+                                title: 'Session Expired!',
+                                text: 'Your session has expired. The page will reload to fix this.',
+                                icon: 'warning',
+                                timer: 2000,
+                                showConfirmButton: false
+                            }).then(() => {
+                                window.location.reload();
+                            });
+                            return;
+                        }
+                    } else {
+                        throw new Error('Failed to refresh CSRF token');
                     }
                 } catch (refreshError) {
                     console.error('CSRF refresh failed:', refreshError);
-                    throw new Error('Session expired. Please refresh the page and try again.');
+                    
+                    Swal.fire({
+                        title: 'Session Expired!',
+                        text: 'Your session has expired. The page will reload to fix this.',
+                        icon: 'warning',
+                        timer: 2000,
+                        showConfirmButton: false
+                    }).then(() => {
+                        window.location.reload();
+                    });
+                    return;
                 }
             }
 
@@ -1066,13 +1062,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     confirmButtonText: 'OK'
                 });
             } else if (response.status === 419) {
-                console.log('CSRF token mismatch detected (419)');
-                // This should have been handled above, but just in case
+                // Final 419 check - this should rarely happen after retry
+                console.log('CSRF token still invalid after retry');
                 Swal.fire({
                     title: 'Session Expired!',
-                    text: 'Your session has expired. Please try logging in again.',
+                    text: 'Your session has expired. Please refresh the page and try again.',
                     icon: 'warning',
-                    confirmButtonText: 'Try Again'
+                    confirmButtonText: 'Refresh Page'
+                }).then(() => {
+                    window.location.reload();
                 });
             } else if (response.status === 422) {
                 console.log('Validation errors (422)');
@@ -1199,79 +1197,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     });
                 }
                 
-            } else if (response.status === 419) {
-                // CSRF token expired or missing - show refresh token alert
-                console.log('CSRF error (419), showing token refresh alert...');
-                
-                const refreshResult = await showCSRFRefreshAlert();
-                
-                if (refreshResult === 'refreshed') {
-                    // Token refreshed successfully, let user try again manually
-                    showValidation('username', 'Security token refreshed. Please try logging in again.', 'success');
-                } else if (refreshResult === 'reloaded') {
-                    // Page will reload, no need to do anything
-                    return;
-                } else {
-                    // Fallback to simple login if refresh failed
-                    console.log('Token refresh failed, trying simple login method...');
-                    try {
-                        const simpleFormData = new FormData(form);
-                        // Remove CSRF token as simple login doesn't need it
-                        simpleFormData.delete('_token');
-                        
-                        const simpleResponse = await fetch('/simple-login', {
-                            method: 'POST',
-                            body: simpleFormData,
-                            headers: {
-                                'X-Requested-With': 'XMLHttpRequest'
-                            }
-                        });
-                        
-                        if (simpleResponse.ok) {
-                            const simpleData = await simpleResponse.json();
-                            
-                            if (simpleData.success) {
-                                Swal.fire({
-                                    title: 'Login Successful!',
-                                    text: 'Welcome back! Redirecting to your dashboard...',
-                                    icon: 'success',
-                                    timer: 2000,
-                                    showConfirmButton: false,
-                                    allowOutsideClick: false
-                                }).then(() => {
-                                    window.location.href = simpleData.redirect || '/user/dashboard';
-                                });
-                            } else {
-                                // Handle simple login errors
-                                if (simpleData.error_type === 'email_not_verified') {
-                                    showEmailVerificationAlert(simpleData.email);
-                                } else {
-                                    showValidation('password', simpleData.message || 'Login failed', 'error');
-                                    Swal.fire({
-                                        title: 'Login Failed!',
-                                        text: simpleData.message || 'Login failed. Please try again.',
-                                        icon: 'error',
-                                        confirmButtonText: 'Try Again'
-                                    });
-                                }
-                            }
-                        } else {
-                            throw new Error('Simple login failed');
-                        }
-                    } catch (simpleError) {
-                        console.error('Simple login error:', simpleError);
-                        Swal.fire({
-                            title: 'Login Error!',
-                            text: 'There was a problem logging you in. Please refresh the page and try again.',
-                            icon: 'error',
-                            confirmButtonText: 'Refresh Page',
-                            allowOutsideClick: false
-                        }).then(() => {
-                            window.location.reload();
-                        });
-                    }
-                }
-                
             } else if (response.status === 500) {
                 // Server error
                 console.error('Server error (500):', response);
@@ -1304,74 +1229,46 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (error) {
             console.error('Login error:', error);
             
-            // Check for CSRF token mismatch and refresh token
-            if (error.message.includes('419') || error.message.includes('CSRF') || 
-                (error.responseJSON && error.responseJSON.message && error.responseJSON.message.includes('CSRF'))) {
-                console.log('CSRF token mismatch detected, refreshing token...');
-                
-                // Refresh CSRF token
-                const newToken = getCSRFToken();
-                if (newToken) {
-                    $('meta[name="csrf-token"]').attr('content', newToken);
-                    $('input[name="_token"]').val(newToken);
-                    console.log('CSRF token refreshed successfully');
-                    
-                    // Don't show session expired alert for successful CSRF refresh
-                    // This was causing false positives when users came from protected routes
-                    console.log('CSRF token refreshed - ready for retry');
-                    
-                    /* REMOVED - This was showing session expired even when token refresh succeeded
-                    Swal.fire({
-                        title: 'Session Expired!',
-                        text: 'Please try logging in again.',
-                        icon: 'warning',
-                        confirmButtonText: 'Try Again'
-                    });
-                    */
-                } else {
-                    console.error('Failed to refresh CSRF token');
-                    Swal.fire({
-                        title: 'Session Error!',
-                        text: 'Please refresh the page and try again.',
-                        icon: 'error',
-                        confirmButtonText: 'Refresh Page'
-                    }).then(() => {
-                        location.reload();
-                    });
-                }
-            } else if (!error.message.includes('already handled')) {
-                // Don't show generic error if we've already handled a specific case
-                Swal.fire({
-                    title: 'Login Failed!',
-                    text: 'An error occurred. Please try again.',
-                    icon: 'error',
-                    confirmButtonText: 'Try Again'
-                });
-            }
+            // Generic error handling - most errors should be handled in the response checking above
+            Swal.fire({
+                title: 'Login Failed!',
+                text: 'An unexpected error occurred. Please try again.',
+                icon: 'error',
+                confirmButtonText: 'Try Again'
+            });
         } finally {
             submitBtn.disabled = false;
             submitBtn.innerHTML = 'Sign In';
         }
     });
 
-    // Check for logout success message and refresh CSRF token
+    // Check for logout success message from session
+    @if(session('logout_completed'))
+    Swal.fire({
+        title: 'Logged Out!',
+        text: 'You have been successfully logged out.',
+        icon: 'success',
+        timer: 2000,
+        showConfirmButton: false
+    });
+    @endif
+
+    // Check for logout success message from URL parameter (fallback)
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('logout') === '1') {
         Swal.fire({
             title: 'Logged Out!',
             text: 'You have been successfully logged out.',
             icon: 'success',
-            timer: 3000,
+            timer: 2000,
             showConfirmButton: false
         });
         
-        // Refresh CSRF token after logout to prevent session expired errors
-        setTimeout(() => {
-            refreshCSRFToken().catch(() => {
-                // If CSRF refresh fails, just reload the page
-                window.location.href = '/login';
-            });
-        }, 100);
+        // Clean up URL by removing logout parameter
+        if (window.history.replaceState) {
+            const cleanUrl = window.location.pathname + window.location.search.replace(/[?&]logout=1/, '').replace(/^&/, '?');
+            window.history.replaceState({}, document.title, cleanUrl);
+        }
     }
     
     // Check if we need to show session expired message (only if explicitly indicated)
@@ -1393,17 +1290,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     } else {
         console.log('No explicit session expired parameters found - not showing alert');
-    }
-    
-    // Also check if we're coming from a logout redirect (no parameter)
-    const referrer = document.referrer;
-    if (referrer && (referrer.includes('/logout') || referrer.includes('/simple-logout'))) {
-        // Refresh CSRF token silently
-        setTimeout(() => {
-            refreshCSRFToken().catch(() => {
-                console.log('CSRF token refresh failed after logout redirect');
-            });
-        }, 100);
     }
 
     console.log('Login page initialized successfully');

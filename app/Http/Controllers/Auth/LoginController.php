@@ -74,9 +74,6 @@ class LoginController extends Controller
      */
     public function showLoginForm(\Illuminate\Http\Request $request)
     {
-        // Perform opportunistic session cleanup if there are too many guest sessions
-        $this->performOpportunisticSessionCleanup();
-        
         $sessionNotifications = [];
         
         // Check for recent session notifications for all users (last 5 minutes)
@@ -795,43 +792,6 @@ class LoginController extends Controller
     }
 
     /**
-     * Perform opportunistic session cleanup if there are too many guest sessions.
-     * This runs during login form display to prevent session accumulation.
-     */
-    protected function performOpportunisticSessionCleanup()
-    {
-        try {
-            if (config('session.driver') === 'database') {
-                // Check how many guest sessions exist
-                $guestSessionCount = \Illuminate\Support\Facades\DB::table('sessions')
-                    ->whereNull('user_id')
-                    ->count();
-
-                // If more than 10 guest sessions, clean up old ones (older than 30 minutes)
-                if ($guestSessionCount > 10) {
-                    $cleaned = \Illuminate\Support\Facades\DB::table('sessions')
-                        ->whereNull('user_id')
-                        ->where('last_activity', '<', time() - 1800) // 30 minutes ago
-                        ->delete();
-
-                    if ($cleaned > 0) {
-                        \Illuminate\Support\Facades\Log::info('Opportunistic session cleanup performed', [
-                            'guest_sessions_before' => $guestSessionCount,
-                            'sessions_cleaned' => $cleaned,
-                            'trigger' => 'login_form_display'
-                        ]);
-                    }
-                }
-            }
-        } catch (\Exception $e) {
-            // Don't break the login process if cleanup fails
-            \Illuminate\Support\Facades\Log::warning('Opportunistic session cleanup failed', [
-                'error' => $e->getMessage()
-            ]);
-        }
-    }
-
-    /**
      * Log the user out of the application.
      * Handles both GET and POST requests without requiring authentication middleware.
      *
@@ -870,37 +830,22 @@ class LoginController extends Controller
         // Perform the actual logout FIRST
         $this->guard()->logout();
 
-        // Session cleanup - be more careful about this
+        // Simple session cleanup - avoid complex database operations during session invalidation
         try {
-            // Get the current session ID before invalidating
-            $currentSessionId = $request->session()->getId();
-            
             $request->session()->invalidate();
             $request->session()->regenerateToken();
-            
-            // Double-check: remove the old session from database if it still exists
-            \Illuminate\Support\Facades\DB::table('sessions')
-                ->where('id', $currentSessionId)
-                ->delete();
-                
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::warning('Session invalidation warning during logout: ' . $e->getMessage());
             // Continue with logout even if session cleanup fails
         }
 
-        // NOW clear user session tracking in database (AFTER Laravel logout)
+        // Clear user-specific cache AFTER session invalidation (more reliable)
         try {
-            // Only clear sessions for THIS specific user to avoid affecting other users
-            \Illuminate\Support\Facades\DB::table('sessions')
-                ->where('user_id', $userId)
-                ->delete();
-
-            // Also clear any cached session data
             \Illuminate\Support\Facades\Cache::forget('user_' . $userId);
             \Illuminate\Support\Facades\Cache::forget('user_session_' . $userId);
-                
+            \Illuminate\Support\Facades\Cache::forget('user_data_' . $userId);
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::warning('Session cleanup warning during logout: ' . $e->getMessage());
+            \Illuminate\Support\Facades\Log::warning('Cache cleanup warning during logout: ' . $e->getMessage());
         }
 
         // Log successful logout
@@ -911,24 +856,19 @@ class LoginController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Logged out successfully',
-                'redirect_url' => route('login', ['from_logout' => '1', 't' => time()]),
+                'redirect_url' => route('login'),
                 'clear_cache' => true,
                 'cache_version' => time()
             ]);
         }
 
-        // Determine redirect based on request type
-        $redirectUrl = route('login', [
-            'from_logout' => '1', 
-            't' => time(),
-            'clear_cache' => '1'
-        ]);
+        // Simple redirect to login page without aggressive parameters
+        $redirectUrl = route('login');
 
-        // Add simple logout success message with enhanced cache control
+        // Add simple logout success message
         $response = redirect($redirectUrl)->with([
             'success' => 'You have been logged out successfully.',
-            'logout_completed' => true,
-            'force_refresh' => true
+            'logout_completed' => true
         ]);
         
         // Add comprehensive cache control headers to prevent caching issues

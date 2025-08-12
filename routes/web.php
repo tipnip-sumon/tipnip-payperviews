@@ -158,29 +158,20 @@ Route::get('/user/dashboard/performance', [App\Http\Controllers\User\UserControl
 // AUTHENTICATION ROUTES  
 // =============================================================================
 
-// Using Laravel's built-in auth routes for login (excluding logout to use our custom one)
-Auth::routes(['verify' => true, 'logout' => false]);
+// Using Laravel's built-in auth routes (excluding login routes to define them manually)
+Auth::routes(['verify' => true, 'logout' => false, 'login' => false]);
 
 // Simple login route that handles CSRF gracefully (no CSRF issues)
 Route::post('/simple-login', [App\Http\Controllers\Auth\LoginController::class, 'simpleLogin'])
     ->name('simple.login')
     ->middleware(['throttle:5,1']);
 
-// Override login routes with custom middleware
+// Define login routes manually without middleware conflicts
 Route::get('/login', [App\Http\Controllers\Auth\LoginController::class, 'showLoginForm'])
-    ->name('login')
-    ->middleware('clear.login.cache');
+    ->name('login');
 
-// Debug route to check CSRF token status
-Route::get('/debug-csrf', function() {
-    return response()->json([
-        'session_id' => session()->getId(),
-        'csrf_token' => csrf_token(),
-        'session_driver' => config('session.driver'),
-        'session_count' => DB::table('sessions')->count(),
-        'current_session_exists' => DB::table('sessions')->where('id', session()->getId())->exists(),
-    ]);
-})->name('debug.csrf');
+// POST login route
+Route::post('/login', [App\Http\Controllers\Auth\LoginController::class, 'login']);
 
 Route::get('/register', [App\Http\Controllers\Auth\RegisterController::class, 'showRegistrationForm'])
     ->name('register');
@@ -205,11 +196,10 @@ Route::post('/resend-verification', [App\Http\Controllers\Auth\LoginController::
     ->name('resend.verification')
     ->middleware('throttle:3,1'); // Allow max 3 attempts per minute
 
-// Main logout route - properly configured with session handling (bypasses CSRF)
+// Main logout route - simplified to avoid session corruption
 Route::match(['GET', 'POST'], '/logout', [App\Http\Controllers\Auth\LoginController::class, 'logout'])
     ->name('logout')
-    ->middleware(['logout'])
-    ->withoutMiddleware(['web']); // Explicitly remove web middleware to avoid CSRF
+    ->middleware(['logout']); // Use custom logout middleware group (web without CSRF)
 
 // Test route to check authentication status (for debugging)
 Route::get('/auth-status', function(\Illuminate\Http\Request $request) {
@@ -285,8 +275,30 @@ Route::get('/force-logout', function(\Illuminate\Http\Request $request) {
 // Enhanced simple logout route with security validation
 Route::get('/simple-logout', function(\Illuminate\Http\Request $request) {
     try {
+        // Get parameters for verification
+        $userVerify = $request->get('user_verify');
+        $sessionToken = $request->get('session_token');
+        $timestamp = $request->get('t');
+        
+        \Illuminate\Support\Facades\Log::info('Simple logout initiated', [
+            'user_verify' => $userVerify,
+            'session_token' => $sessionToken ? substr($sessionToken, 0, 10) . '...' : null,
+            'timestamp' => $timestamp,
+            'ip' => $request->ip()
+        ]);
+        
         if (\Illuminate\Support\Facades\Auth::check()) {
             $user = \Illuminate\Support\Facades\Auth::user();
+            
+            // Optional: Verify user if user_verify parameter is provided
+            if ($userVerify && $user->id != $userVerify) {
+                \Illuminate\Support\Facades\Log::warning('User verification mismatch during logout', [
+                    'expected' => $userVerify,
+                    'actual' => $user->id,
+                    'ip' => $request->ip()
+                ]);
+                // Continue with logout anyway for security
+            }
             
             // Enhanced session cleanup
             try {
@@ -316,8 +328,8 @@ Route::get('/simple-logout', function(\Illuminate\Http\Request $request) {
         $request->session()->invalidate();
         $request->session()->regenerateToken();
         
-        // Simple redirect without complex messages that might cause issues
-        return redirect('/login')->with('success', 'You have been logged out successfully.');
+        // Simple redirect with logout parameter
+        return redirect('/login?logout=1')->with('success', 'You have been logged out successfully.');
             
     } catch (\Exception $e) {
         \Illuminate\Support\Facades\Log::error('Logout error: ' . $e->getMessage(), [
@@ -331,7 +343,7 @@ Route::get('/simple-logout', function(\Illuminate\Http\Request $request) {
         $request->session()->invalidate();
         $request->session()->regenerateToken();
         
-        return redirect('/login')->with('info', 'Logout completed.');
+        return redirect('/login?logout=1')->with('info', 'Logout completed.');
     }
 })->name('simple.logout');
 
