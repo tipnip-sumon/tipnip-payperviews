@@ -212,10 +212,6 @@
                         </div>
                     @else
                         @if(!$isWalletOtpSession)
-                            <!-- Step 1: Initial Withdrawal Form (NO PASSWORD) -->
-                            <div class="alert alert-info mb-3">
-                                <strong>Current Status:</strong> Showing initial withdrawal form (isWalletOtpSession = {{ $isWalletOtpSession ? 'true' : 'false' }})
-                            </div>
                             <form action="{{ route('user.withdraw.wallet.submit') }}" method="POST" 
                                   style="{{ $formDisabled ? 'pointer-events: none;' : '' }}">
                                 @csrf
@@ -507,7 +503,7 @@
     </div>
 </div>
 
-@push('script')
+@push('script') 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const amountInput = document.getElementById('amount');
