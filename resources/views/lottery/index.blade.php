@@ -100,7 +100,7 @@
                                 Current Lottery Draw
                             </h4>
                             @if(isset($currentDraw))
-                                <span class="badge badge-primary ms-2">{{ $currentDraw->formatted_draw_number }}</span>
+                                <span class="badge bg-primary ms-2">{{ $currentDraw->formatted_draw_number }}</span>
                             @endif
                         </div>
                         <div class="card-body">
@@ -128,35 +128,26 @@
                                             <div class="d-flex align-items-center">
                                                 <i class="fe fe-gift text-warning me-2"></i>
                                                 @php
-                                                    // Calculate actual prize pool based on draw status
-                                                    $calculatedTotalMain = 0;
-                                                    
-                                                    if ($currentDraw->status == 'completed') {
-                                                        // For completed draws: use actual total prize amounts awarded
-                                                        $calculatedTotalMain = $currentDraw->winners()->sum('prize_amount');
-                                                    } else {
-                                                        // For pending draws: use prize distribution from settings or estimate
-                                                        if ($currentDraw->prize_distribution && is_array($currentDraw->prize_distribution)) {
-                                                            $calculatedTotalMain = collect($currentDraw->prize_distribution)->sum('amount');
-                                                        } else {
-                                                            // Estimate based on tickets sold and settings
-                                                            $totalTickets = $currentDraw->total_tickets_sold ?? 0;
-                                                            $totalRevenue = $totalTickets * ($settings->ticket_price ?? 2);
-                                                            $adminCommission = $totalRevenue * (($settings->admin_commission_percentage ?? 10) / 100);
-                                                            $calculatedTotalMain = $totalRevenue - $adminCommission;
-                                                        }
-                                                    }
-                                                    
-                                                    $calculatedTotalMain = max($calculatedTotalMain, 0);
+                                                    // Use the enhanced calculatePrizePool method
+                                                    $calculatedTotalMain = $currentDraw->calculatePrizePool();
                                                 @endphp
                                                 <span class="fw-bold text-warning">${{ number_format($calculatedTotalMain, 2) }}</span>
                                             </div>
                                         </div>
                                         <div class="mb-3">
-                                            <label class="form-label">Tickets Sold</label>
+                                            <label class="form-label">Active Participants</label>
                                             <div class="d-flex align-items-center">
                                                 <i class="fe fe-users text-info me-2"></i>
-                                                <span class="fw-bold" id="ticketsSoldCounter">{{ $currentDraw->total_tickets_sold }} / {{ $settings->max_tickets_per_draw ?? 1000 }}</span>
+                                                @php
+                                                    $totalActiveTickets = \App\Models\LotterySetting::getRealActiveTicketsCount();
+                                                    $settingsObject = \App\Models\LotterySetting::getSettings();
+                                                    $activeTicketsBoost = $settingsObject->active_tickets_boost ?? 0;
+                                                    $displayTickets = $totalActiveTickets + $activeTicketsBoost;
+                                                    
+                                                @endphp
+                                                <div class="d-flex flex-column">
+                                                    <span class="fw-bold" id="ticketsSoldCounter">{{ number_format($displayTickets) }}</span>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -476,65 +467,100 @@
                         <div class="card-header">
                             <h5 class="card-title">
                                 <i class="fas fa-trophy me-2"></i>
-                                Prize Breakdown
+                                Current Draw Prize List
                             </h5>
                         </div>
                         <div class="card-body">
-                            @if(isset($currentDraw) && $currentDraw->prize_distribution)
+                            @if(isset($currentDraw))
                                 @php
+                                    // Use actual prize distribution from database
+                                    $prizeDistribution = $currentDraw->prize_distribution ?? [];
+                                    $activeTicketsForDraw = $currentDraw->tickets()->where('status', 'active')->count();
+                                    
                                     // Group prizes by position to show consolidated amounts
-                                    $prizesByPosition = collect($currentDraw->prize_distribution)->groupBy('position');
+                                    $prizesByPosition = collect($prizeDistribution)->groupBy('position');
+                                    
+                                    // Define position names and styling
                                     $positionNames = [
-                                        1 => ['name' => '1st Prize', 'icon' => 'fas fa-medal text-warning'],
-                                        2 => ['name' => '2nd Prize', 'icon' => 'fas fa-medal text-muted'],
-                                        3 => ['name' => '3rd Prize', 'icon' => 'fas fa-medal text-bronze'],
-                                        4 => ['name' => '4th Prize', 'icon' => 'fas fa-medal text-primary'],
-                                        5 => ['name' => '5th Prize', 'icon' => 'fas fa-medal text-secondary']
+                                        1 => ['name' => '1st Prize', 'icon' => 'fas fa-trophy text-warning', 'color' => 'text-warning'],
+                                        2 => ['name' => '2nd Prize', 'icon' => 'fas fa-medal text-info', 'color' => 'text-info'],
+                                        3 => ['name' => '3rd Prize', 'icon' => 'fas fa-award text-success', 'color' => 'text-success'],
+                                        4 => ['name' => '4th Prize', 'icon' => 'fas fa-star text-primary', 'color' => 'text-primary'],
+                                        5 => ['name' => '5th Prize', 'icon' => 'fas fa-gift text-secondary', 'color' => 'text-secondary']
                                     ];
                                 @endphp
                                 
-                                @foreach($prizesByPosition as $position => $prizes)
-                                    @if(isset($positionNames[$position]))
+                                <div class="alert alert-info bg-light border-info">
+                                    <h6 class="mb-2">
+                                        <i class="fas fa-gift me-2"></i>Prize Distribution for Draw #{{ $currentDraw->formatted_draw_number }}
+                                    </h6>
+                                    <small class="text-muted">
                                         @php
-                                            $totalPrizeForPosition = $prizes->sum('amount');
-                                            $prizeCount = $prizes->count();
+                                            $totalPrizes = count($prizeDistribution);
+                                            $calculatedTotal = $currentDraw->calculatePrizePool();
+                                            $activeTicketsCount = $currentDraw->tickets()->where('status', 'active')->count();
+                                            $activeTicketsBoost = $settings->active_tickets_boost ?? 0;
+                                            $displayTicketsCount = $activeTicketsCount + $activeTicketsBoost;
+                                            
+                                            if (!empty($prizeDistribution)) {
+                                                $prizeSource = 'Fixed Amount Structure';
+                                                $displayMessage = "Pre-defined prize distribution with {$totalPrizes} total prizes";
+                                            } else {
+                                                $prizeSource = 'No Prize Distribution Set';
+                                                $displayMessage = "Prize distribution not configured for this draw";
+                                            }
                                         @endphp
-                                        <div class="mb-3">
-                                            <div class="d-flex justify-content-between align-items-center">
-                                                <div class="d-flex align-items-center">
-                                                    <i class="{{ $positionNames[$position]['icon'] }} me-2"></i>
-                                                    <span>{{ $positionNames[$position]['name'] }}</span>
-                                                    @if($prizeCount > 1)
-                                                        <span class="badge bg-info text-white ms-2 small">{{ $prizeCount }} winners</span>
-                                                    @endif
-                                                </div>
-                                                <div class="text-end">
-                                                    <span class="fw-bold text-success">${{ number_format($totalPrizeForPosition, 2) }}</span>
-                                                    @if($prizeCount > 1)
-                                                        <div class="small text-muted">${{ number_format($prizes->first()['amount'], 2) }} each</div>
-                                                    @endif
+                                        • {{ $displayMessage }}
+                                        • Total prize pool: ${{ number_format($calculatedTotal, 2) }}
+                                        @if($totalPrizes > 0)
+                                            • Total prizes: {{ $totalPrizes }}
+                                        @endif
+                                    </small>
+                                </div>
+                                
+                                @if(!empty($prizeDistribution))
+                                    @foreach($prizesByPosition as $position => $prizes)
+                                        @if(isset($positionNames[$position]))
+                                            @php
+                                                $totalPrizeForPosition = $prizes->sum('amount');
+                                                $prizeCount = $prizes->count();
+                                                $individualAmount = $prizes->first()['amount'];
+                                            @endphp
+                                            <div class="mb-3 p-3 border rounded bg-light">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <div class="d-flex align-items-center">
+                                                        <i class="{{ $positionNames[$position]['icon'] }} me-2 fa-lg"></i>
+                                                        <div>
+                                                            <h6 class="mb-0 {{ $positionNames[$position]['color'] }}">{{ $positionNames[$position]['name'] }}</h6>
+                                                            <small class="text-muted">
+                                                                ${{ number_format($individualAmount, 2) }} each
+                                                                @if($prizeCount > 1)
+                                                                    | Total: ${{ number_format($totalPrizeForPosition, 2) }}
+                                                                @endif
+                                                            </small>
+                                                        </div>
+                                                    </div>
+                                                    <div class="text-end">
+                                                        <span class="badge bg-primary fs-6">{{ $prizeCount }} Winner{{ $prizeCount > 1 ? 's' : '' }}</span>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    @endif
-                                @endforeach
+                                        @endif
+                                    @endforeach
+                                @else
+                                    <div class="text-center py-3">
+                                        <i class="fas fa-exclamation-triangle text-warning mb-2" style="font-size: 2rem;"></i>
+                                        <h6 class="text-muted">No Prize Distribution Set</h6>
+                                        <p class="text-muted small">Prize distribution not configured for this draw.</p>
+                                    </div>
+                                @endif
                                 
                                 <hr>
                                 <div class="d-flex justify-content-between align-items-center">
                                     <span class="fw-bold">Total Prize Pool</span>
                                     @php
-                                        // Calculate actual total prize pool based on draw status
-                                        $calculatedTotal = 0;
-                                        
-                                        if ($currentDraw->status == 'completed') {
-                                            // For completed draws: use actual total prize amounts awarded
-                                            $calculatedTotal = $currentDraw->winners()->sum('prize_amount');
-                                        } else {
-                                            // For pending draws: use prize distribution from settings
-                                            $calculatedTotal = collect($currentDraw->prize_distribution)->sum('amount');
-                                        }
-                                        
-                                        $calculatedTotal = max($calculatedTotal, 0);
+                                        // Use the enhanced calculatePrizePool method for consistency
+                                        $calculatedTotal = $currentDraw->calculatePrizePool();
                                     @endphp
                                     <span class="fw-bold text-primary">${{ number_format($calculatedTotal, 2) }}</span>
                                 </div>
@@ -544,22 +570,34 @@
                                     <div class="row text-center">
                                         <div class="col-6">
                                             <div class="small text-muted">Total Winners</div>
-                                            <div class="fw-bold text-info">{{ collect($currentDraw->prize_distribution)->count() }}</div>
+                                            <div class="fw-bold text-info">{{ count($prizeDistribution) }}</div>
                                         </div>
                                         <div class="col-6">
-                                            <div class="small text-muted">Prize Type</div>
-                                            <div class="fw-bold text-primary">
-                                                @if($currentDraw->prize_distribution_type === 'fixed_amount')
-                                                    Fixed Amount
-                                                @else
-                                                    Percentage
-                                                @endif
-                                            </div>
+                                            <div class="small text-muted">Prize Positions</div>
+                                            <div class="fw-bold text-primary">{{ count($prizesByPosition) }}</div>
                                         </div>
                                     </div>
+                                    @if(!empty($prizeDistribution))
+                                        <div class="row text-center mt-2">
+                                            <div class="col-12">
+                                                <div class="small text-muted">Prize Type</div>
+                                                <div class="fw-bold text-success">
+                                                    @php
+                                                        $firstPrize = collect($prizeDistribution)->first();
+                                                        $prizeType = ($firstPrize['type'] ?? 'fixed_amount') === 'fixed_amount' ? 'Fixed Amount' : 'Percentage';
+                                                    @endphp
+                                                    {{ $prizeType }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endif
                                 </div>
                             @else
-                                <p class="text-muted">No active draw to show prizes</p>
+                                <div class="text-center py-4">
+                                    <i class="fas fa-calendar-times text-muted mb-3" style="font-size: 2rem;"></i>
+                                    <h6 class="text-muted">No Active Draw</h6>
+                                    <p class="text-muted small">Check back later for new lottery draws and exciting prizes!</p>
+                                </div>
                             @endif
                         </div>
                     </div>
@@ -659,7 +697,7 @@
                                             <small class="text-muted">Won ${{ number_format($winner->prize_amount, 2) }}</small>
                                         </div>
                                         <div class="text-end">
-                                            <span class="badge badge-warning">{{ $winner->prize_position }}{{ $winner->prize_position == 1 ? 'st' : ($winner->prize_position == 2 ? 'nd' : ($winner->prize_position == 3 ? 'rd' : 'th')) }}</span>
+                                            <span class="badge bg-warning">{{ $winner->prize_position }}{{ $winner->prize_position == 1 ? 'st' : ($winner->prize_position == 2 ? 'nd' : ($winner->prize_position == 3 ? 'rd' : 'th')) }}</span>
                                         </div>
                                     </div>
                                 @endforeach
@@ -1121,25 +1159,27 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             console.log('Updating page content with data:', data);
             
-            // Update tickets sold count
+            // Update tickets sold count - preserve boost format
             if (data.tickets_sold !== undefined) {
                 // Use the specific ID for tickets sold counter
                 const ticketsSoldElement = document.getElementById('ticketsSoldCounter');
                 if (ticketsSoldElement) {
-                    const maxTickets = '{{ $settings->max_tickets_per_draw ?? 1000 }}';
-                    ticketsSoldElement.textContent = `${data.tickets_sold} / ${maxTickets}`;
-                    console.log(`Updated tickets sold to: ${data.tickets_sold} / ${maxTickets}`);
+                    // Check if we have boost information in the current element
+                    const parentDiv = ticketsSoldElement.parentElement;
+                    const boostElement = parentDiv.querySelector('small.text-muted');
+                    
+                    if (boostElement && boostElement.textContent.includes('boost')) {
+                        // We have boost format, just update the main number
+                        ticketsSoldElement.textContent = data.tickets_sold.toLocaleString();
+                        console.log(`Updated boosted tickets to: ${data.tickets_sold}`);
+                    } else {
+                        // Fallback to old format if no boost detected
+                        const maxTickets = '{{ $settings->max_tickets_per_draw ?? 1000 }}';
+                        ticketsSoldElement.textContent = `${data.tickets_sold} / ${maxTickets}`;
+                        console.log(`Updated tickets sold to: ${data.tickets_sold} / ${maxTickets}`);
+                    }
                 } else {
                     console.log('Tickets sold element not found');
-                    // Fallback to the original selector method
-                    const ticketsSoldElements = document.querySelectorAll('span.fw-bold');
-                    ticketsSoldElements.forEach(element => {
-                        if (element.textContent.includes('/') && element.textContent.match(/\d+\s*\/\s*\d+/)) {
-                            const maxTickets = '{{ $settings->max_tickets_per_draw ?? 1000 }}';
-                            element.textContent = `${data.tickets_sold} / ${maxTickets}`;
-                            console.log(`Updated tickets sold to: ${data.tickets_sold} / ${maxTickets}`);
-                        }
-                    });
                 }
             }
         

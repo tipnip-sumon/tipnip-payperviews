@@ -161,23 +161,50 @@ class LotteryDraw extends Model
     }
 
     /**
-     * Calculate prize pool
+     * Calculate total prize pool from prize distribution
+     * Supports both old format and new format with position/winner_index structure
+     * @return float Total prize pool amount
      */
     public function calculatePrizePool()
     {
-        // Calculate total prize pool from prize_distribution amounts
+        // Always calculate from prize_distribution JSON data (no caching)
         if (!empty($this->prize_distribution) && is_array($this->prize_distribution)) {
-            $total = 0;
+            $total = 0.00;
+            
             foreach ($this->prize_distribution as $prize) {
-                if (isset($prize['type']) && $prize['type'] === 'fixed_amount' && isset($prize['amount'])) {
-                    $total += floatval($prize['amount']);
+                // Validate prize structure
+                if (!is_array($prize) || !isset($prize['amount'])) {
+                    continue;
+                }
+                
+                $amount = $prize['amount'];
+                
+                // Ensure amount is numeric
+                if (!is_numeric($amount)) {
+                    continue;
+                }
+                
+                // Convert to float for calculation
+                $amount = (float) $amount;
+                
+                // Skip negative amounts
+                if ($amount < 0) {
+                    continue;
+                }
+                
+                // Only include fixed_amount type prizes (or no type specified for backward compatibility)
+                $prizeType = $prize['type'] ?? 'fixed_amount';
+                if ($prizeType === 'fixed_amount') {
+                    $total += $amount;
                 }
             }
-            return $total;
+            
+            return round($total, 2);
         }
         
-        // Fallback to default prize distribution if not set
-        return 1400.00; // Default: 1000 + 300 + 100
+        // Return 0 if no prize distribution is set (no fake data)
+        // TODO: Set your actual prize distribution JSON in the database for each draw
+        return 0.00;
     }
 
     /**

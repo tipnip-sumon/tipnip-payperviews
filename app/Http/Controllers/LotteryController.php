@@ -276,7 +276,7 @@ class LotteryController extends Controller
                     'success' => true,
                     'message' => $message,
                     'new_tickets' => $newTicketsFormatted,
-                    'tickets_sold' => $currentDraw->total_tickets_sold,
+                    'tickets_sold' => LotterySetting::getTotalActiveTicketsCount(), // Use boosted count
                     'total_prize_pool' => $currentDraw->calculatePrizePool(),
                     'user_stats' => [
                         'total_tickets' => $userStats['total_tickets'],
