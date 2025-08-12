@@ -407,7 +407,7 @@
 <div class="login-container">
     <div class="login-card">
         <!-- Session Status Indicator -->
-        <div class="session-indicator" id="sessionIndicator" title="Session Status: Active"></div>
+        <div class="session-indicator" id="sessionIndicator" title="Session Status: Checking..." onclick="showSessionStatusHelp()" style="cursor: pointer;"></div>
         
         <!-- Back to Home Button -->
         <a href="{{ url('/') }}" class="back-to-home" title="Back to Home">
@@ -787,9 +787,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Browser Compatibility and Multi-Session Support Functions
     function initBrowserCompatibility() {
+        console.log('Initializing browser compatibility...');
+        
         // Detect browser and version
         const browserInfo = detectBrowser();
         console.log('Browser detected:', browserInfo);
+        
+        // Initialize session status
+        initializeSessionStatus();
         
         // Check for multiple tabs/sessions
         checkMultipleSessions();
@@ -804,6 +809,79 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Auto-refresh for stale sessions
         setupSessionRefresh();
+        
+        // Verify session is active
+        verifySessionActive();
+    }
+
+    function initializeSessionStatus() {
+        const currentSessionKey = document.querySelector('meta[name="session-key"]')?.getAttribute('content');
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        
+        console.log('Session initialization:', {
+            sessionKey: currentSessionKey ? 'Present' : 'Missing',
+            csrfToken: csrfToken ? 'Present' : 'Missing'
+        });
+        
+        if (currentSessionKey && csrfToken) {
+            updateSessionIndicator('active', 'Session active and ready');
+            console.log('Session status: Active');
+        } else {
+            updateSessionIndicator('inactive', 'Session not properly initialized');
+            console.warn('Session status: Inactive - missing session data');
+            
+            // Attempt to fix inactive session
+            setTimeout(() => {
+                fixInactiveSession();
+            }, 1000);
+        }
+    }
+
+    function verifySessionActive() {
+        // Perform a lightweight session check
+        fetch('/login', {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Cache-Control': 'no-cache'
+            },
+            credentials: 'same-origin'
+        })
+        .then(response => {
+            if (response.ok) {
+                console.log('Session verification successful');
+                updateSessionIndicator('active', 'Session verified and active');
+            } else {
+                console.warn('Session verification failed:', response.status);
+                updateSessionIndicator('warning', 'Session verification failed');
+                
+                if (response.status === 419) {
+                    console.log('CSRF token expired - will refresh on form submission');
+                    updateSessionIndicator('expired', 'CSRF token expired - will refresh automatically');
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Session verification error:', error);
+            updateSessionIndicator('error', 'Session verification error');
+        });
+    }
+
+    function fixInactiveSession() {
+        console.log('Attempting to fix inactive session...');
+        
+        Swal.fire({
+            title: 'Activating Session',
+            text: 'Initializing your login session...',
+            icon: 'info',
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            timer: 2000,
+            timerProgressBar: true
+        }).then(() => {
+            // Reload page to get fresh session
+            window.location.reload();
+        });
     }
 
     function detectBrowser() {
@@ -992,9 +1070,83 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateSessionIndicator(status, message) {
         const indicator = document.getElementById('sessionIndicator');
         if (indicator) {
-            indicator.className = 'session-indicator' + (status === 'conflict' ? ' conflict' : '');
+            // Remove all status classes
+            indicator.className = 'session-indicator';
+            
+            // Add appropriate status class
+            switch(status) {
+                case 'active':
+                    indicator.style.background = '#28a745'; // Green
+                    indicator.style.animation = 'pulse 2s infinite';
+                    break;
+                case 'conflict':
+                    indicator.className += ' conflict';
+                    indicator.style.background = '#dc3545'; // Red
+                    indicator.style.animation = 'blink 1s infinite';
+                    break;
+                case 'inactive':
+                    indicator.style.background = '#6c757d'; // Gray
+                    indicator.style.animation = 'none';
+                    break;
+                case 'warning':
+                    indicator.style.background = '#ffc107'; // Yellow
+                    indicator.style.animation = 'pulse 1s infinite';
+                    break;
+                case 'expired':
+                    indicator.style.background = '#fd7e14'; // Orange
+                    indicator.style.animation = 'pulse 0.5s infinite';
+                    break;
+                case 'error':
+                    indicator.style.background = '#dc3545'; // Red
+                    indicator.style.animation = 'blink 0.5s infinite';
+                    break;
+                default:
+                    indicator.style.background = '#28a745'; // Default green
+                    indicator.style.animation = 'pulse 2s infinite';
+            }
+            
             indicator.title = 'Session Status: ' + message;
+            console.log('Session indicator updated:', status, '-', message);
         }
+    }
+
+    function showSessionStatusHelp() {
+        const currentStatus = document.getElementById('sessionIndicator')?.title || 'Unknown';
+        
+        Swal.fire({
+            title: 'Session Status Help',
+            html: `
+                <div style="text-align: left; font-size: 14px;">
+                    <p><strong>Current Status:</strong> ${currentStatus}</p>
+                    <hr style="margin: 15px 0;">
+                    <p><strong>Status Indicators:</strong></p>
+                    <ul style="margin: 10px 0; padding-left: 20px;">
+                        <li><span style="color: #28a745;">●</span> <strong>Green:</strong> Session active and ready</li>
+                        <li><span style="color: #ffc107;">●</span> <strong>Yellow:</strong> Session warning or verification needed</li>
+                        <li><span style="color: #fd7e14;">●</span> <strong>Orange:</strong> Session expired but will auto-refresh</li>
+                        <li><span style="color: #6c757d;">●</span> <strong>Gray:</strong> Session inactive</li>
+                        <li><span style="color: #dc3545;">●</span> <strong>Red:</strong> Session conflict or error</li>
+                    </ul>
+                    <hr style="margin: 15px 0;">
+                    <p><strong>Solutions:</strong></p>
+                    <ul style="margin: 10px 0; padding-left: 20px;">
+                        <li>If inactive/gray: Refresh the page</li>
+                        <li>If red/conflict: Close other login tabs</li>
+                        <li>If orange/expired: Wait for auto-refresh or click "Fix Session Issues"</li>
+                        <li>If persistent issues: Clear browser cache and cookies</li>
+                    </ul>
+                </div>
+            `,
+            icon: 'info',
+            confirmButtonText: 'Got it',
+            showCancelButton: true,
+            cancelButtonText: 'Refresh Page',
+            width: '500px'
+        }).then((result) => {
+            if (result.isDismissed && result.dismiss === 'cancel') {
+                window.location.reload();
+            }
+        });
     }
 
     function refreshSessionForOldBrowser() {
@@ -1150,23 +1302,36 @@ document.addEventListener('DOMContentLoaded', function() {
     window.manualTokenRefresh = async function(event) {
         if (event) event.preventDefault();
         
+        // Check current session status
+        const indicator = document.getElementById('sessionIndicator');
+        const currentStatus = indicator?.title || '';
+        
+        let dialogText = 'This will refresh your security token to prevent session timeouts.';
+        if (currentStatus.includes('inactive') || currentStatus.includes('expired')) {
+            dialogText = 'This will fix your inactive session and refresh your security token.';
+        } else if (currentStatus.includes('conflict')) {
+            dialogText = 'This will resolve session conflicts and refresh your security token.';
+        }
+        
         Swal.fire({
-            title: 'Refresh Security Token?',
+            title: 'Fix Session Issues?',
             html: `
                 <div style="text-align: left; font-size: 14px;">
-                    <p><i class="fas fa-shield-alt" style="color: #3085d6;"></i> This will refresh your security token to prevent session timeouts.</p>
-                    <p>Recommended if you've been on this page for a while or experiencing login issues.</p>
+                    <p><i class="fas fa-shield-alt" style="color: #3085d6;"></i> ${dialogText}</p>
+                    <p><strong>Current Status:</strong> ${currentStatus}</p>
+                    <p style="margin-top: 10px;">Recommended if you've been on this page for a while or experiencing login issues.</p>
                 </div>
             `,
             icon: 'question',
             showCancelButton: true,
-            confirmButtonText: '<i class="fas fa-sync-alt"></i> Refresh Now',
+            confirmButtonText: '<i class="fas fa-sync-alt"></i> Fix Session Now',
             cancelButtonText: 'Cancel',
             confirmButtonColor: '#3085d6',
             cancelButtonColor: '#6c757d',
             showLoaderOnConfirm: true,
             preConfirm: async () => {
                 try {
+                    updateSessionIndicator('warning', 'Refreshing session...');
                     await refreshCSRFToken();
                     return true;
                 } catch (error) {
@@ -1177,14 +1342,14 @@ document.addEventListener('DOMContentLoaded', function() {
         }).then((result) => {
             if (result.isConfirmed) {
                 Swal.fire({
-                    title: 'Token Refreshed!',
-                    text: 'Your security token has been updated successfully.',
+                    title: 'Session Fixed!',
+                    text: 'Your session has been refreshed successfully.',
                     icon: 'success',
                     timer: 2000,
                     showConfirmButton: false
                 });
                 
-                showValidation('username', 'Security token refreshed successfully', 'success');
+                showValidation('username', 'Session and security token refreshed successfully', 'success');
                 setTimeout(() => {
                     hideValidation('username');
                 }, 3000);
@@ -1646,6 +1811,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     console.log('Login page initialized successfully');
     console.log('Available test function: testForgotPassword()');
+    console.log('Available help function: showSessionStatusHelp()');
+
+    // Make session status help globally available
+    window.showSessionStatusHelp = showSessionStatusHelp;
 
     // Fallback submission for very old browsers
     function submitWithFallback() {
