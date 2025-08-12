@@ -11,6 +11,16 @@
     <link rel="alternate icon" href="{{ \App\Models\GeneralSetting::getFavicon() }}">
     <link rel="apple-touch-icon" href="{{ \App\Models\GeneralSetting::getLogo() }}">
     
+    <!-- Cache Control for Multi-Session Support -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    
+    <!-- Session Storage Key for Multi-Tab Detection -->
+    <meta name="session-key" content="{{ session()->getId() }}">
+    <meta name="app-version" content="{{ time() }}">
+    
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
@@ -214,11 +224,17 @@
 
     .forgot-password-link #refreshTokenLink {
         transition: all 0.3s ease;
+        padding: 5px 8px;
+        border-radius: 4px;
+        background: rgba(108, 117, 125, 0.1);
+        border: 1px solid transparent;
     }
 
     .forgot-password-link #refreshTokenLink:hover {
         color: #3085d6 !important;
         text-decoration: underline;
+        background: rgba(48, 133, 214, 0.1);
+        border-color: rgba(48, 133, 214, 0.2);
     }
 
     .forgot-password-link #refreshTokenLink i {
@@ -228,6 +244,44 @@
 
     .forgot-password-link #refreshTokenLink:hover i {
         transform: rotate(180deg);
+    }
+
+    /* Old Browser Support Styles */
+    .browser-warning {
+        background: rgba(255, 193, 7, 0.1);
+        border: 1px solid rgba(255, 193, 7, 0.3);
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 15px;
+        font-size: 13px;
+        color: #856404;
+    }
+
+    .session-indicator {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #28a745;
+        animation: pulse 2s infinite;
+    }
+
+    .session-indicator.conflict {
+        background: #dc3545;
+        animation: blink 1s infinite;
+    }
+
+    @keyframes pulse {
+        0% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.5; transform: scale(1.2); }
+        100% { opacity: 1; transform: scale(1); }
+    }
+
+    @keyframes blink {
+        0%, 50% { opacity: 1; }
+        51%, 100% { opacity: 0; }
     }
 
     .register-link {
@@ -352,6 +406,9 @@
 <body>
 <div class="login-container">
     <div class="login-card">
+        <!-- Session Status Indicator -->
+        <div class="session-indicator" id="sessionIndicator" title="Session Status: Active"></div>
+        
         <!-- Back to Home Button -->
         <a href="{{ url('/') }}" class="back-to-home" title="Back to Home">
             <i class="fas fa-arrow-left"></i>
@@ -428,8 +485,8 @@
             <div class="forgot-password-link">
                 <a href="{{ route('password.request') }}" id="forgotPasswordLink">Forgot your password?</a>
                 <span style="margin: 0 10px; color: #ccc;">|</span>
-                <a href="#" id="refreshTokenLink" style="color: #6c757d; font-size: 13px;" onclick="manualTokenRefresh(event)">
-                    <i class="fas fa-sync-alt"></i> Refresh Security Token
+                <a href="#" id="refreshTokenLink" style="color: #6c757d; font-size: 13px;" onclick="manualTokenRefresh(event)" title="Fix browser/session issues">
+                    <i class="fas fa-sync-alt"></i> Fix Session Issues
                 </a>
             </div>
 
@@ -466,6 +523,9 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Fresh login page loaded');
+    
+    // Browser Compatibility and Multi-Session Detection
+    initBrowserCompatibility();
     
     // Debug CSRF token
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
@@ -725,6 +785,286 @@ document.addEventListener('DOMContentLoaded', function() {
         document.cookie = name + "=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
     }
 
+    // Browser Compatibility and Multi-Session Support Functions
+    function initBrowserCompatibility() {
+        // Detect browser and version
+        const browserInfo = detectBrowser();
+        console.log('Browser detected:', browserInfo);
+        
+        // Check for multiple tabs/sessions
+        checkMultipleSessions();
+        
+        // Handle old browser compatibility
+        if (browserInfo.isOldBrowser) {
+            showOldBrowserWarning(browserInfo);
+        }
+        
+        // Handle session storage conflicts
+        handleSessionConflicts();
+        
+        // Auto-refresh for stale sessions
+        setupSessionRefresh();
+    }
+
+    function detectBrowser() {
+        const ua = navigator.userAgent;
+        let browser = {
+            name: 'Unknown',
+            version: 0,
+            isOldBrowser: false,
+            needsPolyfill: false
+        };
+
+        // Chrome
+        if (ua.includes('Chrome') && !ua.includes('Edge')) {
+            const match = ua.match(/Chrome\/(\d+)/);
+            browser.name = 'Chrome';
+            browser.version = match ? parseInt(match[1]) : 0;
+            browser.isOldBrowser = browser.version < 80;
+        }
+        // Firefox
+        else if (ua.includes('Firefox')) {
+            const match = ua.match(/Firefox\/(\d+)/);
+            browser.name = 'Firefox';
+            browser.version = match ? parseInt(match[1]) : 0;
+            browser.isOldBrowser = browser.version < 75;
+        }
+        // Safari
+        else if (ua.includes('Safari') && !ua.includes('Chrome')) {
+            const match = ua.match(/Version\/(\d+)/);
+            browser.name = 'Safari';
+            browser.version = match ? parseInt(match[1]) : 0;
+            browser.isOldBrowser = browser.version < 13;
+        }
+        // Edge
+        else if (ua.includes('Edge') || ua.includes('Edg/')) {
+            const match = ua.match(/Edg?\/(\d+)/);
+            browser.name = 'Edge';
+            browser.version = match ? parseInt(match[1]) : 0;
+            browser.isOldBrowser = browser.version < 80;
+        }
+        // Internet Explorer
+        else if (ua.includes('MSIE') || ua.includes('Trident')) {
+            browser.name = 'IE';
+            browser.version = 11; // Assume IE11
+            browser.isOldBrowser = true;
+            browser.needsPolyfill = true;
+        }
+
+        return browser;
+    }
+
+    function checkMultipleSessions() {
+        const currentSessionKey = document.querySelector('meta[name="session-key"]')?.getAttribute('content');
+        const storedSessionKey = localStorage.getItem('login_session_key');
+        
+        if (storedSessionKey && storedSessionKey !== currentSessionKey) {
+            console.log('Multiple session detected - clearing old session data');
+            
+            // Clear old session data
+            localStorage.removeItem('login_session_key');
+            localStorage.removeItem('login_cache_timestamp');
+            sessionStorage.clear();
+            
+            // Show notification about session change
+            showSessionChangeNotification();
+        }
+        
+        // Store current session key
+        localStorage.setItem('login_session_key', currentSessionKey);
+    }
+
+    function handleSessionConflicts() {
+        // Listen for storage events (when another tab changes something)
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'login_session_key' && e.newValue !== e.oldValue) {
+                console.log('Session conflict detected from another tab');
+                showMultiTabWarning();
+            }
+        });
+        
+        // Check for session conflicts periodically
+        setInterval(function() {
+            const currentSessionKey = document.querySelector('meta[name="session-key"]')?.getAttribute('content');
+            const storedSessionKey = localStorage.getItem('login_session_key');
+            
+            if (storedSessionKey && storedSessionKey !== currentSessionKey) {
+                console.log('Session mismatch detected');
+                handleSessionMismatch();
+            }
+        }, 30000); // Check every 30 seconds
+    }
+
+    function setupSessionRefresh() {
+        // Auto-refresh CSRF token for old browsers every 10 minutes
+        const browserInfo = detectBrowser();
+        if (browserInfo.isOldBrowser) {
+            setInterval(function() {
+                console.log('Auto-refreshing session for old browser compatibility');
+                refreshSessionForOldBrowser();
+            }, 600000); // 10 minutes
+        }
+    }
+
+    function showOldBrowserWarning(browserInfo) {
+        const warningHtml = `
+            <div style="text-align: left; font-size: 14px;">
+                <p><i class="fas fa-exclamation-triangle" style="color: #f39c12;"></i> 
+                <strong>Browser Compatibility Notice</strong></p>
+                <p>You're using ${browserInfo.name} version ${browserInfo.version}, which may have limited compatibility.</p>
+                <p><strong>Recommendations:</strong></p>
+                <ul style="margin: 10px 0; padding-left: 20px;">
+                    <li>Update to the latest browser version</li>
+                    <li>Clear browser cache and cookies</li>
+                    <li>Disable browser extensions that may interfere</li>
+                    <li>If issues persist, try a different browser</li>
+                </ul>
+                <p style="color: #666; font-size: 12px;">This page will automatically handle compatibility issues.</p>
+            </div>
+        `;
+        
+        Swal.fire({
+            title: 'Browser Compatibility',
+            html: warningHtml,
+            icon: 'warning',
+            confirmButtonText: 'Continue',
+            cancelButtonText: 'Help',
+            showCancelButton: true,
+            timer: 15000, // Auto-close after 15 seconds
+            timerProgressBar: true
+        }).then((result) => {
+            if (result.isDismissed && result.dismiss === 'cancel') {
+                showBrowserHelp();
+            }
+        });
+    }
+
+    function showSessionChangeNotification() {
+        const toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 5000,
+            timerProgressBar: true
+        });
+        
+        toast.fire({
+            icon: 'info',
+            title: 'Session Updated',
+            text: 'Your session has been refreshed for security.'
+        });
+    }
+
+    function showMultiTabWarning() {
+        updateSessionIndicator('conflict', 'Multiple tabs detected - may cause conflicts');
+        
+        const toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 7000,
+            timerProgressBar: true
+        });
+        
+        toast.fire({
+            icon: 'warning',
+            title: 'Multiple Tabs Detected',
+            text: 'Login in another tab may affect this session. Please use one tab for login.'
+        });
+    }
+
+    function handleSessionMismatch() {
+        console.log('Handling session mismatch - refreshing page');
+        updateSessionIndicator('conflict', 'Session conflict detected');
+        
+        Swal.fire({
+            title: 'Session Conflict',
+            text: 'Your session has changed in another tab. The page will refresh to sync.',
+            icon: 'info',
+            timer: 3000,
+            showConfirmButton: false,
+            allowOutsideClick: false
+        }).then(() => {
+            window.location.reload();
+        });
+    }
+
+    function updateSessionIndicator(status, message) {
+        const indicator = document.getElementById('sessionIndicator');
+        if (indicator) {
+            indicator.className = 'session-indicator' + (status === 'conflict' ? ' conflict' : '');
+            indicator.title = 'Session Status: ' + message;
+        }
+    }
+
+    function refreshSessionForOldBrowser() {
+        // Lightweight session refresh for old browsers
+        try {
+            fetch('/login', {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Cache-Control': 'no-cache'
+                },
+                credentials: 'same-origin'
+            }).then(response => {
+                if (response.ok) {
+                    console.log('Session refreshed successfully for old browser');
+                }
+            }).catch(error => {
+                console.log('Session refresh failed for old browser:', error);
+            });
+        } catch (error) {
+            console.log('Session refresh not supported in this browser');
+        }
+    }
+
+    function showBrowserHelp() {
+        const helpHtml = `
+            <div style="text-align: left; font-size: 14px;">
+                <h4 style="margin-bottom: 15px; color: #333;">Browser Update Instructions</h4>
+                
+                <div style="margin-bottom: 15px;">
+                    <strong>Chrome:</strong> Menu → Help → About Google Chrome
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <strong>Firefox:</strong> Menu → Help → About Firefox
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <strong>Safari:</strong> Safari → About Safari (Mac) or Help → About Safari
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <strong>Edge:</strong> Menu → Help and feedback → About Microsoft Edge
+                </div>
+                
+                <hr style="margin: 15px 0;">
+                
+                <p><strong>Alternative browsers:</strong></p>
+                <ul style="margin: 10px 0; padding-left: 20px;">
+                    <li>Google Chrome (Recommended)</li>
+                    <li>Mozilla Firefox</li>
+                    <li>Microsoft Edge</li>
+                    <li>Safari (for Mac users)</li>
+                </ul>
+                
+                <p style="color: #666; font-size: 12px; margin-top: 15px;">
+                    If you continue having issues, please contact our support team.
+                </p>
+            </div>
+        `;
+        
+        Swal.fire({
+            title: 'Browser Help',
+            html: helpHtml,
+            icon: 'info',
+            confirmButtonText: 'Close',
+            width: '500px'
+        });
+    }
+
     // Email verification alert functionality
     function showEmailVerificationAlert(email) {
         emailVerificationAlert.classList.add('show');
@@ -923,10 +1263,21 @@ document.addEventListener('DOMContentLoaded', function() {
         hideValidation('password');
 
         try {
+            // Browser compatibility check before submission
+            const browserInfo = detectBrowser();
+            if (browserInfo.needsPolyfill) {
+                // Use fallback for very old browsers
+                return submitWithFallback();
+            }
+
             // Save email for remember me if checked
             if (rememberCheckbox.checked) {
                 setCookie('saved_email', usernameInput.value.trim(), 30);
             }
+
+            // Update session tracking
+            const currentSessionKey = document.querySelector('meta[name="session-key"]')?.getAttribute('content');
+            localStorage.setItem('login_session_key', currentSessionKey);
 
             // Get fresh CSRF token before submission
             const currentToken = getCSRFToken();
@@ -946,7 +1297,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 body: formData,
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest',
-                    'Accept': 'application/json'
+                    'Accept': 'application/json',
+                    'Cache-Control': 'no-cache' // Prevent caching issues
                 },
                 credentials: 'same-origin'
             });
@@ -1294,6 +1646,50 @@ document.addEventListener('DOMContentLoaded', function() {
 
     console.log('Login page initialized successfully');
     console.log('Available test function: testForgotPassword()');
+
+    // Fallback submission for very old browsers
+    function submitWithFallback() {
+        console.log('Using fallback submission for old browser');
+        
+        Swal.fire({
+            title: 'Processing Login...',
+            text: 'Using compatibility mode for your browser.',
+            icon: 'info',
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            timer: 2000
+        }).then(() => {
+            // Use traditional form submission for old browsers
+            form.submit();
+        });
+    }
+
+    // Add periodic session health check for multi-tab scenarios
+    setInterval(function() {
+        const currentSessionKey = document.querySelector('meta[name="session-key"]')?.getAttribute('content');
+        const storedSessionKey = localStorage.getItem('login_session_key');
+        
+        if (storedSessionKey && currentSessionKey && storedSessionKey !== currentSessionKey) {
+            console.log('Session mismatch detected in health check');
+            handleSessionMismatch();
+        }
+    }, 60000); // Check every minute
+
+    // Handle page visibility changes (when user switches tabs)
+    document.addEventListener('visibilitychange', function() {
+        if (!document.hidden) {
+            // Page became visible again - check for session changes
+            setTimeout(checkMultipleSessions, 500);
+        }
+    });
+
+    // Enhanced beforeunload handling for old browsers
+    window.addEventListener('beforeunload', function(e) {
+        // Clean up session storage for better compatibility
+        if (sessionStorage.getItem('login_temp_data')) {
+            sessionStorage.removeItem('login_temp_data');
+        }
+    });
 });
 </script>
 
