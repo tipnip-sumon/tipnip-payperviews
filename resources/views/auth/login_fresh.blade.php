@@ -613,22 +613,22 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // CSRF Token Refresh Function
+    // CSRF Token Refresh Function - Fixed to prevent session invalidation
     async function refreshCSRFToken() {
         try {
-            const response = await fetch('/login', {
+            // Use the debug route to get fresh CSRF token without creating new session
+            const response = await fetch('/debug-csrf', {
                 method: 'GET',
                 headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                },
+                credentials: 'same-origin'
             });
             
             if (response.ok) {
-                const html = await response.text();
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, 'text/html');
-                const newToken = doc.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
-                               doc.querySelector('input[name="_token"]')?.value;
+                const data = await response.json();
+                const newToken = data.csrf_token;
                 
                 if (newToken) {
                     // Update meta tag
@@ -643,13 +643,32 @@ document.addEventListener('DOMContentLoaded', function() {
                         tokenInput.value = newToken;
                     }
                     
-                    console.log('CSRF token refreshed successfully');
+                    console.log('CSRF token refreshed successfully', {
+                        newToken: newToken.substring(0, 10) + '...',
+                        sessionId: data.session_id,
+                        sessionExists: data.current_session_exists
+                    });
                     return newToken;
                 }
             }
-            throw new Error('Failed to get new token');
+            throw new Error('Failed to get new token from response');
         } catch (error) {
             console.error('CSRF token refresh failed:', error);
+            
+            // Fallback: try to regenerate token by calling a simple route
+            try {
+                const fallbackResponse = await fetch(window.location.href, {
+                    method: 'HEAD',
+                    credentials: 'same-origin'
+                });
+                
+                if (fallbackResponse.ok) {
+                    console.log('Fallback session refresh completed');
+                }
+            } catch (fallbackError) {
+                console.error('Fallback refresh also failed:', fallbackError);
+            }
+            
             throw error;
         }
     }
@@ -954,68 +973,50 @@ document.addEventListener('DOMContentLoaded', function() {
                 setCookie('saved_email', usernameInput.value.trim(), 30);
             }
 
-            // First try to submit normally via AJAX
+            // Simplified CSRF token handling - let Laravel handle it naturally
             const formData = new FormData(form);
             
-            // Ensure CSRF token is fresh
-            const csrfToken = getCSRFToken();
+            console.log('Submitting login form...');
             
-            if (csrfToken) {
-                formData.set('_token', csrfToken);
-            } else {
-                throw new Error('CSRF token not available');
-            }
+            const response = await fetch(form.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                },
+                credentials: 'same-origin'
+            });
             
-            let response;
-            try {
-                // Enhanced CSRF token handling
-                const csrfToken = getCSRFToken();
-                console.log('Using CSRF token for login:', csrfToken ? 'Token available' : 'No token');
+            console.log('Login response status:', response.status);
+            
+            // Handle CSRF token mismatch with one retry
+            if (response.status === 419) {
+                console.log('CSRF token mismatch (419) - attempting refresh and retry...');
                 
-                response = await fetch(form.action, {
-                    method: 'POST',
-                    body: formData,
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRF-TOKEN': csrfToken || '',
-                        'Accept': 'application/json'
-                    }
-                });
-                
-                console.log('Login response status:', response.status);
-                
-                // Check for CSRF token mismatch specifically
-                if (response.status === 419) {
-                    console.log('CSRF token mismatch detected (419), refreshing token...');
-                    const newToken = getCSRFToken();
+                try {
+                    const newToken = await refreshCSRFToken();
                     if (newToken) {
-                        // Update token and retry
                         formData.set('_token', newToken);
-                        $('meta[name="csrf-token"]').attr('content', newToken);
-                        $('input[name="_token"]').val(newToken);
                         
-                        console.log('Retrying login with new CSRF token...');
-                        response = await fetch(form.action, {
+                        console.log('Retrying login with refreshed token...');
+                        const retryResponse = await fetch(form.action, {
                             method: 'POST',
                             body: formData,
                             headers: {
                                 'X-Requested-With': 'XMLHttpRequest',
-                                'X-CSRF-TOKEN': newToken,
                                 'Accept': 'application/json'
-                            }
+                            },
+                            credentials: 'same-origin'
                         });
+                        
+                        // Use the retry response
+                        response = retryResponse;
                     }
+                } catch (refreshError) {
+                    console.error('CSRF refresh failed:', refreshError);
+                    throw new Error('Session expired. Please refresh the page and try again.');
                 }
-            } catch (fetchError) {
-                console.log('Network error, trying simple login method...', fetchError);
-                // If network error, try simple login
-                response = await fetch('/simple-login', {
-                    method: 'POST',
-                    body: new FormData(form),
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
-                });
             }
 
             if (response.ok || response.redirected) {
