@@ -33,6 +33,7 @@ class LotterySetting extends Model
         'virtual_ticket_base',
         'virtual_user_id', // Dynamic virtual user ID for virtual tickets
         'active_tickets_boost', // Manual boost for active tickets display
+        'auto_adjust_boost', // Automatically reduce boost when draws complete
         // Auto-generation fields
         'auto_generate_draws',
         'auto_generation_frequency',

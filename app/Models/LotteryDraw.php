@@ -399,6 +399,9 @@ class LotteryDraw extends Model
         
         // Auto-cleanup virtual lottery data after completion
         $this->cleanupVirtualData();
+        
+        // Auto-adjust active tickets boost after draw completion
+        $this->autoAdjustActiveTicketsBoost();
     }
 
     /**
@@ -718,5 +721,45 @@ class LotteryDraw extends Model
         }
         
         return $nextDrawTime;
+    }
+
+    /**
+     * Auto-adjust active tickets boost after draw completion
+     * Reduces boost by the number of tickets that were active in this draw
+     */
+    private function autoAdjustActiveTicketsBoost()
+    {
+        try {
+            $settings = LotterySetting::getSettings();
+            
+            // Check if auto-adjustment is enabled
+            if (!($settings->auto_adjust_boost ?? true)) {
+                return;
+            }
+            
+            // Get the number of tickets that were active in this draw
+            $ticketsInThisDraw = $this->tickets()->where('status', 'active')->count();
+            
+            if ($ticketsInThisDraw > 0) {
+                $currentBoost = $settings->active_tickets_boost ?? 0;
+                
+                // Reduce boost by the number of tickets that are no longer active
+                $newBoost = max(0, $currentBoost - $ticketsInThisDraw);
+                
+                LotterySetting::updateSettings(['active_tickets_boost' => $newBoost]);
+                
+                Log::info("Auto-adjusted active tickets boost after draw completion", [
+                    'draw_id' => $this->id,
+                    'tickets_completed' => $ticketsInThisDraw,
+                    'old_boost' => $currentBoost,
+                    'new_boost' => $newBoost,
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::error("Failed to auto-adjust active tickets boost", [
+                'draw_id' => $this->id,
+                'error' => $e->getMessage()
+            ]);
+        }
     }
 }
