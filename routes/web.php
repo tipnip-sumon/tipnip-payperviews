@@ -198,6 +198,22 @@ Route::match(['GET', 'POST'], '/logout', [App\Http\Controllers\Auth\LoginControl
     ->name('logout')
     ->middleware(['web']);
 
+// Test route to check authentication status (for debugging)
+Route::get('/auth-status', function(\Illuminate\Http\Request $request) {
+    return response()->json([
+        'authenticated' => \Illuminate\Support\Facades\Auth::check(),
+        'user_id' => \Illuminate\Support\Facades\Auth::id(),
+        'session_id' => $request->session()->getId(),
+        'session_data' => $request->session()->all(),
+        'timestamp' => now()->toDateTimeString()
+    ]);
+})->name('auth.status');
+
+// Logout test page (for debugging logout behavior)
+Route::get('/logout-test', function() {
+    return view('logout-test');
+})->name('logout.test');
+
 // Enhanced simple logout route with security validation
 Route::get('/simple-logout', function(\Illuminate\Http\Request $request) {
     try {

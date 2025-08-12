@@ -768,7 +768,35 @@ class LoginController extends Controller
             'method' => $request->method()
         ]);
 
-        // Clear user session tracking in database (with better error handling)
+        // Store user info before logout for logging
+        $userInfo = [
+            'user_id' => $userId,
+            'username' => $username,
+            'ip' => $request->ip()
+        ];
+
+        // Perform the actual logout FIRST
+        $this->guard()->logout();
+
+        // Session cleanup - be more careful about this
+        try {
+            // Get the current session ID before invalidating
+            $currentSessionId = $request->session()->getId();
+            
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+            
+            // Double-check: remove the old session from database if it still exists
+            \Illuminate\Support\Facades\DB::table('sessions')
+                ->where('id', $currentSessionId)
+                ->delete();
+                
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::warning('Session invalidation warning during logout: ' . $e->getMessage());
+            // Continue with logout even if session cleanup fails
+        }
+
+        // NOW clear user session tracking in database (AFTER Laravel logout)
         try {
             // Only clear sessions for THIS specific user to avoid affecting other users
             \Illuminate\Support\Facades\DB::table('sessions')
@@ -781,25 +809,6 @@ class LoginController extends Controller
                 
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::warning('Session cleanup warning during logout: ' . $e->getMessage());
-        }
-
-        // Store user info before logout for logging
-        $userInfo = [
-            'user_id' => $userId,
-            'username' => $username,
-            'ip' => $request->ip()
-        ];
-
-        // Perform the actual logout
-        $this->guard()->logout();
-
-        // Session cleanup - be more careful about this
-        try {
-            $request->session()->invalidate();
-            $request->session()->regenerateToken();
-        } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::warning('Session invalidation warning during logout: ' . $e->getMessage());
-            // Continue with logout even if session cleanup fails
         }
 
         // Log successful logout
@@ -819,13 +828,15 @@ class LoginController extends Controller
         // Determine redirect based on request type
         $redirectUrl = route('login', [
             'from_logout' => '1', 
-            't' => time()
+            't' => time(),
+            'clear_cache' => '1'
         ]);
 
-        // Add simple logout success message
+        // Add simple logout success message with enhanced cache control
         $response = redirect($redirectUrl)->with([
             'success' => 'You have been logged out successfully.',
-            'logout_completed' => true
+            'logout_completed' => true,
+            'force_refresh' => true
         ]);
         
         // Add comprehensive cache control headers to prevent caching issues
