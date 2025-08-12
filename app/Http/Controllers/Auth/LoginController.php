@@ -74,6 +74,9 @@ class LoginController extends Controller
      */
     public function showLoginForm(\Illuminate\Http\Request $request)
     {
+        // Perform opportunistic session cleanup if there are too many guest sessions
+        $this->performOpportunisticSessionCleanup();
+        
         $sessionNotifications = [];
         
         // Check for recent session notifications for all users (last 5 minutes)
@@ -704,21 +707,25 @@ class LoginController extends Controller
      */
     protected function forceLogoutExistingSessions($user)
     {
-        // Clear any existing session tracking for THIS user only
-        // Removed method check as it may not exist
-        
-        // Only clear sessions for this specific user - be very conservative
         try {
             if (config('session.driver') === 'database') {
-                // Only clear sessions specifically belonging to this user
-                \Illuminate\Support\Facades\DB::table('sessions')
+                // Clear sessions specifically belonging to this user
+                $userSessionsDeleted = \Illuminate\Support\Facades\DB::table('sessions')
                     ->where('user_id', $user->id)
                     ->delete();
                     
+                // ALSO clean up old guest sessions (older than 1 hour) to prevent accumulation
+                $guestSessionsDeleted = \Illuminate\Support\Facades\DB::table('sessions')
+                    ->whereNull('user_id')
+                    ->where('last_activity', '<', time() - 3600) // Older than 1 hour
+                    ->delete();
+                    
                 // Log the action
-                \Illuminate\Support\Facades\Log::info('Cleared database sessions for user', [
+                \Illuminate\Support\Facades\Log::info('Cleared database sessions for user and old guest sessions', [
                     'user_id' => $user->id,
-                    'username' => $user->username
+                    'username' => $user->username,
+                    'user_sessions_deleted' => $userSessionsDeleted,
+                    'guest_sessions_deleted' => $guestSessionsDeleted
                 ]);
             }
         } catch (\Exception $e) {
@@ -737,6 +744,91 @@ class LoginController extends Controller
             'ip' => request()->ip(),
             'user_agent' => request()->userAgent(),
         ]);
+    }
+
+    /**
+     * Clean up orphaned and old guest sessions to prevent database bloat.
+     * This method should be called periodically (e.g., via scheduled task).
+     *
+     * @return array Statistics about cleaned sessions
+     */
+    public static function cleanupOrphanedSessions()
+    {
+        $stats = [
+            'old_guest_sessions' => 0,
+            'orphaned_user_sessions' => 0,
+            'expired_sessions' => 0
+        ];
+
+        try {
+            if (config('session.driver') === 'database') {
+                // 1. Clean old guest sessions (older than 2 hours)
+                $stats['old_guest_sessions'] = \Illuminate\Support\Facades\DB::table('sessions')
+                    ->whereNull('user_id')
+                    ->where('last_activity', '<', time() - 7200) // 2 hours ago
+                    ->delete();
+
+                // 2. Clean orphaned user sessions (user_id doesn't exist in users table)
+                $stats['orphaned_user_sessions'] = \Illuminate\Support\Facades\DB::table('sessions')
+                    ->whereNotNull('user_id')
+                    ->whereNotIn('user_id', function($query) {
+                        $query->select('id')->from('users');
+                    })
+                    ->delete();
+
+                // 3. Clean expired sessions based on session lifetime
+                $sessionLifetime = config('session.lifetime', 120) * 60; // Convert minutes to seconds
+                $stats['expired_sessions'] = \Illuminate\Support\Facades\DB::table('sessions')
+                    ->where('last_activity', '<', time() - $sessionLifetime)
+                    ->delete();
+
+                \Illuminate\Support\Facades\Log::info('Session cleanup completed', $stats);
+            }
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Session cleanup failed', [
+                'error' => $e->getMessage(),
+                'stats' => $stats
+            ]);
+        }
+
+        return $stats;
+    }
+
+    /**
+     * Perform opportunistic session cleanup if there are too many guest sessions.
+     * This runs during login form display to prevent session accumulation.
+     */
+    protected function performOpportunisticSessionCleanup()
+    {
+        try {
+            if (config('session.driver') === 'database') {
+                // Check how many guest sessions exist
+                $guestSessionCount = \Illuminate\Support\Facades\DB::table('sessions')
+                    ->whereNull('user_id')
+                    ->count();
+
+                // If more than 10 guest sessions, clean up old ones (older than 30 minutes)
+                if ($guestSessionCount > 10) {
+                    $cleaned = \Illuminate\Support\Facades\DB::table('sessions')
+                        ->whereNull('user_id')
+                        ->where('last_activity', '<', time() - 1800) // 30 minutes ago
+                        ->delete();
+
+                    if ($cleaned > 0) {
+                        \Illuminate\Support\Facades\Log::info('Opportunistic session cleanup performed', [
+                            'guest_sessions_before' => $guestSessionCount,
+                            'sessions_cleaned' => $cleaned,
+                            'trigger' => 'login_form_display'
+                        ]);
+                    }
+                }
+            }
+        } catch (\Exception $e) {
+            // Don't break the login process if cleanup fails
+            \Illuminate\Support\Facades\Log::warning('Opportunistic session cleanup failed', [
+                'error' => $e->getMessage()
+            ]);
+        }
     }
 
     /**
@@ -1013,9 +1105,13 @@ class LoginController extends Controller
             if (\Illuminate\Support\Facades\Auth::attempt($loginCredentials, $request->filled('remember'))) {
                 $user = \Illuminate\Support\Facades\Auth::user();
                 
-                // Reset login attempts on successful login
-                $user->login_attempts = 0;
-                $user->save();
+                // Reset login attempts on successful login using direct database update
+                \Illuminate\Support\Facades\DB::table('users')
+                    ->where('id', $user->id)
+                    ->update([
+                        'login_attempts' => 0,
+                        'locked_until' => null
+                    ]);
                 
                 // Check email verification
                 if (!$user->email_verified_at) {
