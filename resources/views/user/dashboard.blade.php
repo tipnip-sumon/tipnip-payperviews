@@ -59,6 +59,18 @@
                 color: #ffffff !important;
             }
             
+            /* Override for circle icons - force dark color */
+            .balance-card .bg-white .text-dark,
+            .balance-card .bg-opacity-30 .text-dark,
+            .balance-card .rounded-circle .text-dark,
+            .welcome-banner .bg-white .text-dark,
+            .welcome-banner .bg-opacity-30 .text-dark,
+            .welcome-banner .rounded-circle .text-dark,
+            .bg-white.bg-opacity-30 .text-dark,
+            .rounded-circle .text-dark {
+                color: #000000 !important;
+            }
+            
             /* Theme-adaptive table headers */
             .theme-table-header {
                 background-color: #f8f9fa !important;
@@ -154,43 +166,43 @@
                         <div class="row align-items-center g-0 d-none d-lg-flex">
                             <div class="col-lg-8 p-5">
                                 <div class="text-white force-white-text">
-                                    <h2 class="mb-3 fw-bold text-white force-white-text" style="color: #ffffff !important; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">
-                                        <i class="fas fa-rocket me-3 text-white force-white-text" style="color: #ffffff !important;"></i>Welcome to Your Earnings Dashboard!
+                                    <h2 class="mb-3 fw-bold text-white force-white-text" style="color: #ffffff !important; text-shadow: 0 2px 4px rgba(0,0,0,0.8); font-weight: 800;">
+                                        <i class="fas fa-rocket me-3 text-white force-white-text" style="color: #ffffff !important; text-shadow: 0 2px 4px rgba(0,0,0,0.8);"></i>Welcome to Your Earnings Dashboard!
                                     </h2>
-                                    <p class="lead mb-4 text-white force-white-text" style="color: #ffffff !important; text-shadow: 0 1px 3px rgba(0,0,0,0.5); opacity: 0.95;">
+                                    <p class="lead mb-4 text-white force-white-text" style="color: #ffffff !important; text-shadow: 0 2px 4px rgba(0,0,0,0.8); opacity: 1; font-weight: 600;">
                                         Track your investments, manage your portfolio, and watch your earnings grow with our advanced platform.
                                     </p>
                                     <div class="row">
                                         <div class="col-md-4 mb-3">
                                             <div class="d-flex align-items-center">
-                                                <div class="bg-white bg-opacity-20 rounded-circle p-2 me-3">
-                                                    <i class="fas fa-chart-line text-white"></i>
+                                                <div class="bg-white bg-opacity-30 rounded-circle p-2 me-3">
+                                                    <i class="fas fa-chart-line text-dark"></i>
                                                 </div>
                                                 <div>
-                                                    <h6 class="text-white mb-0 fw-bold">Smart Investing</h6>
-                                                    <small class="text-white-50">AI-powered strategies</small>
+                                                    <h6 class="text-white mb-0 fw-bold" style="color: #ffffff !important; text-shadow: 0 2px 4px rgba(0,0,0,0.8); font-weight: 700;">Smart Investing</h6>
+                                                    <small class="text-white-50" style="color: rgba(255,255,255,0.9) !important; text-shadow: 0 1px 3px rgba(0,0,0,0.6);">AI-powered strategies</small>
                                                 </div>
                                             </div>
                                         </div>
                                         <div class="col-md-4 mb-3">
                                             <div class="d-flex align-items-center">
-                                                <div class="bg-white bg-opacity-20 rounded-circle p-2 me-3">
-                                                    <i class="fas fa-shield-alt text-white"></i>
+                                                <div class="bg-white bg-opacity-30 rounded-circle p-2 me-3">
+                                                    <i class="fas fa-shield-alt text-dark"></i>
                                                 </div>
                                                 <div>
-                                                    <h6 class="text-white mb-0 fw-bold">Secure Platform</h6>
-                                                    <small class="text-white-50">Bank-level security</small>
+                                                    <h6 class="text-white mb-0 fw-bold" style="color: #ffffff !important; text-shadow: 0 2px 4px rgba(0,0,0,0.8); font-weight: 700;">Secure Platform</h6>
+                                                    <small class="text-white-50" style="color: rgba(255,255,255,0.9) !important; text-shadow: 0 1px 3px rgba(0,0,0,0.6);">Bank-level security</small>
                                                 </div>
                                             </div>
                                         </div>
                                         <div class="col-md-4 mb-3">
                                             <div class="d-flex align-items-center">
-                                                <div class="bg-white bg-opacity-20 rounded-circle p-2 me-3">
-                                                    <i class="fas fa-clock text-white"></i>
+                                                <div class="bg-white bg-opacity-30 rounded-circle p-2 me-3">
+                                                    <i class="fas fa-clock text-dark"></i>
                                                 </div>
                                                 <div>
-                                                    <h6 class="text-white mb-0 fw-bold">24/7 Access</h6>
-                                                    <small class="text-white-50">Always available</small>
+                                                    <h6 class="text-white mb-0 fw-bold" style="color: #ffffff !important; text-shadow: 0 2px 4px rgba(0,0,0,0.8); font-weight: 700;">24/7 Access</h6>
+                                                    <small class="text-white-50" style="color: rgba(255,255,255,0.9) !important; text-shadow: 0 1px 3px rgba(0,0,0,0.6);">Always available</small>
                                                 </div>
                                             </div>
                                         </div>
@@ -200,12 +212,12 @@
                             <div class="col-lg-4 p-4 text-center">
                                 <div class="text-white">
                                     <div class="mb-4">
-                                        <i class="fas fa-wallet fa-4x mb-3" style="opacity: 0.8;"></i>
-                                        <h5 class="fw-bold">Ready to Start?</h5>
+                                        <i class="fas fa-wallet fa-4x mb-3" style="opacity: 0.8; color: #ffffff !important; text-shadow: 0 2px 4px rgba(0,0,0,0.8);"></i>
+                                        <h5 class="fw-bold" style="color: #ffffff !important; text-shadow: 0 2px 4px rgba(0,0,0,0.8); font-weight: 700;">Ready to Start?</h5>
                                     </div>
                                     <div class="d-grid gap-3">
-                                        <a href="{{ route('deposit.index') }}" class="btn btn-light btn-lg fw-bold shadow-sm">
-                                            <i class="fas fa-plus-circle me-2"></i>Add Funds
+                                        <a href="{{ route('deposit.index') }}" class="btn btn-light btn-lg fw-bold shadow-sm" style="color: #000000 !important;">
+                                            <i class="fas fa-plus-circle me-2" style="color: #000000 !important;"></i>Add Funds
                                         </a>
                                         <a href="{{ route('invest.index') }}" class="btn btn-outline-light btn-lg fw-bold">
                                             <i class="fas fa-chart-line me-2"></i>Start Investing
@@ -218,14 +230,14 @@
                         <!-- Mobile Version - Simple Banner -->
                         <div class="d-block d-lg-none p-4 text-center text-white">
                             <div class="mb-3">
-                                <i class="fas fa-rocket fa-2x mb-2" style="opacity: 0.9;"></i>
-                                <h4 class="fw-bold mb-2" style="text-shadow: 0 2px 4px rgba(0,0,0,0.3);">Welcome Back!</h4>
-                                <p class="mb-3" style="text-shadow: 0 1px 3px rgba(0,0,0,0.3); opacity: 0.9;">
+                                <i class="fas fa-rocket fa-2x mb-2" style="opacity: 0.9; color: #ffffff !important; text-shadow: 0 2px 4px rgba(0,0,0,0.8);"></i>
+                                <h4 class="fw-bold mb-2" style="text-shadow: 0 2px 4px rgba(0,0,0,0.8); color: #ffffff !important; font-weight: 800;">Welcome Back!</h4>
+                                <p class="mb-3" style="text-shadow: 0 2px 4px rgba(0,0,0,0.8); opacity: 1; color: #ffffff !important; font-weight: 600;">
                                     Track your earnings and grow your portfolio
                                 </p>
                             </div>
                             <div class="d-grid gap-2">
-                                <a href="{{ route('deposit.index') }}" class="btn btn-light fw-bold">
+                                <a href="{{ route('deposit.index') }}" class="btn btn-outline-light btn-lg fw-bold">
                                     <i class="fas fa-plus-circle me-2"></i>Add Funds
                                 </a>
                                 <a href="{{ route('invest.index') }}" class="btn btn-outline-light fw-bold">
@@ -246,7 +258,7 @@
                                     <h6 class="balance-card-text-header mb-0">💙 Account Wallet</h6>
                                 </div>
                                 <h3 class="mb-0 balance-card-text-amount d-flex align-items-center" id="current-balance-amount">
-                                    <span class="balance-value">${{ showAmount($currentBalance) }}</span>
+                                    <span class="balance-value" data-realtime-update="dashboard-total-balance">${{ showAmount($currentBalance) }}</span>
                                     <span class="balance-hidden" style="display: none;">••••••••</span>
                                     <button class="btn btn-sm btn-link balance-card-text ms-2 p-0 balance-quick-toggle" onclick="toggleBalanceVisibility('current-balance')" style="font-size: 0.8rem; opacity: 0.7;">
                                         <i class="fas fa-eye balance-quick-icon"></i>
@@ -259,8 +271,8 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="bg-white bg-opacity-20 rounded-circle p-3">
-                                <i class="fas fa-wallet fa-lg balance-card-text"></i>
+                            <div class="bg-white bg-opacity-30 rounded-circle p-3">
+                                <i class="fas fa-wallet fa-lg text-dark"></i>
                             </div>
                         </div>
                         <div class="progress mt-2" style="height: 4px; background: rgba(255,255,255,0.2);">
@@ -294,8 +306,8 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="bg-white bg-opacity-20 rounded-circle p-3">
-                                <i class="fas fa-users fa-lg balance-card-text"></i>
+                            <div class="bg-white bg-opacity-30 rounded-circle p-3">
+                                <i class="fas fa-users fa-lg text-dark"></i>
                             </div>
                         </div>
                         <div class="progress mt-2" style="height: 4px; background: rgba(255,255,255,0.2);">
@@ -313,7 +325,7 @@
                                     <h6 class="balance-card-text-header mb-0">💰 Total Earnings Hub</h6>
                                 </div>
                                 <h3 class="mb-0 balance-card-text-amount d-flex align-items-center" id="total-earnings-amount">
-                                    <span class="balance-value">${{ showAmount(auth()->user()->interest_wallet) }}</span>
+                                    <span class="balance-value" data-realtime-update="dashboard-interest-balance">${{ showAmount(auth()->user()->interest_wallet) }}</span>
                                     <span class="balance-hidden" style="display: none;">••••••••</span>
                                     <button class="btn btn-sm btn-link balance-card-text ms-2 p-0 balance-quick-toggle" onclick="toggleBalanceVisibility('total-earnings')" style="font-size: 0.8rem; opacity: 0.7;">
                                         <i class="fas fa-eye balance-quick-icon"></i>
@@ -329,8 +341,8 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="bg-white bg-opacity-20 rounded-circle p-3">
-                                <i class="fas fa-coins fa-lg balance-card-text"></i>
+                            <div class="bg-white bg-opacity-30 rounded-circle p-3">
+                                <i class="fas fa-coins fa-lg text-dark"></i>
                             </div>
                         </div>
                         <div class="progress mt-2" style="height: 4px; background: rgba(255,255,255,0.2);">
@@ -348,7 +360,7 @@
                                     <h6 class="balance-card-text-header mb-0">💎 Video Access Vault</h6>
                                 </div>
                                 <h3 class="mb-0 balance-card-text-amount d-flex align-items-center" id="video-access-amount">
-                                    <span class="balance-value">${{ showAmount($totalInvest) }}</span>
+                                    <span class="balance-value" data-realtime-update="dashboard-deposit-balance">${{ showAmount($totalInvest) }}</span>
                                     <span class="balance-hidden" style="display: none;">••••••••</span>
                                     <button class="btn btn-sm btn-link balance-card-text ms-2 p-0 balance-quick-toggle" onclick="toggleBalanceVisibility('video-access-vault')" style="font-size: 0.8rem; opacity: 0.7;">
                                         <i class="fas fa-eye balance-quick-icon"></i>
@@ -364,8 +376,8 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="bg-white bg-opacity-20 rounded-circle p-3">
-                                <i class="fas fa-video fa-lg balance-card-text"></i>
+                            <div class="bg-white bg-opacity-30 rounded-circle p-3">
+                                <i class="fas fa-video fa-lg text-dark"></i>
                             </div>
                         </div>
                         <div class="progress mt-2" style="height: 4px; background: rgba(255,255,255,0.2);">
@@ -384,8 +396,8 @@
                         <div class="row align-items-center">
                             <div class="col-lg-8">
                                 <div class="d-flex align-items-center mb-3">
-                                    <div class="bg-white bg-opacity-20 rounded-circle p-3 me-3">
-                                        <i class="fas fa-ticket-alt fa-2x text-white"></i>
+                                    <div class="bg-white bg-opacity-30 rounded-circle p-3 me-3">
+                                        <i class="fas fa-ticket-alt fa-2x text-dark"></i>
                                     </div>
                                     <div>
                                         <h3 class="text-white mb-1" style="text-shadow: 0 3px 6px rgba(0,0,0,0.9), 0 1px 3px rgba(0,0,0,0.8); font-weight: 800; color: #ffffff !important;">🎰 Try Your Luck with Our Lottery!</h3>
