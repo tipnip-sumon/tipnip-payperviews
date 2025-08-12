@@ -32,6 +32,7 @@ class LotterySetting extends Model
         'virtual_ticket_multiplier',
         'virtual_ticket_base',
         'virtual_user_id', // Dynamic virtual user ID for virtual tickets
+        'active_tickets_boost', // Manual boost for active tickets display
         // Auto-generation fields
         'auto_generate_draws',
         'auto_generation_frequency',
@@ -397,5 +398,32 @@ class LotterySetting extends Model
     public function allowsMultipleWinnersPerPlace()
     {
         return $this->allow_multiple_winners_per_place;
+    }
+
+    /**
+     * Get total active tickets count (real + boost)
+     */
+    public static function getTotalActiveTicketsCount()
+    {
+        // Get real active tickets count
+        $realActiveTickets = \App\Models\LotteryTicket::whereHas('draw', function($query) {
+            $query->whereIn('status', ['pending', 'active']);
+        })->count();
+        
+        // Get boost setting
+        $settings = self::getSettings();
+        $boost = $settings->active_tickets_boost ?? 0;
+        
+        return $realActiveTickets + $boost;
+    }
+
+    /**
+     * Get real active tickets count without boost
+     */
+    public static function getRealActiveTicketsCount()
+    {
+        return \App\Models\LotteryTicket::whereHas('draw', function($query) {
+            $query->whereIn('status', ['pending', 'active']);
+        })->count();
     }
 }

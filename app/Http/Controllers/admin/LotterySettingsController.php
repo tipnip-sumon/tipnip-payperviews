@@ -58,6 +58,7 @@ class LotterySettingsController extends Controller
                 'virtual_ticket_multiplier' => $settings->virtual_ticket_multiplier ?? 100,
                 'virtual_ticket_base' => $settings->virtual_ticket_base ?? 0,
                 'virtual_user_id' => $settings->virtual_user_id ?? 1,
+                'active_tickets_boost' => $settings->active_tickets_boost ?? 0,
             ];
 
             // Debug: Log the prize structure and distribution for troubleshooting
@@ -136,6 +137,7 @@ class LotterySettingsController extends Controller
             'show_virtual_tickets' => 'boolean',
             'virtual_ticket_base' => 'nullable|integer|min:0|max:10000',
             'virtual_user_id' => 'required|integer|min:1|max:999999',
+            'active_tickets_boost' => 'nullable|integer|min:0|max:100000',
         ];
         
         // Conditional validation for virtual ticket multiplier
@@ -289,6 +291,7 @@ class LotterySettingsController extends Controller
                 'virtual_ticket_multiplier' => (int) ($request->virtual_ticket_multiplier ?? 100),
                 'virtual_ticket_base' => (int) ($request->virtual_ticket_base ?? 0),
                 'virtual_user_id' => (int) ($request->virtual_user_id ?? 1),
+                'active_tickets_boost' => (int) ($request->active_tickets_boost ?? 0),
                 'prize_structure' => $prizeStructure,
             ];
 

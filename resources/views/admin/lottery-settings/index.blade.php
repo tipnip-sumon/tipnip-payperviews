@@ -598,6 +598,40 @@
                                         </div>
                                     </div>
                                 </div>
+
+                                <!-- Active Tickets Boost Settings -->
+                                <div class="card mb-4">
+                                    <div class="card-header bg-warning text-white">
+                                        <h6 class="mb-0">🎯 Active Tickets Display Boost</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <label class="form-label">Active Tickets Boost</label>
+                                                <input type="number" name="active_tickets_boost" class="form-control" 
+                                                       value="{{ old('active_tickets_boost', $settingsArray['active_tickets_boost'] ?? 0) }}" 
+                                                       step="1" min="0" max="100000">
+                                                <small class="text-muted">Additional tickets to add to real active tickets count</small>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="mt-4">
+                                                    <div class="alert alert-warning">
+                                                        <strong>Current Status:</strong><br>
+                                                        Real Active Tickets: <span class="fw-bold text-success">{{ \App\Models\LotterySetting::getRealActiveTicketsCount() }}</span><br>
+                                                        Current Boost: <span class="fw-bold text-warning">{{ $settingsArray['active_tickets_boost'] ?? 0 }}</span><br>
+                                                        <strong>Total Displayed: <span class="fw-bold text-primary">{{ \App\Models\LotterySetting::getTotalActiveTicketsCount() }}</span></strong>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-12">
+                                                <div class="alert alert-info mt-3">
+                                                    <strong>💡 How it works:</strong> This number will be added to the real active tickets count across all lottery displays.<br>
+                                                    <strong>Example:</strong> If you have 38 real active tickets and set boost to 100, users will see 138 active tickets.
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
 
                             <!-- Action Buttons -->

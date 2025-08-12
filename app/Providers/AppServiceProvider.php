@@ -54,6 +54,18 @@ class AppServiceProvider extends ServiceProvider
                     ]);
                 }
             }
+            
+            // Share lottery active tickets count globally
+            if (Schema::hasTable('lottery_settings') && Schema::hasTable('lottery_tickets')) {
+                try {
+                    $globalActiveTicketsCount = \App\Models\LotterySetting::getTotalActiveTicketsCount();
+                    $view->with('globalActiveTicketsCount', $globalActiveTicketsCount);
+                } catch (\Exception $e) {
+                    $view->with('globalActiveTicketsCount', 0);
+                }
+            } else {
+                $view->with('globalActiveTicketsCount', 0);
+            }
         });
     }
     
