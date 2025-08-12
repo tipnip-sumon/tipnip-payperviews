@@ -378,14 +378,18 @@ class UnifiedLotteryController extends Controller
         }
         
         $timeRemaining = $currentDraw->draw_date->diffForHumans();
-        $totalPrize = $currentDraw->total_prize_pool ?? 0;
-        $participants = $currentDraw->tickets()->count(); // Show total ticket count instead of unique participants
+        $totalPrize = $currentDraw->calculatePrizePool(); // Use the new prize pool calculation
+        
+        // Get total active tickets across all pending/active draws
+        $totalActiveTickets = \App\Models\LotteryTicket::whereHas('draw', function($query) {
+            $query->whereIn('status', ['pending', 'active']);
+        })->count();
         
         return [
             'exists' => true,
             'time_remaining' => $timeRemaining,
             'total_prize' => $totalPrize,
-            'participants' => $participants,
+            'participants' => $totalActiveTickets,
             'draw_date' => $currentDraw->draw_date,
             'tickets_sold' => $currentDraw->tickets()->count()
         ];

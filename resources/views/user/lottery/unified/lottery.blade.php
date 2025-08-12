@@ -28,7 +28,7 @@
                         <div class="col-6">
                             <strong>{{ $currentDraw->formatted_draw_number }}</strong>
                             <p class="mb-1">Total Prize Pool</p>
-                            <h4 class="text-success">${{ number_format($currentDraw->total_prize_pool, 2) }}</h4>
+                            <h4 class="text-success">${{ number_format($currentDraw->calculatePrizePool(), 2) }}</h4>
                         </div>
                         <div class="col-6 text-end">
                             <p class="mb-1">Tickets Sold</p>

@@ -277,7 +277,7 @@ class LotteryController extends Controller
                     'message' => $message,
                     'new_tickets' => $newTicketsFormatted,
                     'tickets_sold' => $currentDraw->total_tickets_sold,
-                    'total_prize_pool' => $currentDraw->total_prize_pool,
+                    'total_prize_pool' => $currentDraw->calculatePrizePool(),
                     'user_stats' => [
                         'total_tickets' => $userStats['total_tickets'],
                         'total_spent' => $userStats['total_spent'],
@@ -702,7 +702,7 @@ class LotteryController extends Controller
                 'has_manual_winners' => $draw->has_manual_winners,
                 'draw_date_passed' => $draw->draw_date->isPast(),
                 'total_tickets_sold' => $draw->total_tickets_sold,
-                'total_prize_pool' => $draw->total_prize_pool
+                'total_prize_pool' => $draw->calculatePrizePool()
             ]);
             
         } catch (Exception $e) {

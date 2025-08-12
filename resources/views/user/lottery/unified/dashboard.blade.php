@@ -63,7 +63,7 @@
                         <div class="col-6">
                             <div class="p-2">
                                 <h4 class="text-info mb-1">{{ $nextDraw['participants'] }}</h4>
-                                <small class="text-muted">Participants</small>
+                                <small class="text-muted">Active Tickets</small>
                             </div>
                         </div>
                     </div>
