@@ -77,9 +77,7 @@
                 
                 log(`Logout response status: ${response.status}`);
                 
-                if (response.redirected) {
-                    log(`Logout redirected to: ${response.url}`);
-                } else if (response.ok) {
+                if (response.ok) {
                     try {
                         const data = await response.json();
                         log(`Logout response: ${JSON.stringify(data)}`);
@@ -87,6 +85,19 @@
                         const text = await response.text();
                         log(`Logout response (text): ${text.substring(0, 200)}...`);
                     }
+                } else if (response.status === 419) {
+                    // CSRF error but check if logout actually worked
+                    log('CSRF error (419) but checking if logout succeeded...');
+                    setTimeout(checkAuthStatus, 500);
+                    
+                    try {
+                        const errorData = await response.json();
+                        log(`CSRF Error details: ${JSON.stringify(errorData)}`);
+                    } catch (e) {
+                        log('Could not parse error response');
+                    }
+                } else if (response.redirected) {
+                    log(`Logout redirected to: ${response.url}`);
                 } else {
                     const errorText = await response.text();
                     log(`Logout error (${response.status}): ${errorText.substring(0, 200)}...`);

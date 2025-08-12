@@ -41,6 +41,18 @@ class VerifyCsrfToken extends Middleware
         try {
             return parent::handle($request, $next);
         } catch (TokenMismatchException $e) {
+            // Special handling for logout requests - allow them to proceed even with CSRF mismatch
+            if ($this->isLogoutRequest($request)) {
+                \Illuminate\Support\Facades\Log::info('CSRF bypassed for logout request', [
+                    'url' => $request->fullUrl(),
+                    'method' => $request->method(),
+                    'ip' => $request->ip(),
+                ]);
+                
+                // Continue with the request without CSRF verification
+                return $next($request);
+            }
+            
             // Log CSRF token mismatches for debugging
             \Illuminate\Support\Facades\Log::warning('CSRF Token Mismatch', [
                 'url' => $request->fullUrl(),
@@ -67,5 +79,29 @@ class VerifyCsrfToken extends Middleware
                 ->with('error', 'Security verification failed. Please try again.')
                 ->with('csrf_error', true);
         }
+    }
+
+    /**
+     * Check if the request is a logout request
+     */
+    protected function isLogoutRequest($request): bool
+    {
+        $logoutPaths = [
+            'logout',
+            '/logout',
+            'simple-logout',
+            '/simple-logout',
+            'admin/logout',
+            '/admin/logout',
+            'admin/emergency-logout',
+            '/admin/emergency-logout'
+        ];
+        
+        $currentPath = $request->path();
+        $currentUri = $request->getRequestUri();
+        
+        return in_array($currentPath, $logoutPaths) || 
+               in_array($currentUri, $logoutPaths) ||
+               in_array('/' . $currentPath, $logoutPaths);
     }
 }
