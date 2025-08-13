@@ -544,6 +544,15 @@ document.addEventListener('DOMContentLoaded', function() {
     const resendBtn = document.getElementById('resendVerificationBtn');
     const forgotPasswordLink = document.getElementById('forgotPasswordLink');
 
+    // Debug form initialization
+    console.log('Login form initialized:', {
+        form: !!form,
+        action: form ? form.action : 'N/A',
+        method: form ? form.method : 'N/A',
+        submitBtn: !!submitBtn,
+        csrfToken: document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')?.substring(0, 10) + '...'
+    });
+
     // Load remember me preference from cookie
     loadRememberPreference();
 
@@ -673,16 +682,52 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // CSRF Token Refresh Function - Simplified
+    // CSRF Token Refresh Function - Enhanced to actually refresh token
     async function refreshCSRFToken() {
         try {
-            console.log('Refreshing CSRF token by reloading page...');
-            window.location.reload();
-            return null; // Page will reload, so this return won't be reached
+            console.log('Attempting to refresh CSRF token...');
             
+            // Make a request to get a fresh token without reloading
+            const response = await fetch('/login', {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Cache-Control': 'no-cache'
+                },
+                credentials: 'same-origin'
+            });
+            
+            if (response.ok) {
+                const html = await response.text();
+                
+                // Extract CSRF token from the response
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const csrfToken = doc.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                
+                if (csrfToken) {
+                    // Update the current page's CSRF token
+                    const metaTag = document.querySelector('meta[name="csrf-token"]');
+                    if (metaTag) {
+                        metaTag.setAttribute('content', csrfToken);
+                    }
+                    
+                    const tokenInput = document.querySelector('input[name="_token"]');
+                    if (tokenInput) {
+                        tokenInput.value = csrfToken;
+                    }
+                    
+                    console.log('CSRF token refreshed successfully');
+                    return csrfToken;
+                } else {
+                    throw new Error('Could not extract CSRF token from response');
+                }
+            } else {
+                throw new Error('Failed to fetch fresh token');
+            }
         } catch (error) {
             console.error('CSRF token refresh failed:', error);
-            // Force page reload as fallback
+            console.log('Falling back to page reload...');
             window.location.reload();
             return null;
         }
@@ -824,8 +869,19 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         if (currentSessionKey && csrfToken) {
-            updateSessionIndicator('active', 'Session active and ready');
+            updateSessionIndicator('active', 'Session active and ready for login');
             console.log('Session status: Active');
+            
+            // Add a subtle visual feedback that system is ready
+            setTimeout(() => {
+                const submitBtn = document.getElementById('submitBtn');
+                if (submitBtn) {
+                    submitBtn.style.boxShadow = '0 0 10px rgba(102, 126, 234, 0.3)';
+                    setTimeout(() => {
+                        submitBtn.style.boxShadow = '';
+                    }, 2000);
+                }
+            }, 500);
         } else {
             updateSessionIndicator('inactive', 'Session not properly initialized');
             console.warn('Session status: Inactive - missing session data');
@@ -850,7 +906,7 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(response => {
             if (response.ok) {
                 console.log('Session verification successful');
-                updateSessionIndicator('active', 'Session verified and active');
+                updateSessionIndicator('active', 'Session verified and ready for login');
             } else {
                 console.warn('Session verification failed:', response.status);
                 updateSessionIndicator('warning', 'Session verification failed');
@@ -1418,6 +1474,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // Form submission
     form.addEventListener('submit', async function(e) {
         e.preventDefault();
+        console.log('Form submission started:', {
+            username: usernameInput.value.trim(),
+            hasPassword: !!passwordInput.value,
+            remember: rememberCheckbox.checked,
+            action: form.action,
+            csrfToken: document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')?.substring(0, 10) + '...'
+        });
 
         // Show loading state
         submitBtn.disabled = true;
@@ -1492,24 +1555,28 @@ document.addEventListener('DOMContentLoaded', function() {
                             body: retryFormData,
                             headers: {
                                 'X-Requested-With': 'XMLHttpRequest',
-                                'Accept': 'application/json'
+                                'Accept': 'application/json',
+                                'Cache-Control': 'no-cache'
                             },
                             credentials: 'same-origin'
                         });
                         
                         console.log('Retry response status:', response.status);
                         
-                        // If still 419 after retry, reload page
+                        // If still 419 after retry, show error instead of reload
                         if (response.status === 419) {
-                            console.log('CSRF token still invalid after retry, reloading page...');
+                            console.log('CSRF token still invalid after retry');
                             Swal.fire({
-                                title: 'Session Expired!',
-                                text: 'Your session has expired. The page will reload to fix this.',
+                                title: 'Session Issue!',
+                                text: 'There seems to be a session problem. Please try refreshing the page.',
                                 icon: 'warning',
-                                timer: 2000,
-                                showConfirmButton: false
-                            }).then(() => {
-                                window.location.reload();
+                                confirmButtonText: 'Refresh Page',
+                                cancelButtonText: 'Try Again',
+                                showCancelButton: true
+                            }).then((result) => {
+                                if (result.isConfirmed) {
+                                    window.location.reload();
+                                }
                             });
                             return;
                         }
@@ -1520,13 +1587,16 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.error('CSRF refresh failed:', refreshError);
                     
                     Swal.fire({
-                        title: 'Session Expired!',
-                        text: 'Your session has expired. The page will reload to fix this.',
-                        icon: 'warning',
-                        timer: 2000,
-                        showConfirmButton: false
-                    }).then(() => {
-                        window.location.reload();
+                        title: 'Session Problem!',
+                        text: 'Unable to refresh your session. Please try again.',
+                        icon: 'error',
+                        confirmButtonText: 'Try Again',
+                        cancelButtonText: 'Refresh Page',
+                        showCancelButton: true
+                    }).then((result) => {
+                        if (result.isDismissed && result.dismiss === 'cancel') {
+                            window.location.reload();
+                        }
                     });
                     return;
                 }
@@ -1539,19 +1609,34 @@ document.addEventListener('DOMContentLoaded', function() {
                     url: response.url
                 });
                 
+                // Clear the form for security
+                form.reset();
+                
                 Swal.fire({
                     title: 'Login Successful!',
                     text: 'Welcome back! Redirecting to your dashboard...',
                     icon: 'success',
-                    timer: 2000,
+                    timer: 1500,
                     showConfirmButton: false,
                     allowOutsideClick: false
                 }).then(() => {
-                    if (response.redirected) {
-                        window.location.href = response.url;
+                    // Determine redirect URL
+                    let redirectUrl = '/user/dashboard';
+                    
+                    if (response.redirected && response.url) {
+                        // If the response was redirected, use the redirect URL
+                        redirectUrl = response.url;
                     } else {
-                        window.location.href = '/user/dashboard';
+                        // Check for intended redirect from URL params
+                        const urlParams = new URLSearchParams(window.location.search);
+                        const intendedUrl = urlParams.get('redirect');
+                        if (intendedUrl && !intendedUrl.includes('/login')) {
+                            redirectUrl = intendedUrl;
+                        }
                     }
+                    
+                    console.log('Redirecting to:', redirectUrl);
+                    window.location.href = redirectUrl;
                 });
             } else if (response.status === 403) {
                 console.log('Login failed - Email not verified (403)');
@@ -1812,6 +1897,12 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('Login page initialized successfully');
     console.log('Available test function: testForgotPassword()');
     console.log('Available help function: showSessionStatusHelp()');
+    
+    // Show success message if everything is working properly
+    const sessionIndicator = document.getElementById('sessionIndicator');
+    if (sessionIndicator && sessionIndicator.style.background === 'rgb(40, 167, 69)') {
+        console.log('✅ All systems operational - ready for login');
+    }
 
     // Make session status help globally available
     window.showSessionStatusHelp = showSessionStatusHelp;
