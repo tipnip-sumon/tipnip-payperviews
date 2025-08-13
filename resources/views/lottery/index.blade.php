@@ -1,7 +1,10 @@
 <x-smart_layout>
 
 @section('content')
-<div class="container-fluid">
+<!-- Mobile Sidebar Overlay -->
+<div class="mobile-sidebar-overlay d-lg-none" id="mobileOverlay"></div>
+
+<div class="container-fluid lottery-content">
     <div class="row my-4">
         <div class="col-12">
             <!-- Page Header -->
@@ -92,7 +95,7 @@
 
             <div class="row">
                 <!-- Current Draw Information -->
-                <div class="col-lg-8">
+                <div class="col-12 col-lg-8 mb-4">
                     <div class="card">
                         <div class="card-header">
                             <h4 class="card-title">
@@ -106,7 +109,7 @@
                         <div class="card-body">
                             @if(isset($currentDraw))
                                 <div class="row">
-                                    <div class="col-md-6">
+                                    <div class="col-12 col-md-6 mb-3">
                                         <div class="mb-3">
                                             <label class="form-label">Draw Date & Time</label>
                                             <div class="d-flex align-items-center">
@@ -122,7 +125,7 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="col-md-6">
+                                    <div class="col-12 col-md-6 mb-3">
                                         <div class="mb-3">
                                             <label class="form-label">Total Prize Pool</label>
                                             <div class="d-flex align-items-center">
@@ -259,7 +262,7 @@
                                                 <i class="fas fa-gift me-1"></i>Special Ticket Benefits
                                             </h6>
                                             <div class="row">
-                                                <div class="col-md-6">
+                                                <div class="col-12 col-md-6 mb-3">
                                                     <div class="mb-2">
                                                         <strong class="text-primary">
                                                             <i class="fas fa-ticket-alt me-1"></i>Standard Tickets:
@@ -271,7 +274,7 @@
                                                         </ul>
                                                     </div>
                                                 </div>
-                                                <div class="col-md-6">
+                                                <div class="col-12 col-md-6 mb-3">
                                                     <div class="mb-2">
                                                         <strong class="text-info">
                                                             <i class="fas fa-gift me-1"></i>Special Tickets:
@@ -310,7 +313,7 @@
                                         <input type="hidden" name="lottery_draw_id" value="{{ $currentDraw->id }}">
                                         
                                         <div class="row">
-                                            <div class="col-md-6">
+                                            <div class="col-12 col-md-6 mb-3">
                                                 <div class="mb-3">
                                                     <label for="ticket_quantity" class="form-label">Number of Tickets</label>
                                                     <select name="ticket_quantity" id="ticket_quantity" class="form-control" 
@@ -321,7 +324,7 @@
                                                     </select>
                                                 </div>
                                             </div>
-                                            <div class="col-md-6">
+                                            <div class="col-12 col-md-6 mb-3">
                                                 <div class="mb-3">
                                                     <label class="form-label">Total Cost</label>
                                                     <div class="form-control bg-light" id="totalCost">
@@ -401,7 +404,7 @@
                                         </div>
                                         <div class="row">
                                             @foreach($userTickets as $ticket)
-                                                <div class="col-md-3 mb-2" data-ticket-id="{{ $ticket->id }}">
+                                                <div class="col-6 col-md-3 mb-2" data-ticket-id="{{ $ticket->id }}">
                                                     <div class="card {{ $ticket->is_virtual ? 'bg-info' : 'bg-primary' }} text-white position-relative">
                                                         <div class="card-body text-center">
                                                             <div class="mb-1">
@@ -461,7 +464,7 @@
                 </div>
 
                 <!-- Sidebar -->
-                <div class="col-lg-4">
+                <div class="col-12 col-lg-4">
                     <!-- Prize Breakdown -->
                     <div class="card">
                         <div class="card-header">
@@ -501,7 +504,7 @@
                                     ];
                                 @endphp
                                 
-                                <div class="alert alert-info bg-light border-info">
+                                {{-- <div class="alert alert-info bg-light border-info">
                                     <h6 class="mb-2">
                                         <i class="fas fa-gift me-2"></i>Prize Distribution for Draw #{{ $currentDraw->formatted_draw_number }}
                                     </h6>
@@ -527,7 +530,7 @@
                                             • Total prizes: {{ $totalPrizes }}
                                         @endif
                                     </small>
-                                </div>
+                                </div> --}}
                                 
                                 @if(!empty($prizeDistribution))
                                     @foreach($prizesByPosition as $position => $prizes)
@@ -727,9 +730,175 @@
 <!-- Include jQuery if needed -->
 <script src="{{ asset('assets/js/jquery-3.7.1.min.js') }}"></script>
 
+<!-- Mobile Sidebar Fix CSS -->
+<style>
+/* Mobile Sidebar Overlay */
+.mobile-sidebar-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1045;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    pointer-events: none;
+}
+
+/* Show overlay when sidebar is open */
+body[data-toggled="open"] .mobile-sidebar-overlay {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+/* Mobile Sidebar Z-Index and Overlay Fixes */
+@media (max-width: 991.98px) {
+    /* Ensure sidebar appears above all content on mobile */
+    .app-sidebar {
+        z-index: 1051 !important;
+        position: fixed !important;
+    }
+    
+    /* Lower z-index for main content cards when sidebar is open */
+    .main-content {
+        z-index: 1 !important;
+        position: relative !important;
+    }
+    
+    .main-content .card {
+        z-index: 1 !important;
+        position: relative !important;
+    }
+    
+    /* Ensure sidebar backdrop appears correctly */
+    .backdrop {
+        z-index: 1050 !important;
+    }
+    
+    /* Prevent content interaction when sidebar is open */
+    body[data-toggled="open"] .main-content .card,
+    body[data-toggled="open"] .main-content .alert,
+    body[data-toggled="open"] .main-content .btn {
+        pointer-events: none !important;
+    }
+    
+    /* Keep sidebar interactive */
+    body[data-toggled="open"] .app-sidebar {
+        pointer-events: auto !important;
+    }
+    
+    /* Fix for lottery specific elements */
+    .lottery-content {
+        position: relative !important;
+        z-index: 1 !important;
+    }
+    
+    /* Special handling for modals and dropdowns */
+    .dropdown-menu {
+        z-index: 1052 !important;
+    }
+    
+    .modal {
+        z-index: 1055 !important;
+    }
+    
+    /* Ensure mobile menu toggle is always accessible */
+    .sidemenu-toggle {
+        z-index: 1052 !important;
+        position: relative !important;
+    }
+    
+    /* Fix header elements z-index on mobile */
+    .app-header {
+        z-index: 1049 !important;
+    }
+}
+
+@media (max-width: 767.98px) {
+    /* Additional mobile phone specific fixes */
+    body[data-toggled="open"] .page-header,
+    body[data-toggled="open"] .alert,
+    body[data-toggled="open"] .card {
+        opacity: 0.3 !important;
+        pointer-events: none !important;
+    }
+    
+    /* Ensure sidebar remains fully opaque and interactive */
+    .app-sidebar {
+        opacity: 1 !important;
+        pointer-events: auto !important;
+    }
+}
+
+/* Smooth transitions for mobile sidebar */
+.app-sidebar {
+    transition: transform 0.3s ease !important;
+}
+
+.main-content {
+    transition: opacity 0.3s ease !important;
+}
+</style>
+
 <script> 
+// Mobile Sidebar Interaction Handler
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize and handle Bootstrap alerts
+    // Mobile sidebar handling
+    const sidebarToggle = document.querySelector('.sidemenu-toggle');
+    const body = document.body;
+    const mainContent = document.querySelector('.main-content');
+    
+    // Handle mobile sidebar toggle
+    if (sidebarToggle && window.innerWidth <= 991.98) {
+        sidebarToggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Toggle sidebar state
+            const isOpen = body.getAttribute('data-toggled') === 'open';
+            
+            if (!isOpen) {
+                body.setAttribute('data-toggled', 'open');
+                // Add backdrop click handler
+                setTimeout(() => {
+                    document.addEventListener('click', closeSidebarOnBackdrop);
+                }, 100);
+            } else {
+                closeMobileSidebar();
+            }
+        });
+    }
+    
+    // Function to close mobile sidebar
+    function closeMobileSidebar() {
+        body.setAttribute('data-toggled', 'close');
+        document.removeEventListener('click', closeSidebarOnBackdrop);
+    }
+    
+    // Close sidebar when clicking on backdrop (main content area)
+    function closeSidebarOnBackdrop(e) {
+        const sidebar = document.querySelector('.app-sidebar');
+        const toggle = document.querySelector('.sidemenu-toggle');
+        
+        // Don't close if clicking on sidebar or toggle button
+        if (!sidebar.contains(e.target) && !toggle.contains(e.target)) {
+            closeMobileSidebar();
+        }
+    }
+    
+    // Handle window resize to ensure proper behavior
+    window.addEventListener('resize', function() {
+        if (window.innerWidth > 991.98) {
+            // Desktop view - ensure normal behavior
+            body.setAttribute('data-toggled', 'close');
+            document.removeEventListener('click', closeSidebarOnBackdrop);
+        }
+    });
+    
+    // Initialize Bootstrap alerts
     const alertElements = document.querySelectorAll('.alert-dismissible');
     
     // Make sure alerts are visible and properly initialized
@@ -1258,7 +1427,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Add new tickets with animation
                     data.new_tickets.forEach((ticket, index) => {
                         const ticketDiv = document.createElement('div');
-                        ticketDiv.className = 'col-md-3 mb-2';
+                        ticketDiv.className = 'col-6 col-md-3 mb-2';
                         
                         const cardClass = ticket.is_virtual ? 'bg-info' : 'bg-primary';
                         const badgeClass = ticket.is_virtual ? 'text-info' : 'text-primary';
@@ -1549,6 +1718,78 @@ function showCopyError(message) {
     align-items: center;
     justify-content: center;
     font-weight: bold;
+}
+
+/* Mobile Responsive Fixes */
+@media (max-width: 991.98px) {
+    /* Fix sidebar overlap on mobile */
+    .col-lg-4 {
+        margin-top: 20px;
+    }
+    
+    /* Ensure proper spacing between main content and sidebar */
+    .col-lg-8.mb-4 {
+        margin-bottom: 1.5rem !important;
+    }
+    
+    /* Make Special Ticket Benefits more compact on mobile */
+    .alert-info {
+        padding: 1rem 0.75rem;
+    }
+    
+    .alert-info .col-12.col-md-6 {
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
+    
+    /* Improve button layout on mobile */
+    .page-header .d-flex {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 15px;
+    }
+    
+    .page-header .d-flex > div:last-child {
+        width: 100%;
+    }
+    
+    .page-header .d-flex > div:last-child .btn {
+        width: 100%;
+        margin-bottom: 8px;
+    }
+}
+
+@media (max-width: 767.98px) {
+    /* Extra mobile optimizations */
+    .container-fluid {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+    
+    /* Stack ticket benefits vertically on very small screens */
+    .alert-info .row .col-12 {
+        margin-bottom: 1rem;
+    }
+    
+    /* Compact font sizes for mobile */
+    .page-title {
+        font-size: 1.5rem !important;
+    }
+    
+    .card-title {
+        font-size: 1.1rem !important;
+    }
+    
+    /* Prevent horizontal scroll */
+    .row {
+        margin-left: -8px;
+        margin-right: -8px;
+    }
+    
+    .row > * {
+        padding-left: 8px;
+        padding-right: 8px;
+    }
 }
 
 /* Enhanced countdown and status styles */
