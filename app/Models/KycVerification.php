@@ -11,6 +11,8 @@ class KycVerification extends Model
 
     protected $fillable = [
         'user_id',
+        'first_name',
+        'last_name',
         'date_of_birth', // Optional field for date of birth
         'document_type',
         'document_number',
@@ -26,6 +28,7 @@ class KycVerification extends Model
         'phone_number',
         'status',
         'admin_remarks',
+        'admin_notes',
         'submitted_at',
         'reviewed_at',
         'reviewed_by',
@@ -113,7 +116,7 @@ class KycVerification extends Model
             ],
             'step3' => [
                 'document_type' => 'required|in:passport,national_id,driving_license',
-                'document_number' => 'required|string|max:50|unique:kyc_verifications,document_number',
+                'document_number' => 'required|string|max:50',
                 'document_front' => 'required|file|mimes:jpeg,jpg,png,pdf|max:5120',
                 'document_back' => 'nullable|file|mimes:jpeg,jpg,png,pdf|max:5120',
                 'selfie_image' => 'required|file|mimes:jpeg,jpg,png|max:5120',

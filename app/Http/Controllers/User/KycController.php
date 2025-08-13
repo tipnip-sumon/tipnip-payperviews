@@ -57,8 +57,9 @@ class KycController extends Controller
      */
     public function store(Request $request)
     {
-        
         try {
+            
+            //dd($request->all()); // Debugging line to check request data
             $user = Auth::user();
             $c = json_decode(file_get_contents(resource_path('views/country/country.json')));
             $countries = [];
@@ -95,10 +96,12 @@ class KycController extends Controller
                 ? $this->storeKycFile($request->file('document_back'), $userKycPath, 'back')
                 : null;
             $selfieImage = $this->storeKycFile($request->file('selfie_image'), $userKycPath, 'selfie');
-
+            
             // Create KYC verification record
             KycVerification::create([
                 'user_id' => $user->id,
+                'first_name' => $request->first_name,
+                'last_name' => $request->last_name,
                 'date_of_birth' => $request->date_of_birth,
                 'document_type' => $request->document_type,
                 'document_number' => $request->document_number,
@@ -112,7 +115,6 @@ class KycController extends Controller
                 'postal_code' => $request->postal_code,
                 'country' => $request->country,
                 'phone_number' => $fullMobileNumber,
-                'status' => 'pending',
                 'submitted_at' => now()
             ]);
             // Update user's KYC status
@@ -251,7 +253,7 @@ class KycController extends Controller
         }
 
         $absolutePath = Storage::disk('public')->path($filePath);
-        $mimeType = Storage::disk('public')->mimeType($filePath);
+        $mimeType = mime_content_type($absolutePath);
         
         return response()->file($absolutePath, [
             'Content-Type' => $mimeType,
@@ -265,16 +267,56 @@ class KycController extends Controller
     public function checkDocumentNumber(Request $request)
     {
         $documentNumber = $request->input('document_number');
+        $userId = Auth::id();
         
         if (!$documentNumber) {
             return response()->json(['available' => false, 'message' => 'Document number is required']);
         }
         
-        $exists = KycVerification::where('document_number', $documentNumber)->exists();
+        // Check if document number already exists for other users
+        $exists = KycVerification::where('document_number', $documentNumber)
+            ->where('user_id', '!=', $userId)
+            ->exists();
         
         return response()->json([
             'available' => !$exists,
-            'message' => $exists ? 'Document number already exists' : 'Document number is available'
+            'message' => $exists ? 'This document number is already registered by another user' : 'Document number is available'
+        ]);
+    }
+
+    /**
+     * Check if phone number is unique
+     */
+    public function checkPhoneNumber(Request $request)
+    {
+        $phoneNumber = $request->input('phone_number');
+        $dialCode = $request->input('dial_code');
+        $userId = Auth::id();
+        
+        if (!$phoneNumber) {
+            return response()->json(['available' => false, 'message' => 'Phone number is required']);
+        }
+        
+        // Process mobile number same way as in store method
+        if (str_starts_with($phoneNumber, '0')) {
+            $phoneNumber = substr($phoneNumber, 1);
+        }
+        $fullMobileNumber = $dialCode . $phoneNumber;
+        
+        // Check if phone number already exists for other users
+        $existsInKyc = KycVerification::where('phone_number', $fullMobileNumber)
+            ->where('user_id', '!=', $userId)
+            ->exists();
+            
+        $existsInUsers = User::where('mobile', $fullMobileNumber)
+            ->where('id', '!=', $userId)
+            ->exists();
+        
+        $exists = $existsInKyc || $existsInUsers;
+        
+        return response()->json([
+            'available' => !$exists,
+            'message' => $exists ? 'This phone number is already registered by another user' : 'Phone number is available'
         ]);
     }
 }

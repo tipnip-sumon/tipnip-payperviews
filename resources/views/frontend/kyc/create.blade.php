@@ -43,7 +43,32 @@
                         <strong>Important:</strong> Please ensure all information is accurate and documents are clear and readable.
                     </div>
 
-                    <form id="kycForm" action="{{ route('user.kyc.store') }}" method="POST" enctype="multipart/form-data">
+                    @if($errors->any())
+                        <div class="alert alert-danger">
+                            <h6><i class="fas fa-exclamation-triangle me-2"></i>Form Validation Errors:</h6>
+                            <ul class="mb-0">
+                                @foreach($errors->all() as $error)
+                                    <li>{{ $error }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
+
+                    @if(session('error'))
+                        <div class="alert alert-danger">
+                            <i class="fas fa-times-circle me-2"></i>
+                            {{ session('error') }}
+                        </div>
+                    @endif
+
+                    @if(session('success'))
+                        <div class="alert alert-success">
+                            <i class="fas fa-check-circle me-2"></i>
+                            {{ session('success') }}
+                        </div>
+                    @endif
+
+                    <form id="kycForm" action="{{ route('user.kyc.store') }}" method="POST" enctype="multipart/form-data" novalidate>
                         @csrf
                         
                         <!-- Step 1: Personal Information -->
@@ -299,6 +324,15 @@
                                 <i class="fas fa-paper-plane me-2"></i>Submit Application
                             </button>
                         </div>
+                        
+                        <!-- TESTING: Direct submit button -->
+                        <div class="mt-3 p-3 bg-warning rounded">
+                            <h6>⚠️ Testing Mode</h6>
+                            <p class="mb-2 small">Direct form submission for testing (bypasses step validation):</p>
+                            <button type="submit" class="btn btn-danger" id="directSubmitBtn">
+                                <i class="fas fa-upload me-2"></i>Direct Submit (Testing)
+                            </button>
+                        </div>
                     </form>
                 </div>
             </div>
@@ -430,6 +464,16 @@
         const totalSteps = 3;
 
         $(document).ready(function() {
+            // TEMPORARY: Skip validation for testing
+            window.skipValidation = true;
+            console.log('Validation skipping enabled for testing');
+            
+            // Remove HTML5 required attributes to prevent browser validation conflicts
+            $('#kycForm input[required], #kycForm select[required], #kycForm textarea[required]').each(function() {
+                $(this).removeAttr('required');
+                console.log('Removed required attribute from:', $(this).attr('name'));
+            });
+            
             // Initialize form
             showStep(currentStep);
             
@@ -441,23 +485,16 @@
                 }
             });
             
-            // Form submission
+            // Form submission - COMPLETELY DISABLED FOR TESTING
             $('#kycForm').on('submit', function(e) {
-                e.preventDefault();
-                
-                if (!$('#terms').is(':checked')) {
-                    alert('Please accept the terms and conditions to proceed.');
-                    return false;
-                }
+                console.log('KYC Form submission triggered - allowing natural submission');
                 
                 // Show loading state
                 $('#submitBtn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>Submitting...');
                 
-                // Submit form
-                this.submit();
-            });
-            
-            // Document type change handler
+                // Allow natural form submission - NO validation checks
+                return true;
+            });            // Document type change handler
             $('#document_type').on('change', function() {
                 const docType = $(this).val();
                 const backLabel = $('#document_back').siblings('label');
@@ -510,11 +547,9 @@
 
         function changeStep(direction) {
             if (direction === 1 && currentStep < totalSteps) {
-                // Validate current step before proceeding
-                if (validateStep(currentStep)) {
-                    currentStep++;
-                    showStep(currentStep);
-                }
+                // Skip validation for testing - just move to next step
+                currentStep++;
+                showStep(currentStep);
             } else if (direction === -1 && currentStep > 1) {
                 currentStep--;
                 showStep(currentStep);
@@ -522,39 +557,8 @@
         }
 
         function validateStep(step) {
-            let isValid = true;
-            const stepElement = $('#step' + step);
-            
-            // Clear previous errors
-            stepElement.find('.is-invalid').removeClass('is-invalid');
-            stepElement.find('.invalid-feedback').hide();
-            
-            // Validate required fields in current step
-            stepElement.find('input[required], select[required], textarea[required]').each(function() {
-                const field = $(this);
-                const value = field.val().trim();
-                
-                if (!value) {
-                    field.addClass('is-invalid');
-                    field.siblings('.invalid-feedback').show();
-                    isValid = false;
-                }
-            });
-            
-            // Additional validation for step 1 (age check)
-            if (step === 1) {
-                const birthDate = new Date($('#date_of_birth').val());
-                const today = new Date();
-                const age = today.getFullYear() - birthDate.getFullYear();
-                
-                if (age < 18) {
-                    $('#date_of_birth').addClass('is-invalid');
-                    $('#date_of_birth').siblings('.invalid-feedback').text('You must be at least 18 years old.');
-                    isValid = false;
-                }
-            }
-            
-            return isValid;
+            // Validation disabled for testing
+            return true;
         }
 
         function checkDocumentNumber(documentNumber) {

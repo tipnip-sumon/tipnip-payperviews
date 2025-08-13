@@ -1435,7 +1435,6 @@
                 <a href="javascript:void(0)">Email Campaigns</a>
             </li>
             @hasPermission('email-campaigns.dashboard')
-            <li class="slide">
                 <a href="{{ route('admin.email-campaigns.index') }}" class="side-menu__item">
                     <i class="fe fe-home me-2"></i>
                     <span class="side-menu__label">Campaign Dashboard</span>

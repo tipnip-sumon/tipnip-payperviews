@@ -91,7 +91,7 @@
                             </div>
                         </div>
                         
-                    @elseif($kycVerification && $kycVerification->status == 'approved')
+                    @elseif($kycVerification && $kycVerification->status == 'approved') 
                         <!-- KYC Approved -->
                         <div class="alert alert-success">
                             <i class="fas fa-check-circle me-2"></i>

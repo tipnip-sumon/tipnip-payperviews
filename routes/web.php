@@ -1,10 +1,10 @@
 <?php
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\LandController;
 use App\Http\Controllers\PaymentController;
@@ -13,20 +13,23 @@ use App\Http\Controllers\NewsletterController;
 use App\Http\Controllers\admin\AdminController;
 use App\Http\Controllers\User\InvestController;
 use App\Http\Controllers\BrowserCacheController;
+use App\Http\Controllers\User\BalanceController;
 use App\Http\Controllers\User\ProfileController;
 use App\Http\Controllers\User\SupportController;
+use App\Http\Controllers\admin\LotteryController as AdminLotteryController;
 use App\Http\Controllers\User\WithdrawController;
 use App\Http\Controllers\admin\AdminKycController;
-use App\Http\Controllers\User\VideoViewController;
-use App\Http\Controllers\User\BalanceController;
 
+use App\Http\Controllers\User\VideoViewController;
 use App\Http\Controllers\admin\AnalyticsController;
 use App\Http\Controllers\admin\VideoLinkController;
 use App\Http\Controllers\Gateway\DepositController;
 use App\Http\Controllers\User\RequirementsController;
+use App\Http\Controllers\admin\EmailCampaignController;
 use App\Http\Controllers\admin\GeneralSettingController;
 use App\Http\Controllers\admin\ModalManagementController;
 use App\Http\Controllers\admin\AdminTransReceiveController;
+use App\Http\Controllers\admin\TransferWithdrawConditionsController;
 use App\Http\Controllers\admin\UserController as AdminUserController;
 use App\Http\Controllers\admin\PaymentController as AdminPaymentController;
 use App\Http\Controllers\admin\SupportController as AdminSupportController;
@@ -618,6 +621,27 @@ Route::prefix('admin')->group(function () {
             Route::post('/send-verification-identity/{id}', 'sendVerificationIdentity')->name('send.identity');
             Route::post('/send-verification-identity-bulk', 'sendBulkIdentityInstructions')->name('send.identity.bulk');
         });
+        Route::controller(AdminKycController::class)->group(function () {
+            Route::get('/kyc', 'index')->name('admin.kyc.index');
+            Route::get('/kyc/{id}', 'show')->name('admin.kyc.show');
+            Route::post('/kyc/{id}/update-status', 'updateStatus')->name('admin.kyc.update-status');
+            Route::post('/kyc/bulk-approve', 'bulkApprove')->name('admin.kyc.bulk-approve');
+            Route::post('/kyc/bulk-change-status', 'bulkChangeStatus')->name('admin.kyc.bulk-change-status');
+            Route::post('/kyc/{id}/mark-under-review', 'markUnderReview')->name('admin.kyc.mark-under-review');
+            Route::get('/kyc/under-review', 'getUnderReview')->name('admin.kyc.under-review');
+            Route::get('/kyc/{id}/document/view/{type}', 'viewDocument')->name('admin.kyc.document.view');
+            Route::get('/kyc/{id}/document/download/{type}', 'downloadDocument')->name('admin.kyc.document.download');
+            Route::get('/kyc/statistics/data', 'statistics')->name('admin.kyc.statistics');
+        });
+
+        // Transfer & Withdrawal Conditions Routes
+        Route::controller(TransferWithdrawConditionsController::class)->middleware(['auth:admin'])->group(function () {
+            Route::get('/transfer-withdraw-conditions', 'index')->name('admin.transfer-withdraw-conditions.index');
+            Route::put('/transfer-withdraw-conditions', 'update')->name('admin.transfer-withdraw-conditions.update');
+            Route::post('/transfer-withdraw-conditions/reset', 'resetToDefaults')->name('admin.transfer-withdraw-conditions.reset');
+            Route::get('/transfer-withdraw-conditions/summary', 'getConditionsSummary')->name('admin.transfer-withdraw-conditions.summary');
+        });
+        
     });
 
     // Video Links Management Routes
@@ -666,15 +690,15 @@ Route::prefix('admin')->group(function () {
     
     // Commission Level Management Routes
     Route::controller(App\Http\Controllers\admin\CommissionLevelController::class)->middleware(['auth:admin'])->group(function () {
-        Route::get('/admin/commission-levels', 'index')->name('admin.commission-levels.index');
-        Route::get('/admin/commission-levels/create', 'create')->name('admin.commission-levels.create');
-        Route::post('/admin/commission-levels', 'store')->name('admin.commission-levels.store');
-        Route::get('/admin/commission-levels/{commissionLevel}/edit', 'edit')->name('admin.commission-levels.edit');
-        Route::put('/admin/commission-levels/{commissionLevel}', 'update')->name('admin.commission-levels.update');
-        Route::delete('/admin/commission-levels/{commissionLevel}', 'destroy')->name('admin.commission-levels.destroy');
-        Route::post('/admin/commission-levels/{commissionLevel}/toggle-active', 'toggleActive')->name('admin.commission-levels.toggle-active');
-        Route::post('/admin/commission-levels/reset-defaults', 'resetToDefaults')->name('admin.commission-levels.reset-defaults');
-        Route::post('/admin/commission-levels/bulk-update', 'bulkUpdate')->name('admin.commission-levels.bulk-update');
+        Route::get('/commission-levels', 'index')->name('admin.commission-levels.index');
+        Route::get('/commission-levels/create', 'create')->name('admin.commission-levels.create');
+        Route::post('/commission-levels', 'store')->name('admin.commission-levels.store');
+        Route::get('/commission-levels/{commissionLevel}/edit', 'edit')->name('admin.commission-levels.edit');
+        Route::put('/commission-levels/{commissionLevel}', 'update')->name('admin.commission-levels.update');
+        Route::delete('/commission-levels/{commissionLevel}', 'destroy')->name('admin.commission-levels.destroy');
+        Route::post('/commission-levels/{commissionLevel}/toggle-active', 'toggleActive')->name('admin.commission-levels.toggle-active');
+        Route::post('/commission-levels/reset-defaults', 'resetToDefaults')->name('admin.commission-levels.reset-defaults');
+        Route::post('/commission-levels/bulk-update', 'bulkUpdate')->name('admin.commission-levels.bulk-update');
     });
     
     // Support Management Routes
@@ -813,6 +837,143 @@ Route::prefix('admin')->group(function () {
         Route::post('/popups/{popup}/duplicate', 'duplicate')->name('admin.popups.duplicate');
     });
     
+    // Email Campaign Management Routes
+    Route::controller(EmailCampaignController::class)->middleware(['auth:admin'])->group(function () {
+        Route::get('/email-campaigns', 'index')->name('admin.email-campaigns.index');
+        Route::get('/email-campaigns/analytics', 'analytics')->name('admin.email-campaigns.analytics');
+        Route::get('/email-campaigns/templates', 'templates')->name('admin.email-campaigns.templates');
+        Route::get('/email-campaigns/queue', 'queue')->name('admin.email-campaigns.queue');
+        Route::get('/email-campaigns/settings', 'settings')->name('admin.email-campaigns.settings');
+
+        // Campaign Actions
+        Route::post('/email-campaigns/send-kyc-reminders', 'sendKycReminders')->name('admin.email-campaigns.send-kyc-reminders');
+        Route::post('/email-campaigns/send-inactive-reminders', 'sendInactiveReminders')->name('admin.email-campaigns.send-inactive-reminders');
+        Route::post('/email-campaigns/send-password-resets', 'sendPasswordResets')->name('admin.email-campaigns.send-password-resets');
+        Route::post('/email-campaigns/send-to-all-users', 'sendToAllUsers')->name('admin.email-campaigns.send-to-all-users');
+
+        // Queue Management
+        Route::get('/email-campaigns/queue-status', 'queueStatus')->name('admin.email-campaigns.queue-status');
+        Route::post('/email-campaigns/retry-failed', 'retryFailed')->name('admin.email-campaigns.retry-failed');
+        Route::post('/email-campaigns/clear-failed', 'clearFailed')->name('admin.email-campaigns.clear-failed');
+        
+        // Template Management
+        Route::put('/email-campaigns/templates/{id}', 'updateTemplate')->name('admin.email-campaigns.update-template');
+        Route::get('/email-campaigns/templates/{slug}', 'getTemplate')->name('admin.email-campaigns.get-template');
+
+        // Command Execution
+        Route::post('/email-campaigns/run-command', 'runCommand')->name('admin.email-campaigns.run-command');
+    });
+    
+    // Admin Lottery Routes
+    Route::controller(AdminLotteryController::class)->middleware(['auth:admin'])->prefix('lottery')->name('admin.lottery.')->group(function () {
+        Route::get('/', 'index')->name('index');
+
+        // Draw Management Routes
+        Route::get('/draws', 'draws')->name('draws');
+        Route::get('/draws/create', 'createDraw')->name('draws.create');
+        Route::post('/draws', 'storeDraw')->name('draws.store');
+        Route::get('/draws/{id}', 'drawDetails')->name('draws.details');
+        Route::get('/draws/{id}/edit', 'editDraw')->name('draws.edit');
+        Route::put('/draws/{id}', 'updateDraw')->name('draws.update');
+        Route::post('/draws/{id}/perform', 'performDraw')->name('draws.perform');
+        Route::post('/draws/{id}/cancel', 'cancelDraw')->name('draws.cancel');
+        Route::post('/draws/{id}/distribute', 'distributePrizes')->name('draws.distribute');
+        Route::get('/draws/{id}/manual-winners', 'manualWinners')->name('draws.manual-winners');
+        Route::post('/draws/{id}/manual-winners', 'storeManualWinners')->name('draws.store-manual-winners');
+        Route::delete('/draws/{id}', 'deleteDraw')->name('draws.delete');
+        Route::post('/draws/bulk-action', 'drawsBulkAction')->name('draws.bulk-action');
+        Route::get('/draws/{id}/export', 'exportDraw')->name('draws.export');
+
+        // Auto Lottery Routes
+        Route::post('/auto-generate', 'autoGenerateDraw')->name('auto-generate');
+        Route::post('/draws/{id}/execute', 'executeAutoDraw')->name('draws.execute');
+        Route::get('/draws/{id}/manual-selection', 'manualWinnerSelection')->name('draws.manual-selection');
+        Route::post('/draws/{id}/save-winners', 'saveManualWinners')->name('draws.save-winners');
+
+        // Manual Winner Manipulation Routes
+        Route::get('/draws/{id}/winner-manipulation', 'manualWinnerManipulation')->name('draws.winner-manipulation');
+        Route::post('/draws/{id}/manual-winners', 'storeManualWinners')->name('draws.store-manual-winners');
+        Route::delete('/draws/{id}/manual-winners/{winnerId}', 'removeManualWinner')->name('draws.remove-manual-winner');
+        Route::patch('/draws/{id}/manual-winners/{winnerId}/change-position', 'changeWinnerPosition')->name('draws.change-winner-position');
+        Route::get('/draws/{id}/tickets/{ticketId}/validate', 'validateTicketAvailability')->name('draws.validate-ticket');
+        Route::post('/draws/{id}/save-manual-tickets', 'saveManualWinningTickets')->name('draws.save-manual-tickets');
+        Route::delete('/draws/{id}/clear-manual-winners', 'clearManualWinners')->name('draws.clear-manual-winners');
+
+        // Ticket management routes
+        Route::get('/draws/{id}/tickets', 'getDrawTickets')->name('draws.tickets');
+
+        // Ticket Management Routes
+        Route::get('/tickets', 'tickets')->name('tickets');
+        Route::get('/tickets/{id}', 'ticketDetails')->name('tickets.details');
+        Route::post('/tickets/bulk-action', 'ticketsBulkAction')->name('tickets.bulk-action');
+
+        // Winner Management Routes
+        Route::get('/winners', 'winners')->name('winners');
+        Route::get('/winners/{id}', 'winnerDetails')->name('winners.details');
+        Route::post('/winners/{id}/force-claim', 'forceClaimPrize')->name('winners.force-claim');
+        Route::post('/winners/distribute-all', 'distributeAllPrizes')->name('winners.distribute-all');
+        Route::post('/winners/notify', 'notifyWinners')->name('winners.notify');
+
+        Route::get('/report', 'report')->name('report');
+        Route::get('/export', 'export')->name('export');
+    });
+    // Admin Lottery Settings Management Routes
+    Route::middleware(['auth:admin'])->prefix('lottery-settings')->name('admin.lottery-settings.')->group(function () {
+        Route::get('/', [App\Http\Controllers\admin\LotterySettingsController::class, 'index'])->name('index');
+        Route::post('/update', [App\Http\Controllers\admin\LotterySettingsController::class, 'update'])->name('update');
+        Route::post('/reset', [App\Http\Controllers\admin\LotterySettingsController::class, 'resetToDefaults'])->name('reset');
+        Route::get('/backup', [App\Http\Controllers\admin\LotterySettingsController::class, 'backup'])->name('backup');
+        Route::post('/backup', [App\Http\Controllers\admin\LotterySettingsController::class, 'createBackup'])->name('backup.create');
+        Route::get('/export', [App\Http\Controllers\admin\LotterySettingsController::class, 'export'])->name('export');
+        Route::post('/import', [App\Http\Controllers\admin\LotterySettingsController::class, 'import'])->name('import');
+    });
+
+    // Admin System Commands (Emergency Command Runner)
+    Route::middleware(['auth:admin'])->prefix('system-commands')->name('admin.system-commands.')->group(function () {
+        Route::get('/', [App\Http\Controllers\admin\SystemCommandController::class, 'index'])->name('index');
+        Route::post('/execute', [App\Http\Controllers\admin\SystemCommandController::class, 'execute'])->name('execute');
+        Route::get('/status', [App\Http\Controllers\admin\SystemCommandController::class, 'status'])->name('status');
+    });
+
+    // Admin Schedule Management
+    Route::middleware(['auth:admin'])->prefix('schedule')->name('admin.schedule.')->group(function () {
+        Route::get('/', [App\Http\Controllers\admin\ScheduleController::class, 'index'])->name('index');
+        Route::post('/run', [App\Http\Controllers\admin\ScheduleController::class, 'runSchedule'])->name('run');
+    });
+
+    // Admin Queue Management
+    Route::middleware(['auth:admin'])->prefix('queue')->name('admin.queue.')->group(function () {
+        Route::get('/', [App\Http\Controllers\admin\QueueController::class, 'index'])->name('index');
+        Route::get('/worker-status', [App\Http\Controllers\admin\QueueController::class, 'workerStatus'])->name('worker-status');
+        Route::post('/start-worker', [App\Http\Controllers\admin\QueueController::class, 'startWorker'])->name('start-worker');
+        Route::get('/counts', [App\Http\Controllers\admin\QueueController::class, 'getCounts'])->name('counts');
+    });
+
+    // Admin Failed Jobs Management
+    Route::middleware(['auth:admin'])->prefix('failed-jobs')->name('admin.failed-jobs.')->group(function () {
+        Route::get('/', [App\Http\Controllers\admin\FailedJobsController::class, 'index'])->name('index');
+        Route::post('/retry/{id}', [App\Http\Controllers\admin\FailedJobsController::class, 'retry'])->name('retry');
+        Route::delete('/delete/{id}', [App\Http\Controllers\admin\FailedJobsController::class, 'delete'])->name('delete');
+        Route::post('/retry-all', [App\Http\Controllers\admin\FailedJobsController::class, 'retryAll'])->name('retry-all');
+        Route::delete('/clear-all', [App\Http\Controllers\admin\FailedJobsController::class, 'clearAll'])->name('clear-all');
+    });
+
+    // Admin Maintenance Mode Management
+    Route::middleware(['auth:admin'])->prefix('maintenance')->name('admin.maintenance.')->group(function () {
+        Route::get('/', [App\Http\Controllers\admin\MaintenanceController::class, 'index'])->name('index');
+        Route::post('/enable', [App\Http\Controllers\admin\MaintenanceController::class, 'enable'])->name('enable');
+        Route::post('/disable', [App\Http\Controllers\admin\MaintenanceController::class, 'disable'])->name('disable');
+        Route::post('/enable-scenario', [App\Http\Controllers\admin\MaintenanceController::class, 'enableScenario'])->name('enable-scenario');
+        Route::get('/status', [App\Http\Controllers\admin\MaintenanceController::class, 'status'])->name('status');
+        Route::get('/generate-secret', [App\Http\Controllers\admin\MaintenanceController::class, 'generateSecret'])->name('generate-secret');
+        Route::get('/preview', [App\Http\Controllers\admin\MaintenanceController::class, 'preview'])->name('preview');
+        Route::get('/templates', [App\Http\Controllers\admin\MaintenanceController::class, 'templates'])->name('templates');
+        Route::get('/scenarios', [App\Http\Controllers\admin\MaintenanceController::class, 'scenarios'])->name('scenarios');
+        Route::post('/schedule-disable', [App\Http\Controllers\admin\MaintenanceController::class, 'scheduleDisable'])->name('schedule-disable');
+        Route::post('/test-bypass', [App\Http\Controllers\admin\MaintenanceController::class, 'testBypass'])->name('test-bypass');
+        Route::post('/validate-secret', [App\Http\Controllers\admin\MaintenanceController::class, 'validateSecret'])->name('validate-secret');
+    });
+
     // Catch-all route for admin URL manipulation attempts
     Route::any('/{any}', function($any) {
         // Check if admin is authenticated
@@ -832,6 +993,8 @@ Route::prefix('admin')->group(function () {
             ]
         ], 404);
     })->where('any', '.*')->name('admin.catch-all');
+
+    
 });
 
 // =============================================================================
@@ -1028,34 +1191,12 @@ Route::controller(App\Http\Controllers\User\KycController::class)->middleware('a
     Route::post('/user/kyc/submit', 'store')->name('user.kyc.store');
     Route::get('/user/kyc/status', 'status')->name('user.kyc.status');
     Route::post('/user/kyc/check-document', 'checkDocumentNumber')->name('user.kyc.check-document');
+    Route::post('/user/kyc/check-phone', 'checkPhoneNumber')->name('user.kyc.check-phone');
     Route::get('/user/kyc/{id}/pdf', 'generateKycPdf')->name('user.kyc.pdf');
     Route::get('/user/kyc/{id}/download/{type}', 'downloadDocument')->name('user.kyc.download');
     Route::get('/user/kyc/{id}/view/{type}', 'viewDocument')->name('user.kyc.view');
 });
 
-// Admin KYC Routes
-Route::prefix('admin')->middleware(['auth:admin'])->group(function () {
-    Route::controller(AdminKycController::class)->group(function () {
-        Route::get('/kyc', 'index')->name('admin.kyc.index');
-        Route::get('/kyc/{id}', 'show')->name('admin.kyc.show');
-        Route::post('/kyc/{id}/update-status', 'updateStatus')->name('admin.kyc.update-status');
-        Route::post('/kyc/bulk-approve', 'bulkApprove')->name('admin.kyc.bulk-approve');
-        Route::post('/kyc/bulk-change-status', 'bulkChangeStatus')->name('admin.kyc.bulk-change-status');
-        Route::post('/kyc/{id}/mark-under-review', 'markUnderReview')->name('admin.kyc.mark-under-review');
-        Route::get('/kyc/under-review', 'getUnderReview')->name('admin.kyc.under-review');
-        Route::get('/kyc/{id}/document/view/{type}', 'viewDocument')->name('admin.kyc.document.view');
-        Route::get('/kyc/{id}/document/download/{type}', 'downloadDocument')->name('admin.kyc.document.download');
-        Route::get('/kyc/statistics/data', 'statistics')->name('admin.kyc.statistics');
-    });
-
-    // Transfer & Withdrawal Conditions Routes
-    Route::controller(\App\Http\Controllers\admin\TransferWithdrawConditionsController::class)->middleware(['auth:admin'])->group(function () {
-        Route::get('/transfer-withdraw-conditions', 'index')->name('admin.transfer-withdraw-conditions.index');
-        Route::put('/transfer-withdraw-conditions', 'update')->name('admin.transfer-withdraw-conditions.update');
-        Route::post('/transfer-withdraw-conditions/reset', 'resetToDefaults')->name('admin.transfer-withdraw-conditions.reset');
-        Route::get('/transfer-withdraw-conditions/summary', 'getConditionsSummary')->name('admin.transfer-withdraw-conditions.summary');
-    });
-});
 
 // =============================================================================
 // VIDEO ROUTES
@@ -1217,143 +1358,116 @@ Route::middleware('auth')->prefix('special-tickets')->name('special.tickets.')->
     Route::post('/cancel-transfer/{transferId}', [App\Http\Controllers\SpecialTicketController::class, 'cancelTransfer'])->name('cancel.transfer');
 });
 
-// Admin Lottery Routes   
-Route::middleware(['auth:admin'])->prefix('admin/lottery')->name('admin.lottery.')->group(function () {
-    Route::get('/', [App\Http\Controllers\admin\LotteryController::class, 'index'])->name('index');
+// // Admin Lottery Routes   
+// Route::middleware(['auth:admin'])->prefix('admin/lottery')->name('admin.lottery.')->group(function () {
+//     Route::get('/', [App\Http\Controllers\admin\LotteryController::class, 'index'])->name('index');
     
-    // Draw Management Routes
-    Route::get('/draws', [App\Http\Controllers\admin\LotteryController::class, 'draws'])->name('draws');
-    Route::get('/draws/create', [App\Http\Controllers\admin\LotteryController::class, 'createDraw'])->name('draws.create');
-    Route::post('/draws', [App\Http\Controllers\admin\LotteryController::class, 'storeDraw'])->name('draws.store');
-    Route::get('/draws/{id}', [App\Http\Controllers\admin\LotteryController::class, 'drawDetails'])->name('draws.details');
-    Route::get('/draws/{id}/edit', [App\Http\Controllers\admin\LotteryController::class, 'editDraw'])->name('draws.edit');
-    Route::put('/draws/{id}', [App\Http\Controllers\admin\LotteryController::class, 'updateDraw'])->name('draws.update');
-    Route::post('/draws/{id}/perform', [App\Http\Controllers\admin\LotteryController::class, 'performDraw'])->name('draws.perform');
-    Route::post('/draws/{id}/cancel', [App\Http\Controllers\admin\LotteryController::class, 'cancelDraw'])->name('draws.cancel');
-    Route::post('/draws/{id}/distribute', [App\Http\Controllers\admin\LotteryController::class, 'distributePrizes'])->name('draws.distribute');
-    Route::get('/draws/{id}/manual-winners', [App\Http\Controllers\admin\LotteryController::class, 'manualWinners'])->name('draws.manual-winners');
-    Route::post('/draws/{id}/manual-winners', [App\Http\Controllers\admin\LotteryController::class, 'storeManualWinners'])->name('draws.store-manual-winners');
-    Route::delete('/draws/{id}', [App\Http\Controllers\admin\LotteryController::class, 'deleteDraw'])->name('draws.delete');
-    Route::post('/draws/bulk-action', [App\Http\Controllers\admin\LotteryController::class, 'drawsBulkAction'])->name('draws.bulk-action');
-    Route::get('/draws/{id}/export', [App\Http\Controllers\admin\LotteryController::class, 'exportDraw'])->name('draws.export');
+//     // Draw Management Routes
+//     Route::get('/draws', [App\Http\Controllers\admin\LotteryController::class, 'draws'])->name('draws');
+//     Route::get('/draws/create', [App\Http\Controllers\admin\LotteryController::class, 'createDraw'])->name('draws.create');
+//     Route::post('/draws', [App\Http\Controllers\admin\LotteryController::class, 'storeDraw'])->name('draws.store');
+//     Route::get('/draws/{id}', [App\Http\Controllers\admin\LotteryController::class, 'drawDetails'])->name('draws.details');
+//     Route::get('/draws/{id}/edit', [App\Http\Controllers\admin\LotteryController::class, 'editDraw'])->name('draws.edit');
+//     Route::put('/draws/{id}', [App\Http\Controllers\admin\LotteryController::class, 'updateDraw'])->name('draws.update');
+//     Route::post('/draws/{id}/perform', [App\Http\Controllers\admin\LotteryController::class, 'performDraw'])->name('draws.perform');
+//     Route::post('/draws/{id}/cancel', [App\Http\Controllers\admin\LotteryController::class, 'cancelDraw'])->name('draws.cancel');
+//     Route::post('/draws/{id}/distribute', [App\Http\Controllers\admin\LotteryController::class, 'distributePrizes'])->name('draws.distribute');
+//     Route::get('/draws/{id}/manual-winners', [App\Http\Controllers\admin\LotteryController::class, 'manualWinners'])->name('draws.manual-winners');
+//     Route::post('/draws/{id}/manual-winners', [App\Http\Controllers\admin\LotteryController::class, 'storeManualWinners'])->name('draws.store-manual-winners');
+//     Route::delete('/draws/{id}', [App\Http\Controllers\admin\LotteryController::class, 'deleteDraw'])->name('draws.delete');
+//     Route::post('/draws/bulk-action', [App\Http\Controllers\admin\LotteryController::class, 'drawsBulkAction'])->name('draws.bulk-action');
+//     Route::get('/draws/{id}/export', [App\Http\Controllers\admin\LotteryController::class, 'exportDraw'])->name('draws.export');
     
-    // Auto Lottery Routes
-    Route::post('/auto-generate', [App\Http\Controllers\admin\LotteryController::class, 'autoGenerateDraw'])->name('auto-generate');
-    Route::post('/draws/{id}/execute', [App\Http\Controllers\admin\LotteryController::class, 'executeAutoDraw'])->name('draws.execute');
-    Route::get('/draws/{id}/manual-selection', [App\Http\Controllers\admin\LotteryController::class, 'manualWinnerSelection'])->name('draws.manual-selection');
-    Route::post('/draws/{id}/save-winners', [App\Http\Controllers\admin\LotteryController::class, 'saveManualWinners'])->name('draws.save-winners');
+//     // Auto Lottery Routes
+//     Route::post('/auto-generate', [App\Http\Controllers\admin\LotteryController::class, 'autoGenerateDraw'])->name('auto-generate');
+//     Route::post('/draws/{id}/execute', [App\Http\Controllers\admin\LotteryController::class, 'executeAutoDraw'])->name('draws.execute');
+//     Route::get('/draws/{id}/manual-selection', [App\Http\Controllers\admin\LotteryController::class, 'manualWinnerSelection'])->name('draws.manual-selection');
+//     Route::post('/draws/{id}/save-winners', [App\Http\Controllers\admin\LotteryController::class, 'saveManualWinners'])->name('draws.save-winners');
     
-    // Manual Winner Manipulation Routes
-    Route::get('/draws/{id}/winner-manipulation', [App\Http\Controllers\admin\LotteryController::class, 'manualWinnerManipulation'])->name('draws.winner-manipulation');
-    Route::post('/draws/{id}/manual-winners', [App\Http\Controllers\admin\LotteryController::class, 'storeManualWinners'])->name('draws.store-manual-winners');
-    Route::delete('/draws/{id}/manual-winners/{winnerId}', [App\Http\Controllers\admin\LotteryController::class, 'removeManualWinner'])->name('draws.remove-manual-winner');
-    Route::patch('/draws/{id}/manual-winners/{winnerId}/change-position', [App\Http\Controllers\admin\LotteryController::class, 'changeWinnerPosition'])->name('draws.change-winner-position');
-    Route::get('/draws/{id}/tickets/{ticketId}/validate', [App\Http\Controllers\admin\LotteryController::class, 'validateTicketAvailability'])->name('draws.validate-ticket');
-    Route::post('/draws/{id}/save-manual-tickets', [App\Http\Controllers\admin\LotteryController::class, 'saveManualWinningTickets'])->name('draws.save-manual-tickets');
-    Route::delete('/draws/{id}/clear-manual-winners', [App\Http\Controllers\admin\LotteryController::class, 'clearManualWinners'])->name('draws.clear-manual-winners');
+//     // Manual Winner Manipulation Routes
+//     Route::get('/draws/{id}/winner-manipulation', [App\Http\Controllers\admin\LotteryController::class, 'manualWinnerManipulation'])->name('draws.winner-manipulation');
+//     Route::post('/draws/{id}/manual-winners', [App\Http\Controllers\admin\LotteryController::class, 'storeManualWinners'])->name('draws.store-manual-winners');
+//     Route::delete('/draws/{id}/manual-winners/{winnerId}', [App\Http\Controllers\admin\LotteryController::class, 'removeManualWinner'])->name('draws.remove-manual-winner');
+//     Route::patch('/draws/{id}/manual-winners/{winnerId}/change-position', [App\Http\Controllers\admin\LotteryController::class, 'changeWinnerPosition'])->name('draws.change-winner-position');
+//     Route::get('/draws/{id}/tickets/{ticketId}/validate', [App\Http\Controllers\admin\LotteryController::class, 'validateTicketAvailability'])->name('draws.validate-ticket');
+//     Route::post('/draws/{id}/save-manual-tickets', [App\Http\Controllers\admin\LotteryController::class, 'saveManualWinningTickets'])->name('draws.save-manual-tickets');
+//     Route::delete('/draws/{id}/clear-manual-winners', [App\Http\Controllers\admin\LotteryController::class, 'clearManualWinners'])->name('draws.clear-manual-winners');
     
-    // Ticket management routes 
-    Route::get('/draws/{id}/tickets', [App\Http\Controllers\admin\LotteryController::class, 'getDrawTickets'])->name('draws.tickets');
+//     // Ticket management routes 
+//     Route::get('/draws/{id}/tickets', [App\Http\Controllers\admin\LotteryController::class, 'getDrawTickets'])->name('draws.tickets');
     
-    // Ticket Management Routes
-    Route::get('/tickets', [App\Http\Controllers\admin\LotteryController::class, 'tickets'])->name('tickets');
-    Route::get('/tickets/{id}', [App\Http\Controllers\admin\LotteryController::class, 'ticketDetails'])->name('tickets.details');
-    Route::post('/tickets/bulk-action', [App\Http\Controllers\admin\LotteryController::class, 'ticketsBulkAction'])->name('tickets.bulk-action');
+//     // Ticket Management Routes
+//     Route::get('/tickets', [App\Http\Controllers\admin\LotteryController::class, 'tickets'])->name('tickets');
+//     Route::get('/tickets/{id}', [App\Http\Controllers\admin\LotteryController::class, 'ticketDetails'])->name('tickets.details');
+//     Route::post('/tickets/bulk-action', [App\Http\Controllers\admin\LotteryController::class, 'ticketsBulkAction'])->name('tickets.bulk-action');
     
-    // Winner Management Routes
-    Route::get('/winners', [App\Http\Controllers\admin\LotteryController::class, 'winners'])->name('winners');
-    Route::get('/winners/{id}', [App\Http\Controllers\admin\LotteryController::class, 'winnerDetails'])->name('winners.details');
-    Route::post('/winners/{id}/force-claim', [App\Http\Controllers\admin\LotteryController::class, 'forceClaimPrize'])->name('winners.force-claim');
-    Route::post('/winners/distribute-all', [App\Http\Controllers\admin\LotteryController::class, 'distributeAllPrizes'])->name('winners.distribute-all');
-    Route::post('/winners/notify', [App\Http\Controllers\admin\LotteryController::class, 'notifyWinners'])->name('winners.notify');
+//     // Winner Management Routes
+//     Route::get('/winners', [App\Http\Controllers\admin\LotteryController::class, 'winners'])->name('winners');
+//     Route::get('/winners/{id}', [App\Http\Controllers\admin\LotteryController::class, 'winnerDetails'])->name('winners.details');
+//     Route::post('/winners/{id}/force-claim', [App\Http\Controllers\admin\LotteryController::class, 'forceClaimPrize'])->name('winners.force-claim');
+//     Route::post('/winners/distribute-all', [App\Http\Controllers\admin\LotteryController::class, 'distributeAllPrizes'])->name('winners.distribute-all');
+//     Route::post('/winners/notify', [App\Http\Controllers\admin\LotteryController::class, 'notifyWinners'])->name('winners.notify');
     
-    Route::get('/report', [App\Http\Controllers\admin\LotteryController::class, 'report'])->name('report');
-    Route::get('/export', [App\Http\Controllers\admin\LotteryController::class, 'export'])->name('export');
-});
+//     Route::get('/report', [App\Http\Controllers\admin\LotteryController::class, 'report'])->name('report');
+//     Route::get('/export', [App\Http\Controllers\admin\LotteryController::class, 'export'])->name('export');
+// });
 
-// Admin Lottery Settings Management Routes
-Route::middleware(['auth:admin'])->prefix('admin/lottery-settings')->name('admin.lottery-settings.')->group(function () {
-    Route::get('/', [App\Http\Controllers\admin\LotterySettingsController::class, 'index'])->name('index');
-    Route::post('/update', [App\Http\Controllers\admin\LotterySettingsController::class, 'update'])->name('update');
-    Route::post('/reset', [App\Http\Controllers\admin\LotterySettingsController::class, 'resetToDefaults'])->name('reset');
-    Route::get('/backup', [App\Http\Controllers\admin\LotterySettingsController::class, 'backup'])->name('backup');
-    Route::post('/backup', [App\Http\Controllers\admin\LotterySettingsController::class, 'createBackup'])->name('backup.create');
-    Route::get('/export', [App\Http\Controllers\admin\LotterySettingsController::class, 'export'])->name('export');
-    Route::post('/import', [App\Http\Controllers\admin\LotterySettingsController::class, 'import'])->name('import');
-});
+// // Admin Lottery Settings Management Routes
+// Route::middleware(['auth:admin'])->prefix('admin/lottery-settings')->name('admin.lottery-settings.')->group(function () {
+//     Route::get('/', [App\Http\Controllers\admin\LotterySettingsController::class, 'index'])->name('index');
+//     Route::post('/update', [App\Http\Controllers\admin\LotterySettingsController::class, 'update'])->name('update');
+//     Route::post('/reset', [App\Http\Controllers\admin\LotterySettingsController::class, 'resetToDefaults'])->name('reset');
+//     Route::get('/backup', [App\Http\Controllers\admin\LotterySettingsController::class, 'backup'])->name('backup');
+//     Route::post('/backup', [App\Http\Controllers\admin\LotterySettingsController::class, 'createBackup'])->name('backup.create');
+//     Route::get('/export', [App\Http\Controllers\admin\LotterySettingsController::class, 'export'])->name('export');
+//     Route::post('/import', [App\Http\Controllers\admin\LotterySettingsController::class, 'import'])->name('import');
+// });
 
-// Admin System Commands (Emergency Command Runner)
-Route::middleware(['auth:admin'])->prefix('admin/system-commands')->name('admin.system-commands.')->group(function () {
-    Route::get('/', [App\Http\Controllers\admin\SystemCommandController::class, 'index'])->name('index');
-    Route::post('/execute', [App\Http\Controllers\admin\SystemCommandController::class, 'execute'])->name('execute');
-    Route::get('/status', [App\Http\Controllers\admin\SystemCommandController::class, 'status'])->name('status');
-});
+// // Admin System Commands (Emergency Command Runner)
+// Route::middleware(['auth:admin'])->prefix('admin/system-commands')->name('admin.system-commands.')->group(function () {
+//     Route::get('/', [App\Http\Controllers\admin\SystemCommandController::class, 'index'])->name('index');
+//     Route::post('/execute', [App\Http\Controllers\admin\SystemCommandController::class, 'execute'])->name('execute');
+//     Route::get('/status', [App\Http\Controllers\admin\SystemCommandController::class, 'status'])->name('status');
+// });
 
-// Admin Maintenance Mode Management
-Route::middleware(['auth:admin'])->prefix('admin/maintenance')->name('admin.maintenance.')->group(function () {
-    Route::get('/', [App\Http\Controllers\admin\MaintenanceController::class, 'index'])->name('index');
-    Route::post('/enable', [App\Http\Controllers\admin\MaintenanceController::class, 'enable'])->name('enable');
-    Route::post('/disable', [App\Http\Controllers\admin\MaintenanceController::class, 'disable'])->name('disable');
-    Route::post('/enable-scenario', [App\Http\Controllers\admin\MaintenanceController::class, 'enableScenario'])->name('enable-scenario');
-    Route::get('/status', [App\Http\Controllers\admin\MaintenanceController::class, 'status'])->name('status');
-    Route::get('/generate-secret', [App\Http\Controllers\admin\MaintenanceController::class, 'generateSecret'])->name('generate-secret');
-    Route::get('/preview', [App\Http\Controllers\admin\MaintenanceController::class, 'preview'])->name('preview');
-    Route::get('/templates', [App\Http\Controllers\admin\MaintenanceController::class, 'templates'])->name('templates');
-    Route::get('/scenarios', [App\Http\Controllers\admin\MaintenanceController::class, 'scenarios'])->name('scenarios');
-    Route::post('/schedule-disable', [App\Http\Controllers\admin\MaintenanceController::class, 'scheduleDisable'])->name('schedule-disable');
-    Route::post('/test-bypass', [App\Http\Controllers\admin\MaintenanceController::class, 'testBypass'])->name('test-bypass');
-    Route::post('/validate-secret', [App\Http\Controllers\admin\MaintenanceController::class, 'validateSecret'])->name('validate-secret');
-});
+// // Admin Maintenance Mode Management
+// Route::middleware(['auth:admin'])->prefix('admin/maintenance')->name('admin.maintenance.')->group(function () {
+//     Route::get('/', [App\Http\Controllers\admin\MaintenanceController::class, 'index'])->name('index');
+//     Route::post('/enable', [App\Http\Controllers\admin\MaintenanceController::class, 'enable'])->name('enable');
+//     Route::post('/disable', [App\Http\Controllers\admin\MaintenanceController::class, 'disable'])->name('disable');
+//     Route::post('/enable-scenario', [App\Http\Controllers\admin\MaintenanceController::class, 'enableScenario'])->name('enable-scenario');
+//     Route::get('/status', [App\Http\Controllers\admin\MaintenanceController::class, 'status'])->name('status');
+//     Route::get('/generate-secret', [App\Http\Controllers\admin\MaintenanceController::class, 'generateSecret'])->name('generate-secret');
+//     Route::get('/preview', [App\Http\Controllers\admin\MaintenanceController::class, 'preview'])->name('preview');
+//     Route::get('/templates', [App\Http\Controllers\admin\MaintenanceController::class, 'templates'])->name('templates');
+//     Route::get('/scenarios', [App\Http\Controllers\admin\MaintenanceController::class, 'scenarios'])->name('scenarios');
+//     Route::post('/schedule-disable', [App\Http\Controllers\admin\MaintenanceController::class, 'scheduleDisable'])->name('schedule-disable');
+//     Route::post('/test-bypass', [App\Http\Controllers\admin\MaintenanceController::class, 'testBypass'])->name('test-bypass');
+//     Route::post('/validate-secret', [App\Http\Controllers\admin\MaintenanceController::class, 'validateSecret'])->name('validate-secret');
+// });
 
-// Admin Schedule Management
-Route::middleware(['auth:admin'])->prefix('admin/schedule')->name('admin.schedule.')->group(function () {
-    Route::get('/', [App\Http\Controllers\admin\ScheduleController::class, 'index'])->name('index');
-    Route::post('/run', [App\Http\Controllers\admin\ScheduleController::class, 'runSchedule'])->name('run');
-});
-// Admin Settings Management
-// Admin Queue Management
-Route::middleware(['auth:admin'])->prefix('admin/queue')->name('admin.queue.')->group(function () {
-    Route::get('/', [App\Http\Controllers\admin\QueueController::class, 'index'])->name('index');
-    Route::get('/worker-status', [App\Http\Controllers\admin\QueueController::class, 'workerStatus'])->name('worker-status');
-    Route::post('/start-worker', [App\Http\Controllers\admin\QueueController::class, 'startWorker'])->name('start-worker');
-    Route::get('/counts', [App\Http\Controllers\admin\QueueController::class, 'getCounts'])->name('counts');
-});
+// // Admin Schedule Management
+// Route::middleware(['auth:admin'])->prefix('admin/schedule')->name('admin.schedule.')->group(function () {
+//     Route::get('/', [App\Http\Controllers\admin\ScheduleController::class, 'index'])->name('index');
+//     Route::post('/run', [App\Http\Controllers\admin\ScheduleController::class, 'runSchedule'])->name('run');
+// });
+// // Admin Settings Management
+// // Admin Queue Management
+// Route::middleware(['auth:admin'])->prefix('admin/queue')->name('admin.queue.')->group(function () {
+//     Route::get('/', [App\Http\Controllers\admin\QueueController::class, 'index'])->name('index');
+//     Route::get('/worker-status', [App\Http\Controllers\admin\QueueController::class, 'workerStatus'])->name('worker-status');
+//     Route::post('/start-worker', [App\Http\Controllers\admin\QueueController::class, 'startWorker'])->name('start-worker');
+//     Route::get('/counts', [App\Http\Controllers\admin\QueueController::class, 'getCounts'])->name('counts');
+// });
 
-// Admin Failed Jobs Management
-Route::middleware(['auth:admin'])->prefix('admin/failed-jobs')->name('admin.failed-jobs.')->group(function () {
-    Route::get('/', [App\Http\Controllers\admin\FailedJobsController::class, 'index'])->name('index');
-    Route::post('/retry/{id}', [App\Http\Controllers\admin\FailedJobsController::class, 'retry'])->name('retry');
-    Route::delete('/delete/{id}', [App\Http\Controllers\admin\FailedJobsController::class, 'delete'])->name('delete');
-    Route::post('/retry-all', [App\Http\Controllers\admin\FailedJobsController::class, 'retryAll'])->name('retry-all');
-    Route::delete('/clear-all', [App\Http\Controllers\admin\FailedJobsController::class, 'clearAll'])->name('clear-all');
-});
-
-// Admin Email Campaign Routes
-Route::middleware(['auth:admin'])->prefix('admin/email-campaigns')->name('admin.email-campaigns.')->group(function () {
-    Route::get('/', [App\Http\Controllers\admin\EmailCampaignController::class, 'index'])->name('index');
-    Route::get('/analytics', [App\Http\Controllers\admin\EmailCampaignController::class, 'analytics'])->name('analytics');
-    Route::get('/templates', [App\Http\Controllers\admin\EmailCampaignController::class, 'templates'])->name('templates');
-    Route::get('/queue', [App\Http\Controllers\admin\EmailCampaignController::class, 'queue'])->name('queue');
-    Route::get('/settings', [App\Http\Controllers\admin\EmailCampaignController::class, 'settings'])->name('settings');
-    
-    // Campaign Actions
-    Route::post('/send-kyc-reminders', [App\Http\Controllers\admin\EmailCampaignController::class, 'sendKycReminders'])->name('send-kyc-reminders');
-    Route::post('/send-inactive-reminders', [App\Http\Controllers\admin\EmailCampaignController::class, 'sendInactiveReminders'])->name('send-inactive-reminders');
-    Route::post('/send-password-resets', [App\Http\Controllers\admin\EmailCampaignController::class, 'sendPasswordResets'])->name('send-password-resets');
-    Route::post('/send-to-all-users', [App\Http\Controllers\admin\EmailCampaignController::class, 'sendToAllUsers'])->name('send-to-all-users');
-    
-    // Queue Management
-    Route::get('/queue-status', [App\Http\Controllers\admin\EmailCampaignController::class, 'queueStatus'])->name('queue-status');
-    Route::post('/retry-failed', [App\Http\Controllers\admin\EmailCampaignController::class, 'retryFailed'])->name('retry-failed');
-    Route::post('/clear-failed', [App\Http\Controllers\admin\EmailCampaignController::class, 'clearFailed'])->name('clear-failed');
-    
-    // Template Management
-    Route::put('/templates/{id}', [App\Http\Controllers\admin\EmailCampaignController::class, 'updateTemplate'])->name('update-template');
-    Route::get('/templates/{slug}', [App\Http\Controllers\admin\EmailCampaignController::class, 'getTemplate'])->name('get-template');
-    
-    // Command Execution
-    Route::post('/run-command', [App\Http\Controllers\admin\EmailCampaignController::class, 'runCommand'])->name('run-command');
-});
+// // Admin Failed Jobs Management
+// Route::middleware(['auth:admin'])->prefix('admin/failed-jobs')->name('admin.failed-jobs.')->group(function () {
+//     Route::get('/', [App\Http\Controllers\admin\FailedJobsController::class, 'index'])->name('index');
+//     Route::post('/retry/{id}', [App\Http\Controllers\admin\FailedJobsController::class, 'retry'])->name('retry');
+//     Route::delete('/delete/{id}', [App\Http\Controllers\admin\FailedJobsController::class, 'delete'])->name('delete');
+//     Route::post('/retry-all', [App\Http\Controllers\admin\FailedJobsController::class, 'retryAll'])->name('retry-all');
+//     Route::delete('/clear-all', [App\Http\Controllers\admin\FailedJobsController::class, 'clearAll'])->name('clear-all');
+// });
 
 // =============================================================================
 // ENHANCED FALLBACK ROUTE - Handle URL manipulation and unauthorized access
