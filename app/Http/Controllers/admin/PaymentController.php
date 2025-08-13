@@ -177,11 +177,15 @@ class PaymentController extends Controller
                     $user = $row->user;
                     if (!$user) return 'N/A';
                     
+                    // Safely get username and email with fallbacks
+                    $username = is_string($user->username) ? $user->username : 'Unknown';
+                    $email = is_string($user->email) ? $user->email : 'No email';
+                    
                     return '<div class="d-flex align-items-center">' .
                            '<img src="' . $user->avatar_url . '" class="rounded-circle me-2" style="width: 32px; height: 32px;">' .
                            '<div>' .
-                           '<div class="fw-medium">' . $user->username . '</div>' .
-                           '<small class="text-muted">' . $user->email . '</small>' .
+                           '<div class="fw-medium">' . e($username) . '</div>' .
+                           '<small class="text-muted">' . e($email) . '</small>' .
                            '</div></div>';
                 })
                 ->addColumn('gateway', function ($row) {
