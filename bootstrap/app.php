@@ -3,7 +3,6 @@
 use App\Http\Middleware\AdminAuth;
 use App\Http\Middleware\ValidUser;
 // use App\Http\Middleware\PreventBack;
-use App\Http\Middleware\AdminOptimized;
 use App\Http\Middleware\AdminPermissionMiddleware;
 use App\Http\Middleware\PermissionMiddleware;
 use App\Http\Middleware\CacheControlMiddleware;
@@ -32,15 +31,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->appendToGroup('ok-user', [
             ValidUser::class
         ]);
-        $middleware->appendToGroup('admin-optimized', [
-            ValidUser::class,
-            AdminOptimized::class
-        ]);
-        $middleware->appendToGroup('auth:admin', [
-            AdminAuth::class,
-        ]);
+        
         $middleware->alias([
             'auth' => Authenticate::class,
+            'auth.admin' => AdminAuth::class,  // Custom admin session middleware
             // 'prevent-back' => PreventBack::class,
             'admin.permission' => AdminPermissionMiddleware::class,
             'permission' => PermissionMiddleware::class,

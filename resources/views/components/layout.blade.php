@@ -4,7 +4,7 @@
 <head>
  
     <!-- Meta Data -->
-    <meta charset="UTF-8">
+    <meta charset="UTF-8"> 
     <meta name='viewport' content='width=device-width, initial-scale=1.0'>
     <meta http-equiv="X-UA-Compatible" content="IE=edge"> 
     <title> @yield('top_title') </title>
@@ -1517,7 +1517,7 @@ console.log('Early openTestEmailModal definition loaded');
     <!-- Scroll To Top -->
 
     <!-- jQuery JS (Required for many components) -->
-    <script src="{{asset('assets/js/jquery-3.7.1.min.js')}}"></script>
+    <script src="{{asset('assets_custom/js/jquery-3.7.1.min.js')}}"></script>
 
     <!-- Popper JS -->
     <script src="{{asset('assets/libs/@popperjs/core/umd/popper.min.js')}}"></script>
@@ -1527,6 +1527,42 @@ console.log('Early openTestEmailModal definition loaded');
 
     <!-- Defaultmenu JS -->
     <script src="{{asset('assets/js/defaultmenu.min.js')}}"></script>
+    
+    <!-- Fix for defaultmenu.min.js DOM errors -->
+    <script>
+        // Prevent defaultmenu.min.js from failing when admin elements are missing
+        document.addEventListener('DOMContentLoaded', function() {
+            // Create missing elements that defaultmenu.min.js expects
+            const requiredElements = [
+                'header-element',
+                'main-header-container', 
+                'header-content-left',
+                'header-content-right',
+                'switcher-canvas'
+            ];
+            
+            requiredElements.forEach(id => {
+                if (!document.getElementById(id)) {
+                    const element = document.createElement('div');
+                    element.id = id;
+                    element.style.display = 'none';
+                    document.body.appendChild(element);
+                }
+            });
+            
+            // Override problematic functions from defaultmenu.min.js
+            if (typeof window.checkHoriMenu !== 'undefined') {
+                const originalCheckHoriMenu = window.checkHoriMenu;
+                window.checkHoriMenu = function(element) {
+                    if (!element || !element.nodeType) {
+                        console.warn('checkHoriMenu: Invalid element provided');
+                        return;
+                    }
+                    return originalCheckHoriMenu.call(this, element);
+                };
+            }
+        });
+    </script>
 
     <!-- Node Waves JS-->
     <script src="{{asset('assets/libs/node-waves/waves.min.js')}}"></script>
@@ -1556,12 +1592,6 @@ console.log('Early openTestEmailModal definition loaded');
 
     <!-- SweetAlert2 JS -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script> 
-    
-    <!-- Admin Cache Manager JS -->
-    <script src="{{asset('assets/js/admin-cache-manager.js')}}"></script> 
-
-    <!-- Admin Auto-Refresh Prevention JS -->
-    <script src="{{asset('assets/js/admin-auto-refresh-prevention.js')}}"></script> 
 
     <!-- Index2 js-->
     <script src="{{asset('assets/js/index3.js')}}"></script>
@@ -1585,9 +1615,9 @@ console.log('Early openTestEmailModal definition loaded');
     <!-- Debug: Verify SweetAlert2 loading -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('🚀 Main Layout DOMContentLoaded');
+            // console.log('🚀 Main Layout DOMContentLoaded');
             if (typeof Swal !== 'undefined') {
-                console.log('✅ SweetAlert2 loaded successfully in main layout');
+                // console.log('✅ SweetAlert2 loaded successfully in main layout');
             } else {
                 console.error('❌ SweetAlert2 failed to load in main layout');
             }
@@ -1740,12 +1770,12 @@ console.log('Early openTestEmailModal definition loaded');
         // Initialize the advanced popup system
         if (typeof AdvancedPopupSystem !== 'undefined') {
             const popupSystem = new AdvancedPopupSystem();
-            console.log('Admin popup system initialized');
+            // console.log('Admin popup system initialized');
         } else {
-            console.error('AdvancedPopupSystem not found');
+            console.warn('AdvancedPopupSystem not found');
         }
         
-        console.log('Global admin functions initialized successfully');
+        // console.log('Global admin functions initialized successfully');
     });
     </script>
     
@@ -2005,7 +2035,7 @@ console.log('Early openTestEmailModal definition loaded');
     
     <!-- Test Email System JavaScript - Global Scope -->
     <script>
-    console.log('Loading test email modal system...');
+    // console.log('Loading test email modal system...');
     
     // Define functions immediately in global scope to prevent reference errors
     window.openTestEmailModal = function() {
@@ -2156,7 +2186,7 @@ console.log('Early openTestEmailModal definition loaded');
                 }
             });
         } else {
-            console.log('Test email menu item not found on this page');
+            // console.log('Test email menu item not found on this page');
         }
         
         // Test Email Form Handler
@@ -2312,7 +2342,7 @@ console.log('Early openTestEmailModal definition loaded');
     
     // Make function globally accessible for menu items
     if (typeof window.showTestEmailModal !== 'undefined' && typeof window.openTestEmailModal !== 'undefined') {
-        console.log('✅ All test email functions are ready and accessible globally');
+        // console.log('✅ All test email functions are ready and accessible globally');
     } else {
         console.warn('⚠️ Some test email functions not found');
     }
@@ -2380,108 +2410,6 @@ console.log('Early openTestEmailModal definition loaded');
 
     // Make handleBulkVerificationActions globally accessible
     window.handleBulkVerificationActions = handleBulkVerificationActions;
-    
-    // Global Browser Cache Manager Function
-    function showBrowserCacheManager() {
-        if (typeof Swal !== 'undefined') {
-            Swal.fire({
-                title: '🌐 Browser Cache Manager',
-                html: `
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <button class="btn btn-primary w-100" onclick="clearDomainCache()">
-                                <i class="fe fe-globe"></i> Clear Domain Cache
-                            </button>
-                        </div>
-                        <div class="col-md-6">
-                            <button class="btn btn-warning w-100" onclick="clearAdvancedCache()">
-                                <i class="fe fe-settings"></i> Advanced Clear
-                            </button>
-                        </div>
-                        <div class="col-md-6">
-                            <button class="btn btn-info w-100" onclick="clearLocalStorage()">
-                                <i class="fe fe-database"></i> Clear Storage
-                            </button>
-                        </div>
-                        <div class="col-md-6">
-                            <button class="btn btn-success w-100" onclick="clearServiceWorkers()">
-                                <i class="fe fe-cpu"></i> Clear SW
-                            </button>
-                        </div>
-                    </div>
-                    <div class="mt-3">
-                        <small class="text-muted">Choose the type of cache clearing needed</small>
-                    </div>
-                `,
-                showConfirmButton: false,
-                showCancelButton: true,
-                cancelButtonText: 'Close',
-                width: '500px'
-            });
-        } else {
-            alert('Browser Cache Manager requires SweetAlert2');
-        }
-    }
-
-    // Global Cache Helper Functions
-    function clearDomainCache() {
-        window.location.href = '/browser_cache_clear/only_this_domain';
-    }
-
-    function clearAdvancedCache() {
-        window.location.href = '/browser_cache_clear/advanced';
-    }
-
-    function clearLocalStorage() {
-        try {
-            localStorage.clear();
-            sessionStorage.clear();
-            if (typeof Swal !== 'undefined') {
-                Swal.fire({
-                    title: '✅ Success!',
-                    text: 'Local storage cleared successfully',
-                    icon: 'success',
-                    timer: 2000,
-                    showConfirmButton: false
-                });
-            } else {
-                alert('Local storage cleared successfully');
-            }
-        } catch (error) {
-            if (typeof Swal !== 'undefined') {
-                Swal.fire('Error', 'Failed to clear local storage', 'error');
-            } else {
-                alert('Error: Failed to clear local storage');
-            }
-        }
-    }
-
-    function clearServiceWorkers() {
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                for(let registration of registrations) {
-                    registration.unregister();
-                }
-                if (typeof Swal !== 'undefined') {
-                    Swal.fire({
-                        title: '✅ Success!',
-                        text: 'Service workers cleared successfully',
-                        icon: 'success',
-                        timer: 2000,
-                        showConfirmButton: false
-                    });
-                } else {
-                    alert('Service workers cleared successfully');
-                }
-            });
-        } else {
-            if (typeof Swal !== 'undefined') {
-                Swal.fire('Info', 'Service workers not supported in this browser', 'info');
-            } else {
-                alert('Service workers not supported in this browser');
-            }
-        }
-    }
 
     // ===========================================
     // LOTTERY MANAGEMENT FUNCTIONS
@@ -2716,13 +2644,6 @@ console.log('Early openTestEmailModal definition loaded');
         }
     }
 
-    // Make cache functions globally accessible
-    window.showBrowserCacheManager = showBrowserCacheManager;
-    window.clearDomainCache = clearDomainCache;
-    window.clearAdvancedCache = clearAdvancedCache;
-    window.clearLocalStorage = clearLocalStorage;
-    window.clearServiceWorkers = clearServiceWorkers;
-    
     // Make lottery functions globally accessible
     window.showAutoGenerateModal = showAutoGenerateModal;
     window.generateAutoDraw = generateAutoDraw;
@@ -2842,11 +2763,11 @@ console.log('Early openTestEmailModal definition loaded');
             });
         });
         
-        console.log('✅ Admin logout interceptors initialized');
+        // console.log('✅ Admin logout interceptors initialized');
     });
     
-    console.log('✅ Bulk verification actions function loaded and globally accessible');
-    console.log('✅ Browser cache manager functions loaded and globally accessible');
+    // console.log('✅ Bulk verification actions function loaded and globally accessible');
+    // console.log('✅ Browser cache manager functions loaded and globally accessible');
     </script>
 </body>
 

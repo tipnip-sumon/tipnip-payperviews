@@ -300,7 +300,7 @@
     for (let i = 0; i < genericExamples.length; ++i) {
       var element = genericExamples[i];
       new Choices(element, {
-        allowHTML: true,
+        allowHTML: false, // Set to false to avoid deprecation warning
         placeholderValue: "This is a placeholder set in the config",
         searchPlaceholderValue: "Search",
       });

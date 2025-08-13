@@ -710,7 +710,7 @@
     
     @push('script')
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="{{ asset('assets/js/jquery-3.7.1.min.js') }}"></script>
+    <script src="{{ asset('assets_custom/js/jquery-3.7.1.min.js') }}"></script>
     <script>
         $(document).ready(function() {
             let currentStep = 1;

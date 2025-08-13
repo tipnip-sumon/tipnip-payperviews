@@ -50,34 +50,58 @@ class AdminController extends Controller
     public function login(Request $request){
         if($request->input()){
             $credentials = $request->validate([
-                'username' => 'required|string',
+                'email' => 'required|string', // Changed from 'username' to 'email' for consistency
                 'password' => 'required|string',
             ]);
 
-            // Find admin by username or email
-            $admin = Admin::where('username', $credentials['username'])
-                         ->orWhere('email', $credentials['username'])
+            // Find admin by email or username (supporting both for flexibility)
+            $admin = Admin::where('email', $credentials['email'])
+                         ->orWhere('username', $credentials['email'])
                          ->first();
 
             if (!$admin) {
-                return redirect()->route('admin.index')->with('error', 'Invalid username or email.');
+                // Return JSON response for AJAX requests
+                if ($request->expectsJson()) {
+                    return response()->json([
+                        'message' => 'Invalid email or username.',
+                        'errors' => ['email' => ['Invalid email or username.']]
+                    ], 422);
+                }
+                return redirect()->route('admin.index')->with('error', 'Invalid email or username.');
             }
 
             // Check if admin is active
             if (!$admin->is_active) {
+                if ($request->expectsJson()) {
+                    return response()->json([
+                        'message' => 'Your account has been deactivated. Please contact support.',
+                        'errors' => ['email' => ['Account deactivated.']]
+                    ], 403);
+                }
                 return redirect()->route('admin.index')->with('error', 'Your account has been deactivated. Please contact support.');
             }
 
             // Check if account is locked
             if ($admin->isLocked()) {
                 $lockExpiry = $admin->locked_until->diffForHumans();
-                return redirect()->route('admin.index')->with('error', "Account is locked. Try again {$lockExpiry}.");
+                $message = "Account is locked. Try again {$lockExpiry}.";
+                
+                if ($request->expectsJson()) {
+                    return response()->json([
+                        'message' => $message,
+                        'errors' => ['email' => [$message]]
+                    ], 403);
+                }
+                return redirect()->route('admin.index')->with('error', $message);
             }
-            // Attempt authentication
+            
+            // Attempt authentication with either email or username
+            $loginField = filter_var($credentials['email'], FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
+            
             if (Auth::guard('admin')->attempt([
-                'username' => $admin->username,
+                $loginField => $credentials['email'],
                 'password' => $credentials['password']
-            ])) {
+            ], $request->filled('remember'))) {
                 // Record successful login
                 $admin->recordLogin($request->ip(), $request->userAgent());
                 
@@ -92,20 +116,43 @@ class AdminController extends Controller
                 // Regenerate session for security
                 $request->session()->regenerate();
                 
-                return redirect()->route('admin.dashboard')->with('success', 'Login successful! Welcome back, ' . $admin->name . '.');
+                $successMessage = 'Login successful! Welcome back, ' . $admin->name . '.';
+                
+                // Return JSON response for AJAX requests
+                if ($request->expectsJson()) {
+                    return response()->json([
+                        'message' => $successMessage,
+                        'redirect_url' => route('admin.dashboard')
+                    ], 200);
+                }
+                
+                return redirect()->route('admin.dashboard')->with('success', $successMessage);
             } else {
                 // Record failed login attempt
                 $admin->incrementLoginAttempts();
                 
                 $remainingAttempts = 5 - $admin->login_attempts;
+                $errorMessage = '';
+                
                 if ($remainingAttempts > 0) {
-                    return redirect()->route('admin.index')->with('error', "Invalid credentials. {$remainingAttempts} attempts remaining.");
+                    $errorMessage = "Invalid credentials. {$remainingAttempts} attempts remaining.";
                 } else {
-                    return redirect()->route('admin.index')->with('error', 'Account locked due to multiple failed attempts. Please try again later.');
+                    $errorMessage = 'Account locked due to multiple failed attempts. Please try again later.';
                 }
+                
+                // Return JSON response for AJAX requests
+                if ($request->expectsJson()) {
+                    return response()->json([
+                        'message' => $errorMessage,
+                        'errors' => ['password' => [$errorMessage]]
+                    ], 422);
+                }
+                
+                return redirect()->route('admin.index')->with('error', $errorMessage);
             }
         } else {
-            return view('admin.index');
+            // If no input, show the login form (this shouldn't happen with the new routing)
+            return view('admin.login_fresh');
         }
     }
     public function dashboard(Request $request){

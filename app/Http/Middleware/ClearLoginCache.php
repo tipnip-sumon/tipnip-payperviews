@@ -9,6 +9,8 @@ class ClearLoginCache
 {
     /**
      * Handle an incoming request and clear cache headers for login pages.
+     * This middleware is designed to prevent login form caching while preserving
+     * session functionality and CSRF token handling.
      *
      * @param  \Illuminate\Http\Request  $request
      * @param  \Closure  $next
@@ -18,13 +20,12 @@ class ClearLoginCache
     {
         $response = $next($request);
 
-        // Clear browser cache for login pages
-        return $response->header('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0')
+        // Less aggressive cache control that preserves session functionality
+        // This prevents form caching but allows session cookies and CSRF tokens to work
+        return $response->header('Cache-Control', 'no-cache, private, must-revalidate')
                        ->header('Pragma', 'no-cache')
-                       ->header('Expires', 'Sat, 26 Jul 1997 05:00:00 GMT')
-                       ->header('Last-Modified', gmdate('D, d M Y H:i:s') . ' GMT')
                        ->header('X-Frame-Options', 'DENY')
                        ->header('X-Content-Type-Options', 'nosniff')
-                       ->header('Referrer-Policy', 'no-referrer');
+                       ->header('Referrer-Policy', 'strict-origin-when-cross-origin');
     }
 }
