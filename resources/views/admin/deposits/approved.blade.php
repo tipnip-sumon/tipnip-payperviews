@@ -197,13 +197,17 @@
                 serverSide: true,
                 ajax: {
                     url: '{{ route("admin.deposits.approved") }}',
-                    type: 'GET'
+                    type: 'GET',
+                    error: function(xhr, error, code) {
+                        console.log('DataTables AJAX Error:', xhr, error, code);
+                        console.log('Response Text:', xhr.responseText);
+                    }
                 },
                 columns: [
-                    { data: 'user', name: 'user.username' },
-                    { data: 'gateway', name: 'gateway.name' },
-                    { data: 'amount', name: 'amount' },
-                    { data: 'approved_at', name: 'updated_at' },
+                    { data: 'user', name: 'user.username', orderable: false },
+                    { data: 'gateway', name: 'gateway.name', orderable: false },
+                    { data: 'amount', name: 'amount', orderable: true },
+                    { data: 'approved_at', name: 'updated_at', orderable: true },
                     { data: 'actions', name: 'actions', orderable: false, searchable: false }
                 ],
                 order: [[3, 'desc']],
@@ -211,6 +215,12 @@
                 responsive: true,
                 language: {
                     processing: '<div class="d-flex justify-content-center"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>'
+                },
+                drawCallback: function(settings) {
+                    console.log('DataTable draw completed');
+                },
+                initComplete: function(settings, json) {
+                    console.log('DataTable initialized with data:', json);
                 }
             });
 

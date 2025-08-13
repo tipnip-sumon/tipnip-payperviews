@@ -43,10 +43,45 @@
                 margin-bottom: 0;
             }
         }
+        
+        /* Page refresh overlay */
+        .refresh-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 9999;
+            display: none;
+        }
+        
+        .refresh-overlay .spinner {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            text-align: center;
+        }
+        
+        .refresh-overlay .spinner i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
     </style>
     @endpush
     
     @section('content') 
+    
+    <!-- Refresh Overlay -->
+    <div class="refresh-overlay" id="refreshOverlay">
+        <div class="spinner">
+            <i class="fas fa-sync-alt fa-spin"></i>
+            <div><strong>Refreshing page...</strong></div>
+            <small>Please wait while we update your payment status</small>
+        </div>
+    </div>
     
     <!-- Add Funds Page Header --> 
     <div class="row mb-2 my-4">
@@ -188,7 +223,7 @@
                                 </label>
                                 <div>
                                     @if ($pendingDeposit->btc_amo == 'waiting')
-                                        <div class="alert alert-warning py-2 d-flex flex-column flex-sm-row align-items-center">
+                                        <div class="alert alert-warning py-2 d-flex flex-column flex-sm-row align-items-center status-waiting">
                                             <div class="me-0 me-sm-3 mb-2 mb-sm-0 text-center">
                                                 <i class="fas fa-clock fa-2x text-warning"></i>
                                             </div>
@@ -198,7 +233,7 @@
                                             </div>
                                         </div>
                                     @elseif ($pendingDeposit->btc_amo == 'finished')
-                                        <div class="alert alert-success py-2 d-flex flex-column flex-sm-row align-items-center">
+                                        <div class="alert alert-success py-2 d-flex flex-column flex-sm-row align-items-center status-finished">
                                             <div class="me-0 me-sm-3 mb-2 mb-sm-0 text-center">
                                                 <i class="fas fa-check-circle fa-2x text-success"></i>
                                             </div>
@@ -208,7 +243,7 @@
                                             </div>
                                         </div>
                                     @else
-                                        <div class="alert alert-primary py-2 d-flex flex-column flex-sm-row align-items-center">
+                                        <div class="alert alert-primary py-2 d-flex flex-column flex-sm-row align-items-center status-processing">
                                             <div class="me-0 me-sm-3 mb-2 mb-sm-0 text-center">
                                                 <i class="fas fa-spinner fa-spin fa-2x text-primary"></i>
                                             </div>
@@ -920,7 +955,7 @@
                                                 window.location.href = redirectUrl;
                                             } else {
                                                 // User cancelled, reload the page
-                                                window.location.reload();
+                                                refreshPageWithOverlay();
                                             }
                                         });
                                     } else {
@@ -935,13 +970,18 @@
                                                 confirmButton: 'btn btn-success'
                                             },
                                             buttonsStyling: false,
-                                            timer: 5000,
-                                            timerProgressBar: true
+                                            timer: 3000,
+                                            timerProgressBar: true,
+                                            allowOutsideClick: false
                                         }).then(() => {
-                                            setTimeout(() => {
-                                                window.location.reload();
-                                            }, 1000);
+                                            // Always reload the page after payment creation
+                                            refreshPageWithOverlay();
                                         });
+                                        
+                                        // Also set up a fallback reload in case the timer doesn't complete
+                                        setTimeout(() => {
+                                            refreshPageWithOverlay();
+                                        }, 4000);
                                     }
                                 } else {
                                     Swal.fire({
@@ -954,11 +994,10 @@
                                             confirmButton: 'btn btn-danger'
                                         },
                                         buttonsStyling: false
+                                    }).then(() => {
+                                        // Reload page even on error to refresh state
+                                        refreshPageWithOverlay();
                                     });
-                                    
-                                    // Re-enable the button
-                                    $(".sw-btn-next").prop('disabled', false);
-                                    $(".sw-btn-next").html('<i class="fas fa-check-circle me-2"></i> Create Payment');
                                 }
                             }).fail(function(xhr) {
                                 var errorMessage = xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'An error occurred. Please try again.';
@@ -973,11 +1012,10 @@
                                         confirmButton: 'btn btn-danger'
                                     },
                                     buttonsStyling: false
+                                }).then(() => {
+                                    // Reload page to refresh state
+                                    refreshPageWithOverlay();
                                 });
-                                
-                                // Re-enable the button
-                                $(".sw-btn-next").prop('disabled', false);
-                                $(".sw-btn-next").html('<i class="fas fa-check-circle me-2"></i> Create Payment');
                             });
                         }
                     });
@@ -1095,10 +1133,138 @@
                     }
                 });
                 
+                // Window focus detection for auto-refresh after payment
+                let paymentWindowOpened = false;
+                let originalFocusHandler = null;
+                
+                function showRefreshOverlay() {
+                    $('#refreshOverlay').fadeIn(300);
+                }
+                
+                function refreshPageWithOverlay() {
+                    showRefreshOverlay();
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 800);
+                }
+                
+                // Track when payment window is opened
+                $(document).on('payment-window-opened', function() {
+                    paymentWindowOpened = true;
+                    
+                    // Set up focus detection
+                    originalFocusHandler = function() {
+                        if (paymentWindowOpened) {
+                            // User returned to the page, refresh to check payment status
+                            refreshPageWithOverlay();
+                        }
+                    };
+                    
+                    $(window).on('focus', originalFocusHandler);
+                });
+                
+                // Trigger when payment window opens
+                $(document).on('click', '.sw-btn-next', function() {
+                    setTimeout(() => {
+                        $(document).trigger('payment-window-opened');
+                    }, 2000);
+                });
+                
                 // Add fast-click for mobile devices
                 if (typeof FastClick !== 'undefined') {
                     FastClick.attach(document.body);
                 }
+                
+                // Periodic payment status check for pending deposits
+                @if ($pendingDeposit ?? false)
+                
+                // Function to check and update pending deposit status
+                function checkPendingDepositStatus() {
+                    $.get('{{ route("user.deposit.status") }}', function(response) {
+                        if (response.success) {
+                            // Check if there's a recently completed deposit
+                            if (response.recently_completed) {
+                                showRefreshOverlay();
+                                setTimeout(function() {
+                                    window.location.reload();
+                                }, 1000);
+                                return;
+                            }
+                            
+                            if (response.has_pending !== {{ $pendingDeposit ? 'true' : 'false' }}) {
+                                // Pending status changed, refresh the page to show updated content
+                                showRefreshOverlay();
+                                setTimeout(function() {
+                                    window.location.reload();
+                                }, 1000);
+                                return;
+                            }
+                            
+                            // Update specific fields if deposit exists
+                            if (response.deposit) {
+                                const deposit = response.deposit;
+                                
+                                // Update payment status badge
+                                if (deposit.btc_amo === 'finished' && $('.status-waiting').is(':visible')) {
+                                    showRefreshOverlay();
+                                    setTimeout(function() {
+                                        window.location.reload();
+                                    }, 1000);
+                                } else if (deposit.btc_amo === 'waiting' && $('.status-finished').is(':visible')) {
+                                    showRefreshOverlay();
+                                    setTimeout(function() {
+                                        window.location.reload();
+                                    }, 1000);
+                                }
+                                
+                                // Update payment link if changed
+                                const currentPaymentLink = $('#payment-link').val();
+                                if (deposit.admin_feedback && deposit.admin_feedback !== currentPaymentLink) {
+                                    $('#payment-link').val(deposit.admin_feedback);
+                                }
+                                
+                                // Update wallet address if changed
+                                const currentWallet = $('#payment-wallet').val();
+                                if (deposit.btc_wallet && deposit.btc_wallet !== currentWallet) {
+                                    $('#payment-wallet').val(deposit.btc_wallet);
+                                }
+                            }
+                        }
+                    }).fail(function() {
+                        // Silent fail - network issues shouldn't disrupt the experience
+                    });
+                }
+                
+                @if ($pendingDeposit)
+                // Check deposit status every 15 seconds for pending deposits
+                let depositStatusInterval = setInterval(checkPendingDepositStatus, 15000);
+                
+                // Clear interval when deposit is completed or user navigates away
+                $(window).on('beforeunload', function() {
+                    if (depositStatusInterval) {
+                        clearInterval(depositStatusInterval);
+                    }
+                });
+                @endif
+                
+                let statusCheckInterval = setInterval(function() {
+                    // Check if payment status has changed
+                    $.get('{{ route("user.payment_history") }}', function(response) {
+                        // This will help detect if payment status changed
+                        // The actual refresh will happen through window focus or user action
+                    }).fail(function() {
+                        // If API fails, we can still rely on other refresh mechanisms
+                    });
+                }, 30000); // Check every 30 seconds
+                
+                // Clear interval when user interacts with the page
+                $(document).on('click', function() {
+                    if (statusCheckInterval) {
+                        clearInterval(statusCheckInterval);
+                        statusCheckInterval = null;
+                    }
+                });
+                @endif
             });
         </script>
     @endpush

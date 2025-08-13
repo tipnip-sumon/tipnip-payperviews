@@ -1163,6 +1163,7 @@ Route::controller(WithdrawController::class)->middleware('auth')->group(function
 
 Route::controller(DepositController::class)->middleware('auth')->group(function(){
     Route::get('/deposit', 'index')->name('deposit.index');
+    Route::get('/deposit/status', 'status')->name('user.deposit.status');
     Route::post('insert', 'depositInsert')->name('deposit.insert');
     Route::get('confirm', 'depositConfirm')->name('deposit.confirm');
     Route::get('manual', 'manualDepositConfirm')->name('deposit.manual.confirm');

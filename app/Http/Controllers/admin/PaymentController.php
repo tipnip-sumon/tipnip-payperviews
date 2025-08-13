@@ -162,52 +162,76 @@ class PaymentController extends Controller
         $pageTitle = 'Approved Deposits';
         
         if ($request->ajax()) {
-            $deposits = Deposit::with(['user', 'gateway'])
-                ->where('status', 1)
-                ->when($request->search, function($query) use ($request) {
-                    return $query->whereHas('user', function($q) use ($request) {
-                        $q->where('username', 'like', '%' . $request->search . '%')
-                          ->orWhere('email', 'like', '%' . $request->search . '%');
-                    });
-                })
-                ->latest();
+            try {
+                $deposits = Deposit::select(['id', 'user_id', 'method_code', 'amount', 'charge', 'status', 'updated_at'])
+                    ->with(['user:id,username,email,avatar', 'gateway:id,code,name'])
+                    ->where('status', 1)
+                    ->latest('updated_at');
 
-            return DataTables::of($deposits)
-                ->addColumn('user', function ($row) {
-                    $user = $row->user;
-                    if (!$user) return 'N/A';
-                    
-                    // Safely get username and email with fallbacks
-                    $username = is_string($user->username) ? $user->username : 'Unknown';
-                    $email = is_string($user->email) ? $user->email : 'No email';
-                    
-                    return '<div class="d-flex align-items-center">' .
-                           '<img src="' . $user->avatar_url . '" class="rounded-circle me-2" style="width: 32px; height: 32px;">' .
-                           '<div>' .
-                           '<div class="fw-medium">' . e($username) . '</div>' .
-                           '<small class="text-muted">' . e($email) . '</small>' .
-                           '</div></div>';
-                })
-                ->addColumn('gateway', function ($row) {
-                    return $row->gateway ? $row->gateway->name : 'N/A';
-                })
-                ->addColumn('amount', function ($row) {
-                    return '<div class="text-end">' .
-                           '<div class="fw-bold text-success">$' . number_format($row->amount, 2) . '</div>' .
-                           '<small class="text-muted">+ $' . number_format($row->charge, 2) . ' fee</small>' .
-                           '</div>';
-                })
-                ->addColumn('approved_at', function ($row) {
-                    return '<div>' .
-                           '<div>' . $row->updated_at->format('M d, Y') . '</div>' .
-                           '<small class="text-muted">' . $row->updated_at->format('h:i A') . '</small>' .
-                           '</div>';
-                })
-                ->addColumn('actions', function ($row) {
-                    return '<a href="' . route('admin.deposits.show', $row->id) . '" class="btn btn-sm btn-info" title="View Details"><i class="fas fa-eye"></i></a>';
-                })
-                ->rawColumns(['user', 'amount', 'approved_at', 'actions'])
-                ->make(true);
+                return DataTables::of($deposits)
+                    ->addColumn('user', function ($row) {
+                        try {
+                            $user = $row->user;
+                            if (!$user) return 'N/A';
+                            
+                            return '<div class="d-flex align-items-center">' .
+                                   '<div>' .
+                                   '<div class="fw-medium">' . e($user->username ?? 'Unknown') . '</div>' .
+                                   '<small class="text-muted">' . e($user->email ?? 'No email') . '</small>' .
+                                   '</div></div>';
+                        } catch (\Exception $e) {
+                            Log::error('User column error: ' . $e->getMessage());
+                            return 'Error loading user';
+                        }
+                    })
+                    ->addColumn('gateway', function ($row) {
+                        try {
+                            return $row->gateway ? e($row->gateway->name) : 'N/A';
+                        } catch (\Exception $e) {
+                            Log::error('Gateway column error: ' . $e->getMessage());
+                            return 'N/A';
+                        }
+                    })
+                    ->addColumn('amount', function ($row) {
+                        try {
+                            $amount = (float) $row->amount;
+                            $charge = (float) ($row->charge ?? 0);
+                            
+                            return '<div class="text-end">' .
+                                   '<div class="fw-bold text-success">$' . number_format($amount, 2) . '</div>' .
+                                   '<small class="text-muted">+ $' . number_format($charge, 2) . ' fee</small>' .
+                                   '</div>';
+                        } catch (\Exception $e) {
+                            Log::error('Amount column error: ' . $e->getMessage());
+                            return '$0.00';
+                        }
+                    })
+                    ->addColumn('approved_at', function ($row) {
+                        try {
+                            return '<div>' .
+                                   '<div>' . $row->updated_at->format('M d, Y') . '</div>' .
+                                   '<small class="text-muted">' . $row->updated_at->format('h:i A') . '</small>' .
+                                   '</div>';
+                        } catch (\Exception $e) {
+                            Log::error('Approved date column error: ' . $e->getMessage());
+                            return 'N/A';
+                        }
+                    })
+                    ->addColumn('actions', function ($row) {
+                        try {
+                            return '<a href="' . route('admin.deposits.show', $row->id) . '" class="btn btn-sm btn-info" title="View Details"><i class="fas fa-eye"></i></a>';
+                        } catch (\Exception $e) {
+                            Log::error('Actions column error: ' . $e->getMessage());
+                            return '';
+                        }
+                    })
+                    ->rawColumns(['user', 'amount', 'approved_at', 'actions'])
+                    ->make(true);
+            } catch (\Exception $e) {
+                Log::error('DataTables error in approved deposits: ' . $e->getMessage());
+                Log::error('DataTables error trace: ' . $e->getTraceAsString());
+                return response()->json(['error' => 'Unable to load data: ' . $e->getMessage()], 500);
+            }
         }
 
         $stats = [

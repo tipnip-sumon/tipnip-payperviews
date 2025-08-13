@@ -24,6 +24,7 @@ class DatabaseSeeder extends Seeder
                     LotterySettingsSeeder::class, // Lottery settings
                     CommissionLevelSettingsSeeder::class, // Commission levels
                     VideoLinkSeeder::class, // Video links data
+                    GatewaySeeder::class, // Payment gateways like NOWPayments, CoinPayments etc.
                     GatewayCurrencySeeder::class, // Gateway currencies for payment methods
             ]);
     }
