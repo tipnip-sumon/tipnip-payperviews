@@ -34,14 +34,7 @@ class Authenticate extends Middleware
      */
     protected function unauthenticated($request, array $guards)
     {
-        $response = redirect($this->redirectTo($request))
-            ->with('info', 'Please log in to continue.');
-            
-        // Add cache control headers to prevent caching issues
-        $response->headers->set('Cache-Control', 'no-cache, no-store, must-revalidate');
-        $response->headers->set('Pragma', 'no-cache');
-        $response->headers->set('Expires', 'Thu, 01 Jan 1970 00:00:00 GMT');
-        
+        // In Laravel 11, we should just throw the exception and let it handle the redirect
         throw new \Illuminate\Auth\AuthenticationException(
             'Unauthenticated.', $guards, $this->redirectTo($request)
         );

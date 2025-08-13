@@ -533,11 +533,11 @@ Route::prefix('admin')->group(function () {
         Route::get('/deposits/pending', 'pending')->name('admin.deposits.pending');
         Route::get('/deposits/approved', 'approved')->name('admin.deposits.approved');
         Route::get('/deposits/rejected', 'rejected')->name('admin.deposits.rejected');
+        Route::get('/deposits/export', 'export')->name('admin.deposits.export');
         Route::get('/deposits/{id}', 'show')->name('admin.deposits.show');
         Route::post('/deposits/{id}/approve', 'approve')->name('admin.deposits.approve');
         Route::post('/deposits/{id}/reject', 'reject')->name('admin.deposits.reject');
         Route::post('/deposits/bulk-action', 'bulkAction')->name('admin.deposits.bulk-action');
-        Route::get('/deposits/export', 'export')->name('admin.deposits.export');
     });
     
     // Withdrawal Management Routes
