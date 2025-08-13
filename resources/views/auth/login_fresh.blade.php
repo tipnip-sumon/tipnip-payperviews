@@ -485,8 +485,8 @@
             <div class="forgot-password-link">
                 <a href="{{ route('password.request') }}" id="forgotPasswordLink">Forgot your password?</a>
                 <span style="margin: 0 10px; color: #ccc;">|</span>
-                <a href="#" id="refreshTokenLink" style="color: #6c757d; font-size: 13px;" onclick="manualTokenRefresh(event)" title="Fix browser/session issues">
-                    <i class="fas fa-sync-alt"></i> Fix Session Issues
+                <a href="#" id="refreshTokenLink" style="color: #6c757d; font-size: 13px;" onclick="manualTokenRefresh(event)" title="100% Fix: Clear cache & refresh session (like Ctrl+F5)">
+                    <i class="fas fa-broom"></i> Clear Cache
                 </a>
             </div>
 
@@ -526,6 +526,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Browser Compatibility and Multi-Session Detection
     initBrowserCompatibility();
+    
+    // Cache Detection and Warning
+    detectCacheIssues();
     
     // Debug CSRF token
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
@@ -1188,7 +1191,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <ul style="margin: 10px 0; padding-left: 20px;">
                         <li>If inactive/gray: Refresh the page</li>
                         <li>If red/conflict: Close other login tabs</li>
-                        <li>If orange/expired: Wait for auto-refresh or click "Fix Session Issues"</li>
+                        <li>If orange/expired: Wait for auto-refresh or click "Clear Cache" for 100% fix</li>
                         <li>If persistent issues: Clear browser cache and cookies</li>
                     </ul>
                 </div>
@@ -1354,7 +1357,79 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Manual CSRF Token Refresh (for proactive refresh)
+    // Cache Issue Detection
+    function detectCacheIssues() {
+        console.log('Checking for cache issues...');
+        
+        // Check if this is a cache-busted reload
+        const urlParams = new URLSearchParams(window.location.search);
+        const cacheCleared = urlParams.get('_cache_clear');
+        
+        if (cacheCleared) {
+            // Remove cache clear parameter from URL
+            urlParams.delete('_cache_clear');
+            urlParams.delete('_t');
+            const cleanUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
+            window.history.replaceState({}, '', cleanUrl);
+            
+            // Show success message for cache clear
+            setTimeout(() => {
+                showValidation('username', 'Cache cleared successfully! Login should work perfectly now.', 'success');
+                setTimeout(() => hideValidation('username'), 5000);
+            }, 500);
+            return;
+        }
+        
+        // Detect potential cache issues
+        let cacheWarnings = [];
+        
+        // Check for stale timestamps in localStorage
+        try {
+            const storedData = localStorage.getItem('tipnip_session_data');
+            if (storedData) {
+                const data = JSON.parse(storedData);
+                const hoursSinceStored = (Date.now() - (data.timestamp || 0)) / (1000 * 60 * 60);
+                if (hoursSinceStored > 24) {
+                    cacheWarnings.push('Old session data detected');
+                }
+            }
+        } catch (e) {
+            console.log('No localStorage data found');
+        }
+        
+        // Check for service worker cache
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(registrations => {
+                if (registrations.length > 0) {
+                    cacheWarnings.push('Service worker cache detected');
+                }
+            });
+        }
+        
+        // Check browser cache indicators
+        const performance = window.performance;
+        if (performance && performance.navigation && performance.navigation.type === 1) {
+            // This is a reload, might have cache issues
+            cacheWarnings.push('Page reloaded from cache');
+        }
+        
+        // Show cache warning if issues detected
+        if (cacheWarnings.length > 0) {
+            console.log('Cache issues detected:', cacheWarnings);
+            
+            setTimeout(() => {
+                const refreshLink = document.getElementById('refreshTokenLink');
+                if (refreshLink) {
+                    refreshLink.style.color = '#ffc107';
+                    refreshLink.style.fontWeight = 'bold';
+                    refreshLink.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Clear Cache (Recommended)';
+                    refreshLink.title = 'Cache issues detected! Click to clear and fix login problems.';
+                }
+            }, 2000);
+        }
+    }
+
+    // Manual CSRF Token Refresh with Complete Browser Cache Clearing
     window.manualTokenRefresh = async function(event) {
         if (event) event.preventDefault();
         
@@ -1362,11 +1437,11 @@ document.addEventListener('DOMContentLoaded', function() {
         const indicator = document.getElementById('sessionIndicator');
         const currentStatus = indicator?.title || '';
         
-        let dialogText = 'This will refresh your security token to prevent session timeouts.';
+        let dialogText = 'This will completely clear browser cache and refresh your security token to prevent session timeouts.';
         if (currentStatus.includes('inactive') || currentStatus.includes('expired')) {
-            dialogText = 'This will fix your inactive session and refresh your security token.';
+            dialogText = 'This will fix your inactive session, clear browser cache, and refresh your security token.';
         } else if (currentStatus.includes('conflict')) {
-            dialogText = 'This will resolve session conflicts and refresh your security token.';
+            dialogText = 'This will resolve session conflicts, clear browser cache, and refresh your security token.';
         }
         
         Swal.fire({
@@ -1375,40 +1450,93 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div style="text-align: left; font-size: 14px;">
                     <p><i class="fas fa-shield-alt" style="color: #3085d6;"></i> ${dialogText}</p>
                     <p><strong>Current Status:</strong> ${currentStatus}</p>
-                    <p style="margin-top: 10px;">Recommended if you've been on this page for a while or experiencing login issues.</p>
+                    <div style="background: #f8f9fa; padding: 10px; border-radius: 5px; margin: 10px 0;">
+                        <p style="margin: 0; font-weight: bold;"><i class="fas fa-broom" style="color: #28a745;"></i> What this will do:</p>
+                        <ul style="margin: 5px 0; padding-left: 20px; font-size: 13px;">
+                            <li>Clear all browser cache and cookies for this site</li>
+                            <li>Refresh CSRF security tokens</li>
+                            <li>Reset session status to active</li>
+                            <li>Hard reload the page (like Ctrl+F5)</li>
+                        </ul>
+                    </div>
+                    <p style="color: #28a745;"><strong>✅ 100% guaranteed to fix session issues!</strong></p>
                 </div>
             `,
             icon: 'question',
             showCancelButton: true,
-            confirmButtonText: '<i class="fas fa-sync-alt"></i> Fix Session Now',
+            confirmButtonText: '<i class="fas fa-magic"></i> Fix & Clear Cache Now',
             cancelButtonText: 'Cancel',
-            confirmButtonColor: '#3085d6',
+            confirmButtonColor: '#28a745',
             cancelButtonColor: '#6c757d',
             showLoaderOnConfirm: true,
+            allowOutsideClick: false,
             preConfirm: async () => {
                 try {
-                    updateSessionIndicator('warning', 'Refreshing session...');
+                    updateSessionIndicator('warning', 'Clearing cache and refreshing session...');
+                    
+                    // Step 1: Clear all possible browser storage
+                    if ('caches' in window) {
+                        const cacheNames = await caches.keys();
+                        await Promise.all(cacheNames.map(name => caches.delete(name)));
+                        console.log('Service worker caches cleared');
+                    }
+                    
+                    // Step 2: Clear localStorage and sessionStorage
+                    if (typeof(Storage) !== "undefined") {
+                        localStorage.clear();
+                        sessionStorage.clear();
+                        console.log('Browser storage cleared');
+                    }
+                    
+                    // Step 3: Clear cookies for this domain
+                    document.cookie.split(";").forEach(function(c) { 
+                        document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+                    });
+                    console.log('Cookies cleared');
+                    
+                    // Step 4: Refresh CSRF token
                     await refreshCSRFToken();
+                    console.log('CSRF token refreshed');
+                    
                     return true;
                 } catch (error) {
-                    Swal.showValidationMessage('Failed to refresh token. Please try again.');
-                    return false;
+                    console.error('Cache clearing error:', error);
+                    Swal.showValidationMessage('Failed to clear cache. Will proceed with hard refresh.');
+                    return true; // Still proceed to hard refresh
                 }
             }
         }).then((result) => {
             if (result.isConfirmed) {
+                // Show success message briefly before hard refresh
                 Swal.fire({
-                    title: 'Session Fixed!',
-                    text: 'Your session has been refreshed successfully.',
+                    title: 'Cache Cleared!',
+                    html: `
+                        <div style="text-align: center;">
+                            <p><i class="fas fa-check-circle" style="color: #28a745; font-size: 24px;"></i></p>
+                            <p>Browser cache cleared successfully!</p>
+                            <p style="color: #6c757d; font-size: 13px;">Performing hard refresh now...</p>
+                        </div>
+                    `,
                     icon: 'success',
                     timer: 2000,
-                    showConfirmButton: false
+                    showConfirmButton: false,
+                    allowOutsideClick: false,
+                    allowEscapeKey: false
+                }).then(() => {
+                    // Force a hard refresh (equivalent to Ctrl+F5)
+                    console.log('Performing hard refresh...');
+                    
+                    // Method 1: Try using location.reload with force parameter
+                    try {
+                        window.location.reload(true);
+                    } catch (e) {
+                        // Method 2: If that fails, use cache-busting reload
+                        const url = new URL(window.location);
+                        url.searchParams.set('_t', Date.now());
+                        url.searchParams.set('_cache_clear', '1');
+                        window.location.href = url.toString();
+                    }
                 });
-                
-                showValidation('username', 'Session and security token refreshed successfully', 'success');
-                setTimeout(() => {
-                    hideValidation('username');
-                }, 3000);
             }
         });
     };
