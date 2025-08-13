@@ -35,7 +35,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'auth' => Authenticate::class,
             'auth.admin' => AdminAuth::class,  // Custom admin session middleware
-            // 'prevent-back' => PreventBack::class,
+            'prevent-back' => PreventBack::class,
             'admin.permission' => AdminPermissionMiddleware::class,
             'permission' => PermissionMiddleware::class,
             'cache.control' => CacheControlMiddleware::class,
