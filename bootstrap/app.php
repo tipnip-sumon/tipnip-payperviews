@@ -2,7 +2,7 @@
 
 use App\Http\Middleware\AdminAuth;
 use App\Http\Middleware\ValidUser;
-// use App\Http\Middleware\PreventBack;
+use App\Http\Middleware\PreventBack;
 use App\Http\Middleware\AdminPermissionMiddleware;
 use App\Http\Middleware\PermissionMiddleware;
 use App\Http\Middleware\CacheControlMiddleware;
