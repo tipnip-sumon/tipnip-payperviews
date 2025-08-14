@@ -55,6 +55,35 @@ Route::get('/storage/{path}', function ($path) {
 })->where('path', '.*');
 
 // =============================================================================
+// SERVICE WORKER FALLBACK ROUTES
+// =============================================================================
+
+// Service worker fallback routes
+Route::get('/sw.js', function () {
+    $path = public_path('sw.js');
+    if (file_exists($path)) {
+        return response()->file($path, [
+            'Content-Type' => 'application/javascript',
+            'Cache-Control' => 'no-cache, no-store, must-revalidate',
+            'Service-Worker-Allowed' => '/'
+        ]);
+    }
+    abort(404);
+});
+
+Route::get('/font-sw.js', function () {
+    $path = public_path('font-sw.js');
+    if (file_exists($path)) {
+        return response()->file($path, [
+            'Content-Type' => 'application/javascript', 
+            'Cache-Control' => 'no-cache, no-store, must-revalidate',
+            'Service-Worker-Allowed' => '/'
+        ]);
+    }
+    abort(404);
+});
+
+// =============================================================================
 // PUBLIC ROUTES
 // =============================================================================
 
