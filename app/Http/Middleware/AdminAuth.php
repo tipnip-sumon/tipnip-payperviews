@@ -17,15 +17,22 @@ class AdminAuth
     {
         $path = $request->path();
         $adminSession = $request->session()->get('admin');
-        if ($path == 'admin' || session('admin')) {
-            if ($adminSession) {
-                return redirect()->route('admin.dashboard')->with('success', 'Already Logged In.');
-            }
-        } else {
-            if (!$adminSession) {
-                return redirect()->route('admin.index')->with('error', 'Please Login First.');
+        
+        // Only apply admin logic for admin routes
+        if (str_starts_with($path, 'admin')) {
+            if ($path == 'admin') {
+                // Admin login page - redirect if already logged in
+                if ($adminSession) {
+                    return redirect()->route('admin.dashboard')->with('success', 'Already Logged In.');
+                }
+            } else {
+                // Other admin routes - require admin session
+                if (!$adminSession) {
+                    return redirect()->route('admin.index')->with('error', 'Please Login First.');
+                }
             }
         }
+        
         return $next($request);
     }
 }
