@@ -16,7 +16,7 @@ class ModalService
     public function getModalsToShow()
     {
         $user = Auth::user();
-        $currentRoute = Request::route()->getName();
+        $currentRoute = Request::route() ? Request::route()->getName() : null;
         $isGuest = !$user;
         
         // Get active modals from database
@@ -101,6 +101,11 @@ class ModalService
         $excludeRoutes = $additionalSettings['exclude_routes'] ?? [];
         $includeRoutes = $additionalSettings['include_routes'] ?? [];
         
+        // If no current route (e.g., command line), allow all
+        if ($currentRoute === null) {
+            return true;
+        }
+        
         // If route is in exclude list, don't show
         if (in_array($currentRoute, $excludeRoutes)) {
             return false;
@@ -141,6 +146,11 @@ class ModalService
     private function checkSessionTime($additionalSettings)
     {
         $minimumSessionTime = $additionalSettings['minimum_session_time'] ?? 0;
+        
+        // Skip session time check if no session exists (e.g., API calls, command line)
+        if (!Session::isStarted()) {
+            return true;
+        }
         
         if ($minimumSessionTime > 0) {
             $sessionStart = Session::get('session_start_time', now());
@@ -258,7 +268,15 @@ class ModalService
             'subtitle' => $modal->subtitle,
             'heading' => $modal->heading,
             'description' => $modal->description,
+            'is_active' => (bool) $modal->is_active,
+            'show_frequency' => $modal->show_frequency,
+            'max_shows' => $modal->max_shows,
             'delay_seconds' => $modal->delay_seconds,
+            'minimum_session_time' => $additionalSettings['minimum_session_time'] ?? 0,
+            'show_on_mobile_only' => $additionalSettings['show_on_mobile_only'] ?? false,
+            'show_on_desktop_only' => $additionalSettings['show_on_desktop_only'] ?? false,
+            'include_routes' => $additionalSettings['include_routes'] ?? [],
+            'exclude_routes' => $additionalSettings['exclude_routes'] ?? [],
             'custom_css' => $additionalSettings['custom_css'] ?? '',
             'custom_js' => $additionalSettings['custom_js'] ?? '',
             'settings' => $additionalSettings

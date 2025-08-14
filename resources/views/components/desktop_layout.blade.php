@@ -10,6 +10,9 @@
     <meta name="Author" content="Spruko Technologies Private Limited">
     <meta name="keywords" content="admin,admin dashboard,admin panel,admin template,bootstrap,clean,dashboard,flat,jquery,modern,responsive,premium admin templates,responsive admin,ui,ui kit.">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    @if(auth()->check())
+    <meta name="user-authenticated" content="true">
+    @endif
 
     <!-- Favicon -->
     @php
@@ -1241,6 +1244,16 @@
             visibility: visible;
         }
 
+        /* Mobile modal adjustments */
+        .dynamic-modal.mobile-modal {
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(3px);
+        }
+
+        .dynamic-modal.small-mobile-modal {
+            background: rgba(0, 0, 0, 0.9);
+        }
+
         .modal-content-wrapper {
             position: absolute;
             top: 50%;
@@ -1253,6 +1266,7 @@
             max-height: 90%;
             overflow: hidden;
             transition: all 0.3s ease;
+            width: 600px;
         }
 
         .dynamic-modal.show .modal-content-wrapper {
@@ -1316,15 +1330,134 @@
         @media (max-width: 768px) {
             .modal-content-wrapper {
                 max-width: 95%;
-                margin: 1rem;
+                width: calc(100vw - 20px);
+                max-height: 85vh;
+                margin: 10px;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%) scale(0.8);
+                border-radius: 12px;
+            }
+            
+            .dynamic-modal.show .modal-content-wrapper {
+                transform: translate(-50%, -50%) scale(1);
             }
             
             .modal-body-custom {
                 padding: 1.5rem;
+                max-height: 60vh;
+                overflow-y: auto;
             }
             
             .modal-header-custom {
                 padding: 1rem;
+                border-radius: 12px 12px 0 0;
+            }
+            
+            .modal-footer-custom {
+                padding: 1rem;
+                position: sticky;
+                bottom: 0;
+                background: #f8f9fa;
+                border-radius: 0 0 12px 12px;
+            }
+            
+            .modal-title-custom {
+                font-size: 1.25rem;
+            }
+            
+            .modal-subtitle-custom {
+                font-size: 0.8rem;
+            }
+            
+            .modal-close-btn {
+                top: 10px;
+                right: 15px;
+                width: 30px;
+                height: 30px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .modal-content-wrapper {
+                max-width: 98%;
+                width: calc(100vw - 10px);
+                max-height: 90vh;
+                margin: 5px;
+                border-radius: 8px;
+            }
+            
+            .modal-body-custom {
+                padding: 1rem;
+                max-height: 65vh;
+            }
+            
+            .modal-header-custom {
+                padding: 0.75rem;
+                border-radius: 8px 8px 0 0;
+            }
+            
+            .modal-footer-custom {
+                padding: 0.75rem;
+                border-radius: 0 0 8px 8px;
+            }
+            
+            .modal-title-custom {
+                font-size: 1.1rem;
+                line-height: 1.3;
+            }
+            
+            .modal-subtitle-custom {
+                font-size: 0.75rem;
+                margin-top: 0.25rem;
+            }
+            
+            .modal-close-btn {
+                top: 8px;
+                right: 12px;
+                width: 28px;
+                height: 28px;
+                font-size: 0.9rem;
+            }
+            
+            .btn {
+                padding: 0.5rem 1rem;
+                font-size: 0.9rem;
+            }
+        }
+
+        @media (max-width: 320px) {
+            .modal-content-wrapper {
+                max-width: 100%;
+                width: 100vw;
+                max-height: 95vh;
+                margin: 0;
+                border-radius: 0;
+                top: 50%;
+                left: 50%;
+            }
+            
+            .modal-body-custom {
+                padding: 0.75rem;
+                max-height: 70vh;
+            }
+            
+            .modal-header-custom {
+                padding: 0.5rem;
+                border-radius: 0;
+            }
+            
+            .modal-footer-custom {
+                padding: 0.5rem;
+                border-radius: 0;
+            }
+            
+            .modal-title-custom {
+                font-size: 1rem;
+            }
+            
+            .modal-subtitle-custom {
+                font-size: 0.7rem;
             }
         }
     </style>
@@ -1341,6 +1474,12 @@
             }
 
             init() {
+                // Only initialize if we're on a user-facing page (not admin)
+                if (window.location.pathname.startsWith('/admin')) {
+                    console.debug('Modal system disabled for admin pages');
+                    return;
+                }
+                
                 // Load modals from server
                 this.loadModals();
                 
@@ -1352,21 +1491,79 @@
 
             async loadModals() {
                 try {
-                    const response = await fetch('/api/modals/active', {
+                    // Check if CSRF token exists
+                    const csrfToken = document.querySelector('meta[name="csrf-token"]');
+                    if (!csrfToken) {
+                        console.debug('No CSRF token found, using fallback modals');
+                        this.loadFallbackModals();
+                        return;
+                    }
+                    
+                    // Use the correct API endpoint
+                    const response = await fetch('/api/modals/get-modals', {
                         headers: {
                             'X-Requested-With': 'XMLHttpRequest',
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                            'X-CSRF-TOKEN': csrfToken.content
                         }
                     });
                     
-                    if (response.ok) {
-                        this.modals = await response.json();
-                        setTimeout(() => {
-                            this.checkModalDisplay();
-                        }, 2000); // Initial check after 2 seconds
+                    // Check if response is actually JSON
+                    const contentType = response.headers.get('content-type');
+                    if (response.ok && contentType && contentType.includes('application/json')) {
+                        const result = await response.json();
+                        if (result.success && result.data) {
+                            this.modals = result.data;
+                            console.info('Loaded ' + result.data.length + ' modals from API (count: ' + (result.count || result.data.length) + ')');
+                            console.debug('Modal data:', result.data);
+                            setTimeout(() => {
+                                this.checkModalDisplay();
+                            }, 2000); // Initial check after 2 seconds
+                        } else {
+                            console.debug('No active modals available from API, using fallback system');
+                            this.loadFallbackModals();
+                        }
+                    } else {
+                        // API endpoint doesn't exist or returns HTML, use fallback
+                        console.debug('Modal API response invalid, using fallback system');
+                        this.loadFallbackModals();
                     }
                 } catch (error) {
-                    console.warn('Could not load modals:', error);
+                    console.debug('Modal API unavailable (' + error.message + '), using fallback system');
+                    this.loadFallbackModals();
+                }
+            }
+
+            loadFallbackModals() {
+                // Fallback modal system when API is not available
+                this.modals = [
+                    {
+                        id: 'welcome',
+                        title: 'Welcome to PayPerViews!',
+                        subtitle: 'Get started with your investment journey',
+                        heading: 'Quick Start Guide',
+                        description: '<p>Thank you for joining us! Here are some quick tips to get you started:</p><ul><li>Complete your profile information</li><li>Verify your email address</li><li>Make your first deposit</li><li>Explore our investment plans</li></ul>',
+                        is_active: true,
+                        show_frequency: 'session',
+                        delay_seconds: 3,
+                        minimum_session_time: 5,
+                        show_on_mobile_only: false,
+                        show_on_desktop_only: false,
+                        include_routes: [],
+                        exclude_routes: ['/admin', '/login', '/register'],
+                        max_shows: 1
+                    }
+                ];
+                
+                console.debug('Fallback modal system initialized with ' + this.modals.length + ' modal(s)');
+                
+                // Only show for specific conditions
+                const isLoggedIn = document.querySelector('meta[name="user-authenticated"]');
+                const isAdminPage = window.location.pathname.startsWith('/admin');
+                
+                if (isLoggedIn && !isAdminPage) {
+                    setTimeout(() => {
+                        this.checkModalDisplay();
+                    }, 3000);
                 }
             }
 
@@ -1374,8 +1571,20 @@
                 const currentRoute = window.location.pathname;
                 const sessionTime = (Date.now() - this.sessionStartTime) / 1000;
 
+                console.debug('Checking modal display:', {
+                    currentRoute: currentRoute,
+                    sessionTime: sessionTime,
+                    totalModals: this.modals.length
+                });
+
                 for (const modal of this.modals) {
+                    console.debug('Checking modal:', modal.modal_name || modal.id, {
+                        modal: modal,
+                        shouldShow: this.shouldShowModal(modal, currentRoute, sessionTime)
+                    });
+                    
                     if (this.shouldShowModal(modal, currentRoute, sessionTime)) {
+                        console.info('Showing modal:', modal.modal_name || modal.id);
                         this.showModal(modal);
                         break; // Show only one modal at a time
                     }
@@ -1383,20 +1592,52 @@
             }
 
             shouldShowModal(modal, currentRoute, sessionTime) {
+                console.debug(`Checking modal ${modal.modal_name}:`);
+                
                 // Check if modal is active
-                if (!modal.is_active) return false;
+                if (!modal.is_active) {
+                    console.debug(`- Modal ${modal.modal_name} is not active`);
+                    return false;
+                }
+                console.debug(`- Modal ${modal.modal_name} is active ✓`);
 
                 // Check if modal should be shown on current route
-                if (modal.exclude_routes && modal.exclude_routes.includes(currentRoute)) return false;
-                if (modal.include_routes && modal.include_routes.length > 0 && !modal.include_routes.includes(currentRoute)) return false;
+                console.debug(`- Current route: ${currentRoute}`);
+                console.debug(`- Exclude routes:`, modal.exclude_routes);
+                console.debug(`- Include routes:`, modal.include_routes);
+                
+                if (modal.exclude_routes && modal.exclude_routes.includes(currentRoute)) {
+                    console.debug(`- Route ${currentRoute} is excluded`);
+                    return false;
+                }
+                
+                if (modal.include_routes && modal.include_routes.length > 0 && !modal.include_routes.includes(currentRoute)) {
+                    console.debug(`- Route ${currentRoute} is not in include list`);
+                    return false;
+                }
+                console.debug(`- Route check passed ✓`);
 
                 // Check session time requirement
-                if (sessionTime < (modal.minimum_session_time || 30)) return false;
+                console.debug(`- Session time: ${sessionTime}s, Required: ${modal.minimum_session_time || 0}s`);
+                if (sessionTime < (modal.minimum_session_time || 0)) {
+                    console.debug(`- Session time requirement not met (${sessionTime} < ${modal.minimum_session_time})`);
+                    return false;
+                }
+                console.debug(`- Session time check passed ✓`);
 
                 // Check device restrictions
                 const isMobile = window.innerWidth <= 768;
-                if (modal.show_on_mobile_only && !isMobile) return false;
-                if (modal.show_on_desktop_only && isMobile) return false;
+                console.debug(`- Is mobile: ${isMobile}, Show on mobile only: ${modal.show_on_mobile_only}, Show on desktop only: ${modal.show_on_desktop_only}`);
+                
+                if (modal.show_on_mobile_only && !isMobile) {
+                    console.debug(`- Mobile only restriction failed`);
+                    return false;
+                }
+                if (modal.show_on_desktop_only && isMobile) {
+                    console.debug(`- Desktop only restriction failed`);
+                    return false;
+                }
+                console.debug(`- Device restrictions passed ✓`);
 
                 // Check frequency rules
                 const modalKey = `modal_${modal.id}`;
@@ -1408,19 +1649,33 @@
                 }
 
                 const modalData = this.shownModals[modalKey];
+                console.debug(`- Frequency: ${modal.show_frequency}, Modal data:`, modalData);
 
+                let frequencyResult;
                 switch (modal.show_frequency) {
                     case 'once':
-                        return modalData.count === 0;
+                        frequencyResult = modalData.count === 0;
+                        console.debug(`- Once frequency: count=${modalData.count}, result=${frequencyResult}`);
+                        return frequencyResult;
                     case 'daily':
-                        return !modalData.dates.includes(today);
+                        frequencyResult = !modalData.dates.includes(today);
+                        console.debug(`- Daily frequency: today=${today}, dates=${modalData.dates}, result=${frequencyResult}`);
+                        return frequencyResult;
                     case 'weekly':
-                        return modalData.lastShown !== thisWeek;
+                        frequencyResult = modalData.lastShown !== thisWeek;
+                        console.debug(`- Weekly frequency: thisWeek=${thisWeek}, lastShown=${modalData.lastShown}, result=${frequencyResult}`);
+                        return frequencyResult;
                     case 'session':
-                        return !sessionStorage.getItem(`modal_${modal.id}_shown`);
+                        const sessionKey = `modal_${modal.id}_shown`;
+                        const sessionShown = sessionStorage.getItem(sessionKey);
+                        frequencyResult = !sessionShown;
+                        console.debug(`- Session frequency: sessionKey=${sessionKey}, sessionShown=${sessionShown}, result=${frequencyResult}`);
+                        return frequencyResult;
                 }
 
-                return modalData.count < modal.max_shows;
+                frequencyResult = modalData.count < modal.max_shows;
+                console.debug(`- Default frequency: count=${modalData.count}, max=${modal.max_shows}, result=${frequencyResult}`);
+                return frequencyResult;
             }
 
             getWeekKey() {
@@ -1433,9 +1688,18 @@
             showModal(modal) {
                 if (this.currentModal) return; // Don't show if another modal is open
 
+                // Check if mobile device
+                const isMobile = window.innerWidth <= 768;
+                const isSmallMobile = window.innerWidth <= 480;
+                
+                // Adjust modal content for mobile
+                let modalClasses = 'dynamic-modal';
+                if (isMobile) modalClasses += ' mobile-modal';
+                if (isSmallMobile) modalClasses += ' small-mobile-modal';
+
                 // Create modal HTML
                 const modalHtml = `
-                    <div class="dynamic-modal" id="modal-${modal.id}">
+                    <div class="${modalClasses}" id="modal-${modal.id}">
                         <div class="modal-content-wrapper">
                             <div class="modal-header-custom">
                                 <button class="modal-close-btn" onclick="window.modalSystem.closeModal()">
@@ -1450,7 +1714,7 @@
                             </div>
                             <div class="modal-footer-custom">
                                 <button class="btn btn-primary" onclick="window.modalSystem.closeModal()">
-                                    Got it!
+                                    ${isMobile ? 'OK' : 'Got it!'}
                                 </button>
                             </div>
                         </div>
@@ -1462,6 +1726,11 @@
                 
                 const modalElement = document.getElementById(`modal-${modal.id}`);
                 this.currentModal = { element: modalElement, data: modal };
+
+                // Prevent body scroll on mobile when modal is open
+                if (isMobile) {
+                    document.body.style.overflow = 'hidden';
+                }
 
                 // Show with delay
                 setTimeout(() => {
@@ -1477,6 +1746,15 @@
                         this.closeModal();
                     }
                 });
+                
+                // Handle escape key
+                const escapeHandler = (e) => {
+                    if (e.key === 'Escape') {
+                        this.closeModal();
+                        document.removeEventListener('keydown', escapeHandler);
+                    }
+                };
+                document.addEventListener('keydown', escapeHandler);
             }
 
             closeModal() {
@@ -1484,6 +1762,9 @@
 
                 const { element } = this.currentModal;
                 element.classList.remove('show');
+                
+                // Restore body scroll
+                document.body.style.overflow = '';
                 
                 setTimeout(() => {
                     element.remove();
@@ -1527,23 +1808,50 @@
 
             async sendTrackingData(modal) {
                 try {
-                    await fetch('/api/modals/track', {
+                    // Check if CSRF token exists
+                    const csrfToken = document.querySelector('meta[name="csrf-token"]');
+                    if (!csrfToken) {
+                        console.debug('No CSRF token found, skipping modal tracking');
+                        return;
+                    }
+                    
+                    const payload = {
+                        modal_name: modal.modal_name || modal.id
+                    };
+                    
+                    console.debug('Sending modal tracking request:', {
+                        url: '/api/modals/record-show',
+                        payload: payload,
+                        modalData: modal
+                    });
+                    
+                    // Send tracking data to the correct endpoint
+                    const response = await fetch('/api/modals/record-show', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
                             'X-Requested-With': 'XMLHttpRequest',
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                            'X-CSRF-TOKEN': csrfToken.content
                         },
-                        body: JSON.stringify({
-                            modal_id: modal.id,
-                            action: 'shown',
-                            user_agent: navigator.userAgent,
-                            screen_resolution: `${screen.width}x${screen.height}`,
-                            route: window.location.pathname
-                        })
+                        body: JSON.stringify(payload)
                     });
+                    
+                    // Check if response is valid
+                    if (response.ok) {
+                        const result = await response.json();
+                        if (result.success) {
+                            console.debug('Modal tracking recorded successfully for:', modal.modal_name || modal.id);
+                        } else {
+                            console.debug('Modal tracking failed:', result.message, result.errors || '');
+                        }
+                    } else {
+                        const errorText = await response.text();
+                        console.debug('Modal tracking HTTP error:', response.status, errorText);
+                        throw new Error(`HTTP ${response.status}`);
+                    }
                 } catch (error) {
-                    console.warn('Could not track modal:', error);
+                    // Silently fail if tracking API is not available
+                    console.debug('Modal tracking not available:', error.message);
                 }
             }
         }
