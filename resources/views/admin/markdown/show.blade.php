@@ -173,41 +173,21 @@
                 </div>
                 <div class="card-body">
                     <div class="d-grid gap-2">
-                        @if(!$markdownFile->is_published)
                         <form action="{{ route('admin.markdown.publish', $markdownFile->id) }}" method="POST" style="display: inline;">
                             @csrf
-                            @method('PATCH')
-                            <button type="submit" class="btn btn-success btn-sm w-100">
-                                <i class="ri-eye-line me-1"></i>Publish Now
+                            <button type="submit" class="btn btn-{{ $markdownFile->is_published ? 'warning' : 'success' }} btn-sm w-100 publish-btn">
+                                <i class="ri-{{ $markdownFile->is_published ? 'eye-off' : 'eye' }}-line me-1"></i>
+                                {{ $markdownFile->is_published ? 'Unpublish' : 'Publish Now' }}
                             </button>
                         </form>
-                        @else
-                        <form action="{{ route('admin.markdown.unpublish', $markdownFile->id) }}" method="POST" style="display: inline;">
-                            @csrf
-                            @method('PATCH')
-                            <button type="submit" class="btn btn-warning btn-sm w-100">
-                                <i class="ri-eye-off-line me-1"></i>Unpublish
-                            </button>
-                        </form>
-                        @endif
 
-                        @if(!$markdownFile->is_featured)
                         <form action="{{ route('admin.markdown.feature', $markdownFile->id) }}" method="POST" style="display: inline;">
                             @csrf
-                            @method('PATCH')
-                            <button type="submit" class="btn btn-info btn-sm w-100">
-                                <i class="ri-star-line me-1"></i>Mark as Featured
+                            <button type="submit" class="btn btn-{{ $markdownFile->is_featured ? 'outline-info' : 'info' }} btn-sm w-100 feature-btn">
+                                <i class="ri-{{ $markdownFile->is_featured ? 'star-fill' : 'star' }}-line me-1"></i>
+                                {{ $markdownFile->is_featured ? 'Remove Featured' : 'Mark as Featured' }}
                             </button>
                         </form>
-                        @else
-                        <form action="{{ route('admin.markdown.unfeature', $markdownFile->id) }}" method="POST" style="display: inline;">
-                            @csrf
-                            @method('PATCH')
-                            <button type="submit" class="btn btn-outline-info btn-sm w-100">
-                                <i class="ri-star-fill me-1"></i>Remove Featured
-                            </button>
-                        </form>
-                        @endif
 
                         <form action="{{ route('admin.markdown.destroy', $markdownFile->id) }}" method="POST" 
                               onsubmit="return confirm('Are you sure you want to delete this markdown file?')" style="display: inline;">
@@ -290,4 +270,76 @@
     }
     </style>
 @endsection
+
+@push('script')
+<script>
+$(document).ready(function() {
+    // Publish/Unpublish
+    $(document).on('click', '.publish-btn', function(e) {
+        e.preventDefault();
+        var form = $(this).closest('form');
+        var url = form.attr('action');
+        
+        $.ajax({
+            url: url,
+            type: 'POST',
+            data: {
+                '_token': '{{ csrf_token() }}'
+            },
+            success: function(response) {
+                if (response.success) {
+                    location.reload(); // Reload the page to update the UI
+                    showAlert('success', response.message);
+                } else {
+                    showAlert('error', response.message);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Publish error:', xhr.responseText);
+                showAlert('error', 'An error occurred while updating the publication status.');
+            }
+        });
+    });
+
+    // Feature/Unfeature
+    $(document).on('click', '.feature-btn', function(e) {
+        e.preventDefault();
+        var form = $(this).closest('form');
+        var url = form.attr('action');
+        
+        $.ajax({
+            url: url,
+            type: 'POST',
+            data: {
+                '_token': '{{ csrf_token() }}'
+            },
+            success: function(response) {
+                if (response.success) {
+                    location.reload(); // Reload the page to update the UI
+                    showAlert('success', response.message);
+                } else {
+                    showAlert('error', response.message);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Feature error:', xhr.responseText);
+                showAlert('error', 'An error occurred while updating the featured status.');
+            }
+        });
+    });
+
+    function showAlert(type, message) {
+        var alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+        var alert = '<div class="alert ' + alertClass + ' alert-dismissible fade show" role="alert">' +
+                   message +
+                   '<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
+        
+        $('body').prepend(alert);
+        setTimeout(function() {
+            $('.alert').alert('close');
+        }, 5000);
+    }
+});
+</script>
+@endpush
 </x-layout>
