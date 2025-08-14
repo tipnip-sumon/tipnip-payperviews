@@ -88,28 +88,14 @@
 
                             <div class="col-lg-4">
                                 <!-- Category -->
-                                <div class="mb-3">
-                                    <label for="category" class="form-label">Category <span class="text-danger">*</span></label>
-                                    <select class="form-select @error('category') is-invalid @enderror" 
-                                            id="category" name="category" required>
-                                        <option value="">Select Category</option>
-                                        <option value="general" {{ old('category') == 'general' ? 'selected' : '' }}>General</option>
-                                        <option value="documentation" {{ old('category') == 'documentation' ? 'selected' : '' }}>Documentation</option>
-                                        <option value="help" {{ old('category') == 'help' ? 'selected' : '' }}>Help</option>
-                                        <option value="tutorial" {{ old('category') == 'tutorial' ? 'selected' : '' }}>Tutorial</option>
-                                        <option value="announcement" {{ old('category') == 'announcement' ? 'selected' : '' }}>Announcement</option>
-                                        <option value="policy" {{ old('category') == 'policy' ? 'selected' : '' }}>Policy</option>
-                                        <option value="terms" {{ old('category') == 'terms' ? 'selected' : '' }}>Terms</option>
-                                        <option value="privacy" {{ old('category') == 'privacy' ? 'selected' : '' }}>Privacy</option>
-                                        <option value="faq" {{ old('category') == 'faq' ? 'selected' : '' }}>FAQ</option>
-                                        <option value="guide" {{ old('category') == 'guide' ? 'selected' : '' }}>Guide</option>
-                                        <option value="api" {{ old('category') == 'api' ? 'selected' : '' }}>API</option>
-                                        <option value="changelog" {{ old('category') == 'changelog' ? 'selected' : '' }}>Changelog</option>
-                                    </select>
-                                    @error('category')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
+                                <x-category-selector 
+                                    :categories="$categories" 
+                                    :selected="request('category')" 
+                                    name="category" 
+                                    id="categorySelect" 
+                                    :required="true" 
+                                    :allowCustom="true" 
+                                    :showRefresh="true" />
 
                                 <!-- Status -->
                                 <div class="mb-3">
@@ -189,6 +175,9 @@
                             <a href="{{ route('admin.markdown.index') }}" class="btn btn-secondary">
                                 <i class="ri-arrow-left-line me-1"></i>Back to List
                             </a>
+                            <a href="{{ route('admin.categories.index') }}" class="btn btn-outline-info">
+                                <i class="ri-settings-3-line me-1"></i>Manage Categories
+                            </a>
                         </div>
                     </form>
                 </div>
@@ -239,7 +228,7 @@
             // Basic client-side validation
             let title = $('#title').val().trim();
             let content = $('#content').val().trim();
-            let category = $('#category').val();
+            let category = $('#categorySelect_final').val();
             let status = $('#status').val();
 
             if (!title) {

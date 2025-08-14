@@ -34,6 +34,9 @@
             <div class="card-header d-flex justify-content-between align-items-center">
                 <div class="card-title">Markdown Files Management</div>
                 <div class="d-flex gap-2">
+                    <a href="{{ route('admin.categories.index') }}" class="btn btn-outline-secondary btn-sm">
+                        <i class="ri-settings-3-line me-1"></i>Manage Categories
+                    </a>
                     <a href="{{ route('admin.markdown.statistics') }}" class="btn btn-info btn-sm">
                         <i class="ri-bar-chart-line me-1"></i>Statistics
                     </a>
@@ -316,7 +319,12 @@ $(document).ready(function() {
             url: "{{ route('admin.markdown.categories') }}",
             method: 'GET',
             dataType: 'json',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
+            },
             success: function(response) {
+                console.log('Categories loaded successfully:', response);
                 if (response.success && response.categories) {
                     var categorySelect = $('#categoryFilter');
                     categorySelect.find('option:not(:first)').remove(); // Keep "All Categories" option
@@ -327,20 +335,50 @@ $(document).ready(function() {
                             category.label + ' (' + category.count + ')</option>'
                         );
                     });
+                } else {
+                    console.warn('Invalid response format:', response);
+                    loadStaticCategories();
                 }
             },
             error: function(xhr, status, error) {
                 console.error('Error loading categories:', {
+                    status: xhr.status,
+                    statusText: xhr.statusText,
+                    responseText: xhr.responseText,
                     url: "{{ route('admin.markdown.categories') }}",
                     referrer: window.location.href,
                     timestamp: new Date().toISOString()
                 });
-                console.log('404 Error occurred:', {
-                    url: "{{ route('admin.markdown.categories') }}",
-                    referrer: window.location.href,
-                    timestamp: new Date().toISOString()
-                });
+                
+                // Fallback to static categories
+                loadStaticCategories();
             }
+        });
+    }
+
+    function loadStaticCategories() {
+        console.log('Loading static categories as fallback');
+        var categorySelect = $('#categoryFilter');
+        var staticCategories = [
+            {value: 'general', label: 'General'},
+            {value: 'documentation', label: 'Documentation'},
+            {value: 'help', label: 'Help'},
+            {value: 'tutorial', label: 'Tutorial'},
+            {value: 'announcement', label: 'Announcement'},
+            {value: 'policy', label: 'Policy'},
+            {value: 'terms', label: 'Terms'},
+            {value: 'privacy', label: 'Privacy'},
+            {value: 'faq', label: 'FAQ'},
+            {value: 'guide', label: 'Guide'},
+            {value: 'api', label: 'API'},
+            {value: 'changelog', label: 'Changelog'}
+        ];
+        
+        categorySelect.find('option:not(:first)').remove();
+        staticCategories.forEach(function(category) {
+            categorySelect.append(
+                '<option value="' + category.value + '">' + category.label + '</option>'
+            );
         });
     }
 });

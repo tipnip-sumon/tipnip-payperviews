@@ -500,17 +500,46 @@ class MarkdownFileController extends Controller
      */
     public function statistics()
     {
+        $totalFiles = MarkdownFile::count();
+        
         $stats = [
-            'total' => MarkdownFile::count(),
+            'total_files' => $totalFiles,
+            'total' => $totalFiles, // Keep both for compatibility
             'published' => MarkdownFile::where('is_published', true)->count(),
+            'published_files' => MarkdownFile::where('is_published', true)->count(),
             'draft' => MarkdownFile::where('is_published', false)->count(),
             'active' => MarkdownFile::where('status', 'active')->count(),
             'inactive' => MarkdownFile::where('status', 'inactive')->count(),
-            'by_category' => MarkdownFile::selectRaw('category, COUNT(*) as count')
+            'featured_files' => MarkdownFile::where('is_featured', true)->count(),
+            'by_category' => MarkdownFile::selectRaw('category, COUNT(*) as count, SUM(view_count) as total_views')
                                        ->groupBy('category')
-                                       ->pluck('count', 'category'),
+                                       ->get()
+                                       ->mapWithKeys(function ($item) {
+                                           // Get published count for this category
+                                           $publishedCount = MarkdownFile::where('category', $item->category)
+                                                                       ->where('is_published', true)
+                                                                       ->count();
+                                           
+                                           return [$item->category => [
+                                               'count' => $item->count,
+                                               'published' => $publishedCount,
+                                               'views' => $item->total_views ?? 0,
+                                               'avg_views' => round(($item->total_views ?? 0) / max($item->count, 1), 1)
+                                           ]];
+                                       }),
+            'by_status' => MarkdownFile::selectRaw('status, COUNT(*) as count')
+                                     ->groupBy('status')
+                                     ->pluck('count', 'status'),
             'total_views' => MarkdownFile::sum('view_count'),
-            'recent' => MarkdownFile::orderBy('created_at', 'desc')->limit(5)->get()
+            'avg_views' => round(MarkdownFile::avg('view_count') ?? 0, 1),
+            'most_viewed' => MarkdownFile::orderBy('view_count', 'desc')->limit(10)->get(),
+            'recent' => MarkdownFile::orderBy('created_at', 'desc')->limit(5)->get(),
+            'recent_files' => MarkdownFile::orderBy('created_at', 'desc')->limit(10)->get(),
+            'files_with_physical_files' => MarkdownFile::whereNotNull('file_path')->count(),
+            'files_this_month' => MarkdownFile::whereMonth('created_at', now()->month)
+                                            ->whereYear('created_at', now()->year)
+                                            ->count(),
+            'updated_this_week' => MarkdownFile::where('updated_at', '>=', now()->startOfWeek())->count()
         ];
 
         return view('admin.markdown.statistics', compact('stats'));
@@ -526,8 +555,8 @@ class MarkdownFileController extends Controller
                                   ->orderBy('category')
                                   ->get();
 
-        // If AJAX request, return JSON
-        if ($request->ajax()) {
+        // If AJAX request, return JSON for the dropdown filter
+        if ($request->ajax() || $request->wantsJson()) {
             return response()->json([
                 'success' => true,
                 'categories' => $categories->map(function($cat) {
@@ -540,17 +569,8 @@ class MarkdownFileController extends Controller
             ]);
         }
 
-        // Otherwise return view (though the view doesn't exist yet)
-        return response()->json([
-            'success' => true,
-            'categories' => $categories->map(function($cat) {
-                return [
-                    'value' => $cat->category,
-                    'label' => ucfirst(str_replace('-', ' ', $cat->category)),
-                    'count' => $cat->count
-                ];
-            })
-        ]);
+        // Otherwise return the categories management page
+        return view('admin.markdown.categories', compact('categories'));
     }
 
     /**
@@ -566,7 +586,179 @@ class MarkdownFileController extends Controller
      */
     public function exportAll()
     {
-        return view('admin.markdown.export');
+        $files = MarkdownFile::all();
+        $categories = MarkdownFile::distinct('category')
+            ->whereNotNull('category')
+            ->where('category', '!=', '')
+            ->pluck('category')
+            ->sort()
+            ->values();
+        
+        $totalFiles = $files->count();
+        $activeFiles = $files->where('status', 'active')->count();
+        $totalCategories = $categories->count();
+        
+        return view('admin.markdown.export', compact(
+            'categories',
+            'totalFiles',
+            'activeFiles', 
+            'totalCategories'
+        ));
+    }
+
+    /**
+     * Export all files as ZIP (Alternative without ZipArchive)
+     */
+    public function exportZip()
+    {
+        try {
+            $files = MarkdownFile::all();
+            
+            if ($files->isEmpty()) {
+                return back()->with('error', 'No markdown files found to export.');
+            }
+
+            // Create a combined markdown file instead of ZIP
+            $combinedContent = "# All Markdown Files Export\n\n";
+            $combinedContent .= "Exported on: " . date('Y-m-d H:i:s') . "\n\n";
+            $combinedContent .= "Total files: " . $files->count() . "\n\n";
+            $combinedContent .= str_repeat("=", 80) . "\n\n";
+
+            foreach ($files as $file) {
+                $combinedContent .= "## " . $file->title . "\n\n";
+                $combinedContent .= "**Category:** " . ($file->category ?: 'Uncategorized') . "\n";
+                $combinedContent .= "**Status:** " . ucfirst($file->status) . "\n";
+                $combinedContent .= "**Created:** " . $file->created_at->format('Y-m-d H:i:s') . "\n\n";
+                $combinedContent .= $file->generateMarkdownContent() . "\n\n";
+                $combinedContent .= str_repeat("-", 80) . "\n\n";
+            }
+
+            $fileName = 'all_markdown_files_' . date('Y-m-d_H-i-s') . '.md';
+            
+            return response($combinedContent)
+                ->header('Content-Type', 'text/markdown')
+                ->header('Content-Disposition', 'attachment; filename="' . $fileName . '"');
+            
+        } catch (\Exception $e) {
+            return back()->with('error', 'Error exporting files: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Export files by categories (Alternative without ZipArchive)
+     */
+    public function exportCategories(Request $request)
+    {
+        try {
+            $categories = $request->input('categories', []);
+            
+            if (empty($categories)) {
+                return back()->with('error', 'No categories selected.');
+            }
+
+            $files = MarkdownFile::whereIn('category', $categories)->get();
+            
+            if ($files->isEmpty()) {
+                return back()->with('error', 'No files found in selected categories.');
+            }
+
+            // Create a combined markdown file for selected categories
+            $combinedContent = "# Markdown Files Export - Selected Categories\n\n";
+            $combinedContent .= "Exported on: " . date('Y-m-d H:i:s') . "\n\n";
+            $combinedContent .= "Categories: " . implode(', ', $categories) . "\n";
+            $combinedContent .= "Total files: " . $files->count() . "\n\n";
+            $combinedContent .= str_repeat("=", 80) . "\n\n";
+
+            foreach ($categories as $category) {
+                $categoryFiles = $files->where('category', $category);
+                if ($categoryFiles->count() > 0) {
+                    $combinedContent .= "# Category: " . $category . "\n\n";
+                    
+                    foreach ($categoryFiles as $file) {
+                        $combinedContent .= "## " . $file->title . "\n\n";
+                        $combinedContent .= "**Status:** " . ucfirst($file->status) . "\n";
+                        $combinedContent .= "**Created:** " . $file->created_at->format('Y-m-d H:i:s') . "\n\n";
+                        $combinedContent .= $file->generateMarkdownContent() . "\n\n";
+                        $combinedContent .= str_repeat("-", 40) . "\n\n";
+                    }
+                    
+                    $combinedContent .= str_repeat("=", 80) . "\n\n";
+                }
+            }
+
+            $fileName = 'markdown_categories_' . date('Y-m-d_H-i-s') . '.md';
+            
+            return response($combinedContent)
+                ->header('Content-Type', 'text/markdown')
+                ->header('Content-Disposition', 'attachment; filename="' . $fileName . '"');
+            
+        } catch (\Exception $e) {
+            return back()->with('error', 'Error exporting files: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Get all file IDs for individual export
+     */
+    public function getAllIds()
+    {
+        $ids = MarkdownFile::pluck('id')->toArray();
+        return response()->json(['ids' => $ids]);
+    }
+
+    /**
+     * Store a new category through AJAX
+     */
+    public function storeCategory(Request $request)
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'category_name' => 'required|string|max:100|unique:markdown_files,category',
+            ], [
+                'category_name.unique' => 'This category already exists.'
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $validator->errors()->first()
+                ], 422);
+            }
+
+            $categoryName = $request->input('category_name');
+            $slug = Str::slug($categoryName);
+
+            // Create a markdown file with this category to establish it
+            $markdownFile = MarkdownFile::create([
+                'title' => 'Category Placeholder: ' . $categoryName,
+                'slug' => $slug . '-category-placeholder',
+                'content' => "# {$categoryName}\n\nThis is a placeholder file for the {$categoryName} category.",
+                'category' => $categoryName,
+                'status' => 'draft',
+                'is_published' => false,
+                'is_featured' => false,
+                'meta_description' => "Category placeholder for {$categoryName}",
+                'author_id' => Auth::guard('admin')->id(),
+                'created_by' => Auth::guard('admin')->id(),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Category created successfully!',
+                'category' => [
+                    'value' => $categoryName,
+                    'label' => $categoryName,
+                    'count' => 1
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Category creation error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error creating category: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**

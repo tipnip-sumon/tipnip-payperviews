@@ -95,28 +95,14 @@
                                 </div>
 
                                 <!-- Category -->
-                                <div class="mb-3">
-                                    <label for="category" class="form-label">Category <span class="text-danger">*</span></label>
-                                    <select class="form-select @error('category') is-invalid @enderror" 
-                                            id="category" name="category" required>
-                                        <option value="">Select Category</option>
-                                        <option value="general" {{ old('category', $markdownFile->category) == 'general' ? 'selected' : '' }}>General</option>
-                                        <option value="documentation" {{ old('category', $markdownFile->category) == 'documentation' ? 'selected' : '' }}>Documentation</option>
-                                        <option value="help" {{ old('category', $markdownFile->category) == 'help' ? 'selected' : '' }}>Help</option>
-                                        <option value="tutorial" {{ old('category', $markdownFile->category) == 'tutorial' ? 'selected' : '' }}>Tutorial</option>
-                                        <option value="announcement" {{ old('category', $markdownFile->category) == 'announcement' ? 'selected' : '' }}>Announcement</option>
-                                        <option value="policy" {{ old('category', $markdownFile->category) == 'policy' ? 'selected' : '' }}>Policy</option>
-                                        <option value="terms" {{ old('category', $markdownFile->category) == 'terms' ? 'selected' : '' }}>Terms</option>
-                                        <option value="privacy" {{ old('category', $markdownFile->category) == 'privacy' ? 'selected' : '' }}>Privacy</option>
-                                        <option value="faq" {{ old('category', $markdownFile->category) == 'faq' ? 'selected' : '' }}>FAQ</option>
-                                        <option value="guide" {{ old('category', $markdownFile->category) == 'guide' ? 'selected' : '' }}>Guide</option>
-                                        <option value="api" {{ old('category', $markdownFile->category) == 'api' ? 'selected' : '' }}>API</option>
-                                        <option value="changelog" {{ old('category', $markdownFile->category) == 'changelog' ? 'selected' : '' }}>Changelog</option>
-                                    </select>
-                                    @error('category')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
+                                <x-category-selector 
+                                    :categories="$categories" 
+                                    :selected="$markdownFile->category" 
+                                    name="category" 
+                                    id="categoryEditSelect" 
+                                    :required="true" 
+                                    :allowCustom="true" 
+                                    :showRefresh="true" />
 
                                 <!-- Status -->
                                 <div class="mb-3">

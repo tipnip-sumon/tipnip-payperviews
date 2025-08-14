@@ -856,9 +856,24 @@ Route::prefix('admin')->group(function () {
     Route::controller(App\Http\Controllers\admin\MarkdownFileController::class)->middleware(['auth:admin'])->group(function () {
         Route::get('/markdown', 'index')->name('admin.markdown.index');
         Route::get('/markdown/create', 'create')->name('admin.markdown.create');
+        
+        // Static routes MUST come before parameterized routes
+        Route::get('/markdown/categories', 'categories')->name('admin.markdown.categories');
+        Route::post('/markdown/categories', 'storeCategory')->name('admin.markdown.categories.store');
+        Route::get('/markdown/stats', 'stats')->name('admin.markdown.stats');
+        Route::get('/markdown/statistics', 'statistics')->name('admin.markdown.statistics');
+        Route::get('/markdown/export-all', 'exportAll')->name('admin.markdown.export-all');
+        Route::post('/markdown/export-zip', 'exportZip')->name('admin.markdown.export-zip');
+        Route::post('/markdown/export-categories', 'exportCategories')->name('admin.markdown.export-categories');
+        Route::get('/markdown/get-all-ids', 'getAllIds')->name('admin.markdown.get-all-ids');
+        Route::get('/markdown/import-form', 'importForm')->name('admin.markdown.import-form');
+        Route::post('/markdown/import', 'importFromDirectory')->name('admin.markdown.import');
+        
+        // Parameterized routes come AFTER static routes
         Route::post('/markdown', 'store')->name('admin.markdown.store');
         Route::get('/markdown/{id}', 'show')->name('admin.markdown.show');
         Route::get('/markdown/{id}/edit', 'edit')->name('admin.markdown.edit');
+        Route::get('/markdown/{id}/export', 'export')->name('admin.markdown.export');
         Route::put('/markdown/{id}', 'update')->name('admin.markdown.update');
         Route::delete('/markdown/{id}', 'destroy')->name('admin.markdown.destroy');
         Route::post('/markdown/{id}/toggle-status', 'toggleStatus')->name('admin.markdown.toggle-status');
@@ -867,14 +882,6 @@ Route::prefix('admin')->group(function () {
         Route::post('/markdown/{id}/duplicate', 'duplicate')->name('admin.markdown.duplicate');
         Route::get('/markdown/{id}/export', 'export')->name('admin.markdown.export');
         Route::get('/markdown/{id}/preview', 'preview')->name('admin.markdown.preview');
-        Route::post('/markdown/import', 'importFromDirectory')->name('admin.markdown.import');
-        Route::get('/markdown/statistics', 'statistics')->name('admin.markdown.statistics');
-        
-        // Additional routes for admin menu
-        Route::get('/markdown/categories', 'categories')->name('admin.markdown.categories');
-        Route::get('/markdown/stats', 'stats')->name('admin.markdown.stats');
-        Route::get('/markdown/export-all', 'exportAll')->name('admin.markdown.export-all');
-        Route::get('/markdown/import-form', 'importForm')->name('admin.markdown.import-form');
         
         // Debug route for testing
         Route::get('/markdown/{id}/debug', function($id) {
@@ -888,6 +895,18 @@ Route::prefix('admin')->group(function () {
                 'is_featured' => $file->is_featured ?? 'column_missing'
             ]);
         })->name('admin.markdown.debug');
+    });
+
+    // Category Management Routes (within admin prefix)
+    Route::controller(App\Http\Controllers\admin\CategoryController::class)->middleware(['auth:admin'])->group(function () {
+        Route::get('/categories', 'index')->name('admin.categories.index');
+        Route::get('/categories/create', 'create')->name('admin.categories.create');
+        Route::post('/categories', 'store')->name('admin.categories.store');
+        Route::get('/categories/{category}/edit', 'edit')->name('admin.categories.edit');
+        Route::put('/categories/{category}', 'update')->name('admin.categories.update');
+        Route::delete('/categories/{category}', 'destroy')->name('admin.categories.destroy');
+        Route::post('/categories/{category}/move-files', 'moveFiles')->name('admin.categories.move-files');
+        Route::get('/api/categories', 'getCategories')->name('admin.categories.api');
     });
 
     // Admin Popup Management Routes

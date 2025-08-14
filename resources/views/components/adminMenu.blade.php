@@ -441,6 +441,15 @@
                 </a>
             </li>
 
+            <!-- Category Management -->
+            <li class="slide">
+                <a href="{{ route('admin.categories.index') }}" class="side-menu__item">
+                    <i class="fe fe-settings me-2"></i>
+                    <span class="side-menu__label">Manage Categories</span>
+                    <span class="badge badge-warning ms-auto">⚙️</span>
+                </a>
+            </li>
+
             <!-- Statistics -->
             <li class="slide">
                 <a href="{{ route('admin.markdown.stats') }}" class="side-menu__item">
@@ -459,7 +468,7 @@
                 </a>
                 <ul class="slide-menu child2">
                     <li class="slide">
-                        <a href="{{ route('admin.markdown.import') }}" class="side-menu__item">
+                        <a href="{{ route('admin.markdown.import-form') }}" class="side-menu__item">
                             <i class="fe fe-upload me-2"></i>
                             <span class="side-menu__label">Import Files</span>
                         </a>
