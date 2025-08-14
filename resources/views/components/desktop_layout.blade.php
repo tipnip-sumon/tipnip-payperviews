@@ -1220,10 +1220,752 @@
                 box-shadow: 0 0 15px rgba(0, 123, 255, 0.8);
             }
         }
+
+        /* Modal System Styles */
+        .dynamic-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+            z-index: 9999;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .dynamic-modal.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content-wrapper {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.8);
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 90%;
+            max-height: 90%;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .dynamic-modal.show .modal-content-wrapper {
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .modal-header-custom {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .modal-body-custom {
+            padding: 2rem;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .modal-footer-custom {
+            padding: 1rem 2rem;
+            background: #f8f9fa;
+            text-align: center;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .modal-close-btn {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .modal-close-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: rotate(90deg);
+        }
+
+        .modal-title-custom {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .modal-subtitle-custom {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            margin-top: 0.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .modal-content-wrapper {
+                max-width: 95%;
+                margin: 1rem;
+            }
+            
+            .modal-body-custom {
+                padding: 1.5rem;
+            }
+            
+            .modal-header-custom {
+                padding: 1rem;
+            }
+        }
+    </style>
+
+    <!-- Modal System JavaScript -->
+    <script>
+        class DynamicModalSystem {
+            constructor() {
+                this.modals = [];
+                this.currentModal = null;
+                this.shownModals = JSON.parse(localStorage.getItem('shownModals') || '{}');
+                this.sessionStartTime = Date.now();
+                this.init();
+            }
+
+            init() {
+                // Load modals from server
+                this.loadModals();
+                
+                // Track session time for modal display rules
+                setInterval(() => {
+                    this.checkModalDisplay();
+                }, 5000); // Check every 5 seconds
+            }
+
+            async loadModals() {
+                try {
+                    const response = await fetch('/api/modals/active', {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        this.modals = await response.json();
+                        setTimeout(() => {
+                            this.checkModalDisplay();
+                        }, 2000); // Initial check after 2 seconds
+                    }
+                } catch (error) {
+                    console.warn('Could not load modals:', error);
+                }
+            }
+
+            checkModalDisplay() {
+                const currentRoute = window.location.pathname;
+                const sessionTime = (Date.now() - this.sessionStartTime) / 1000;
+
+                for (const modal of this.modals) {
+                    if (this.shouldShowModal(modal, currentRoute, sessionTime)) {
+                        this.showModal(modal);
+                        break; // Show only one modal at a time
+                    }
+                }
+            }
+
+            shouldShowModal(modal, currentRoute, sessionTime) {
+                // Check if modal is active
+                if (!modal.is_active) return false;
+
+                // Check if modal should be shown on current route
+                if (modal.exclude_routes && modal.exclude_routes.includes(currentRoute)) return false;
+                if (modal.include_routes && modal.include_routes.length > 0 && !modal.include_routes.includes(currentRoute)) return false;
+
+                // Check session time requirement
+                if (sessionTime < (modal.minimum_session_time || 30)) return false;
+
+                // Check device restrictions
+                const isMobile = window.innerWidth <= 768;
+                if (modal.show_on_mobile_only && !isMobile) return false;
+                if (modal.show_on_desktop_only && isMobile) return false;
+
+                // Check frequency rules
+                const modalKey = `modal_${modal.id}`;
+                const today = new Date().toDateString();
+                const thisWeek = this.getWeekKey();
+
+                if (!this.shownModals[modalKey]) {
+                    this.shownModals[modalKey] = { count: 0, dates: [], lastShown: null };
+                }
+
+                const modalData = this.shownModals[modalKey];
+
+                switch (modal.show_frequency) {
+                    case 'once':
+                        return modalData.count === 0;
+                    case 'daily':
+                        return !modalData.dates.includes(today);
+                    case 'weekly':
+                        return modalData.lastShown !== thisWeek;
+                    case 'session':
+                        return !sessionStorage.getItem(`modal_${modal.id}_shown`);
+                }
+
+                return modalData.count < modal.max_shows;
+            }
+
+            getWeekKey() {
+                const now = new Date();
+                const yearStart = new Date(now.getFullYear(), 0, 1);
+                const weekNumber = Math.ceil((((now - yearStart) / 86400000) + yearStart.getDay() + 1) / 7);
+                return `${now.getFullYear()}-W${weekNumber}`;
+            }
+
+            showModal(modal) {
+                if (this.currentModal) return; // Don't show if another modal is open
+
+                // Create modal HTML
+                const modalHtml = `
+                    <div class="dynamic-modal" id="modal-${modal.id}">
+                        <div class="modal-content-wrapper">
+                            <div class="modal-header-custom">
+                                <button class="modal-close-btn" onclick="window.modalSystem.closeModal()">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                                ${modal.title ? `<h3 class="modal-title-custom">${modal.title}</h3>` : ''}
+                                ${modal.subtitle ? `<p class="modal-subtitle-custom">${modal.subtitle}</p>` : ''}
+                            </div>
+                            <div class="modal-body-custom">
+                                ${modal.heading ? `<h4>${modal.heading}</h4>` : ''}
+                                ${modal.description ? `<div>${modal.description}</div>` : ''}
+                            </div>
+                            <div class="modal-footer-custom">
+                                <button class="btn btn-primary" onclick="window.modalSystem.closeModal()">
+                                    Got it!
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                // Add to DOM
+                document.body.insertAdjacentHTML('beforeend', modalHtml);
+                
+                const modalElement = document.getElementById(`modal-${modal.id}`);
+                this.currentModal = { element: modalElement, data: modal };
+
+                // Show with delay
+                setTimeout(() => {
+                    modalElement.classList.add('show');
+                }, modal.delay_seconds * 1000 || 0);
+
+                // Track the show
+                this.trackModalShow(modal);
+
+                // Add event listeners
+                modalElement.addEventListener('click', (e) => {
+                    if (e.target === modalElement) {
+                        this.closeModal();
+                    }
+                });
+            }
+
+            closeModal() {
+                if (!this.currentModal) return;
+
+                const { element } = this.currentModal;
+                element.classList.remove('show');
+                
+                setTimeout(() => {
+                    element.remove();
+                    this.currentModal = null;
+                }, 300);
+            }
+
+            trackModalShow(modal) {
+                const modalKey = `modal_${modal.id}`;
+                const today = new Date().toDateString();
+                const thisWeek = this.getWeekKey();
+
+                if (!this.shownModals[modalKey]) {
+                    this.shownModals[modalKey] = { count: 0, dates: [], lastShown: null };
+                }
+
+                const modalData = this.shownModals[modalKey];
+                modalData.count++;
+                
+                if (!modalData.dates.includes(today)) {
+                    modalData.dates.push(today);
+                }
+                
+                modalData.lastShown = thisWeek;
+
+                // Keep only last 30 days of dates
+                const thirtyDaysAgo = new Date();
+                thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                modalData.dates = modalData.dates.filter(date => new Date(date) > thirtyDaysAgo);
+
+                localStorage.setItem('shownModals', JSON.stringify(this.shownModals));
+                
+                // Track in session for session-based modals
+                if (modal.show_frequency === 'session') {
+                    sessionStorage.setItem(`modal_${modal.id}_shown`, 'true');
+                }
+
+                // Send tracking data to server
+                this.sendTrackingData(modal);
+            }
+
+            async sendTrackingData(modal) {
+                try {
+                    await fetch('/api/modals/track', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                        },
+                        body: JSON.stringify({
+                            modal_id: modal.id,
+                            action: 'shown',
+                            user_agent: navigator.userAgent,
+                            screen_resolution: `${screen.width}x${screen.height}`,
+                            route: window.location.pathname
+                        })
+                    });
+                } catch (error) {
+                    console.warn('Could not track modal:', error);
+                }
+            }
+        }
+
+        // Initialize modal system when DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            window.modalSystem = new DynamicModalSystem();
+        });
+    </script>
     </style>
 </head>
 
 <body>
+    <!-- Auto-Suggestion Web Install System -->
+    @php
+        $isNewUser = false;
+        $showInstallSuggestion = false;
+        $currentDomain = request()->getHost();
+        $isPayPerViewsDomain = str_contains($currentDomain, 'payperviews.net') || str_contains($currentDomain, 'localhost');
+        
+        // Check if user is new or needs guidance
+        if (auth()->check()) {
+            $user = auth()->user();
+            $isNewUser = $user->created_at->diffInDays(now()) <= 7; // New user within 7 days
+            
+            try {
+                $hasDeposits = \App\Models\Deposit::where('user_id', $user->id)->where('status', 1)->exists();
+                $hasInvestments = \App\Models\Invest::where('user_id', $user->id)->exists();
+            } catch (\Exception $e) {
+                $hasDeposits = false;
+                $hasInvestments = false;
+            }
+            
+            $profileComplete = !empty($user->firstname) && !empty($user->lastname) && !empty($user->mobile);
+            
+            // Show install suggestion if user is new and hasn't completed basic actions
+            $showInstallSuggestion = $isNewUser && (!$hasDeposits || !$hasInvestments || !$profileComplete || !$user->email_verified_at);
+            
+            // Don't show if user has dismissed it before
+            $showInstallSuggestion = $showInstallSuggestion && !session('install_suggestion_dismissed');
+        } else {
+            // Show for guests on payperviews.net domain or localhost
+            $showInstallSuggestion = $isPayPerViewsDomain && !session('install_suggestion_dismissed');
+        }
+    @endphp
+
+    @if($showInstallSuggestion)
+    <!-- Web Install Suggestion Modal -->
+    <div class="modal fade" id="webInstallSuggestionModal" tabindex="-1" aria-labelledby="webInstallSuggestionModalLabel" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-gradient-primary text-white border-0">
+                    <div class="d-flex align-items-center">
+                        <i class="fe fe-zap me-2 fs-4"></i>
+                        <div>
+                            <h5 class="modal-title mb-0" id="webInstallSuggestionModalLabel">Welcome to {{ config('app.name', 'PayPerViews') }}!</h5>
+                            <small class="opacity-75">Quick Setup & Installation Guide</small>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <!-- Progress Indicator -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="text-muted small">Setup Progress</span>
+                                <span class="badge bg-primary" id="setup-progress">0%</span>
+                            </div>
+                            <div class="progress" style="height: 8px;">
+                                <div class="progress-bar bg-gradient-primary" role="progressbar" style="width: 0%" id="setup-progress-bar"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Installation Steps -->
+                    <div class="row g-3">
+                        @if(!auth()->check())
+                        <!-- Step 1: Register Account -->
+                        <div class="col-md-6">
+                            <div class="card border-0 bg-light h-100">
+                                <div class="card-body text-center p-3">
+                                    <div class="avatar avatar-lg bg-primary-transparent mb-3 mx-auto">
+                                        <i class="fe fe-user-plus fs-4"></i>
+                                    </div>
+                                    <h6 class="mb-2">Create Account</h6>
+                                    <p class="text-muted small mb-3">Start your journey with a free account</p>
+                                    <a href="{{ route('register') }}" class="btn btn-primary btn-sm">
+                                        <i class="fe fe-arrow-right me-1"></i>Register Now
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 2: Login -->
+                        <div class="col-md-6">
+                            <div class="card border-0 bg-light h-100">
+                                <div class="card-body text-center p-3">
+                                    <div class="avatar avatar-lg bg-success-transparent mb-3 mx-auto">
+                                        <i class="fe fe-log-in fs-4"></i>
+                                    </div>
+                                    <h6 class="mb-2">Access Dashboard</h6>
+                                    <p class="text-muted small mb-3">Login to your account</p>
+                                    <a href="{{ route('login') }}" class="btn btn-success btn-sm">
+                                        <i class="fe fe-arrow-right me-1"></i>Login
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        @else
+                        <!-- Step 1: Complete Profile -->
+                        <div class="col-md-6">
+                            <div class="card border-0 bg-light h-100 setup-step" data-step="profile">
+                                <div class="card-body text-center p-3">
+                                    <div class="avatar avatar-lg bg-info-transparent mb-3 mx-auto position-relative">
+                                        <i class="fe fe-user fs-4"></i>
+                                        @if(!empty(auth()->user()->firstname) && !empty(auth()->user()->lastname))
+                                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-success">
+                                                <i class="fe fe-check fs-6"></i>
+                                            </span>
+                                        @endif
+                                    </div>
+                                    <h6 class="mb-2">Complete Profile</h6>
+                                    <p class="text-muted small mb-3">Add your personal information</p>
+                                    <a href="{{ route('profile.edit') }}" class="btn btn-info btn-sm">
+                                        <i class="fe fe-edit me-1"></i>Update Profile
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 2: Verify Email -->
+                        <div class="col-md-6">
+                            <div class="card border-0 bg-light h-100 setup-step" data-step="email">
+                                <div class="card-body text-center p-3">
+                                    <div class="avatar avatar-lg bg-warning-transparent mb-3 mx-auto position-relative">
+                                        <i class="fe fe-mail fs-4"></i>
+                                        @if(auth()->user()->email_verified_at)
+                                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-success">
+                                                <i class="fe fe-check fs-6"></i>
+                                            </span>
+                                        @endif
+                                    </div>
+                                    <h6 class="mb-2">Verify Email</h6>
+                                    <p class="text-muted small mb-3">Confirm your email address</p>
+                                    @if(!auth()->user()->email_verified_at)
+                                        <a href="{{ route('verification.notice') }}" class="btn btn-warning btn-sm">
+                                            <i class="fe fe-check me-1"></i>Verify Email
+                                        </a>
+                                    @else
+                                        <span class="badge bg-success">Verified</span>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 3: First Investment -->
+                        <div class="col-md-6">
+                            <div class="card border-0 bg-light h-100 setup-step" data-step="investment">
+                                <div class="card-body text-center p-3">
+                                    <div class="avatar avatar-lg bg-success-transparent mb-3 mx-auto position-relative">
+                                        <i class="fe fe-trending-up fs-4"></i>
+                                        @php
+                                            try {
+                                                $hasInvestments = \App\Models\Invest::where('user_id', auth()->id())->exists();
+                                            } catch (\Exception $e) {
+                                                $hasInvestments = false;
+                                            }
+                                        @endphp
+                                        @if($hasInvestments)
+                                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-success">
+                                                <i class="fe fe-check fs-6"></i>
+                                            </span>
+                                        @endif
+                                    </div>
+                                    <h6 class="mb-2">Make Investment</h6>
+                                    <p class="text-muted small mb-3">Start earning with your first investment</p>
+                                    <a href="{{ route('invest.index') }}" class="btn btn-success btn-sm">
+                                        <i class="fe fe-dollar-sign me-1"></i>Invest Now
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 4: Add Funds -->
+                        <div class="col-md-6">
+                            <div class="card border-0 bg-light h-100 setup-step" data-step="deposit">
+                                <div class="card-body text-center p-3">
+                                    <div class="avatar avatar-lg bg-primary-transparent mb-3 mx-auto position-relative">
+                                        <i class="fe fe-credit-card fs-4"></i>
+                                        @php
+                                            try {
+                                                $hasDeposits = \App\Models\Deposit::where('user_id', auth()->id())->where('status', 1)->exists();
+                                            } catch (\Exception $e) {
+                                                $hasDeposits = false;
+                                            }
+                                        @endphp
+                                        @if($hasDeposits)
+                                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-success">
+                                                <i class="fe fe-check fs-6"></i>
+                                            </span>
+                                        @endif
+                                    </div>
+                                    <h6 class="mb-2">Add Funds</h6>
+                                    <p class="text-muted small mb-3">Deposit money to your account</p>
+                                    <a href="{{ route('deposit.index') }}" class="btn btn-primary btn-sm">
+                                        <i class="fe fe-plus me-1"></i>Deposit
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        @endif
+                    </div>
+
+                    <!-- Quick Links Section -->
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <h6 class="mb-3"><i class="fe fe-link me-2"></i>Quick Access</h6>
+                            <div class="d-flex flex-wrap gap-2">
+                                <a href="{{ route('user.dashboard') }}" class="btn btn-outline-primary btn-sm">
+                                    <i class="fe fe-home me-1"></i>Dashboard
+                                </a>
+                                @if(!auth()->check())
+                                <a href="{{ route('register') }}" class="btn btn-outline-success btn-sm">
+                                    <i class="fe fe-user-plus me-1"></i>Sign Up
+                                </a>
+                                <a href="{{ route('login') }}" class="btn btn-outline-info btn-sm">
+                                    <i class="fe fe-log-in me-1"></i>Login
+                                </a>
+                                @else
+                                <a href="{{ route('invest.index') }}" class="btn btn-outline-success btn-sm">
+                                    <i class="fe fe-trending-up me-1"></i>Investments
+                                </a>
+                                <a href="{{ route('deposit.index') }}" class="btn btn-outline-warning btn-sm">
+                                    <i class="fe fe-credit-card me-1"></i>Deposits
+                                </a>
+                                <a href="{{ route('profile.edit') }}" class="btn btn-outline-secondary btn-sm">
+                                    <i class="fe fe-settings me-1"></i>Profile
+                                </a>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Domain Information -->
+                    @if($isPayPerViewsDomain)
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <div class="alert alert-info border-0 bg-info-transparent">
+                                <div class="d-flex align-items-start">
+                                    <i class="fe fe-info me-2 mt-1"></i>
+                                    <div>
+                                        <strong>Welcome to PayPerViews.net!</strong><br>
+                                        <small class="text-muted">
+                                            You're accessing our premium investment platform. This domain offers advanced features, 
+                                            secure transactions, and 24/7 support for all your investment needs.
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    @endif
+                </div>
+                <div class="modal-footer border-0 bg-light">
+                    <div class="d-flex justify-content-between w-100">
+                        <div class="d-flex align-items-center">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="dontShowAgain">
+                                <label class="form-check-label text-muted small" for="dontShowAgain">
+                                    Don't show this again
+                                </label>
+                            </div>
+                        </div>
+                        <div>
+                            <button type="button" class="btn btn-light me-2" data-bs-dismiss="modal">Maybe Later</button>
+                            <button type="button" class="btn btn-primary" id="getStartedBtn">
+                                <i class="fe fe-arrow-right me-1"></i>Get Started
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Auto-Show Script -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Auto-show modal after 2 seconds if not dismissed
+        setTimeout(function() {
+            if (!localStorage.getItem('install_suggestion_dismissed')) {
+                var modal = new bootstrap.Modal(document.getElementById('webInstallSuggestionModal'));
+                modal.show();
+            }
+        }, 2000);
+
+        // Calculate and update progress
+        function updateSetupProgress() {
+            @if(auth()->check())
+            let completedSteps = 0;
+            let totalSteps = 4;
+
+            // Check profile completion
+            @if(!empty(auth()->user()->firstname) && !empty(auth()->user()->lastname))
+            completedSteps++;
+            @endif
+
+            // Check email verification
+            @if(auth()->user()->email_verified_at)
+            completedSteps++;
+            @endif
+
+            // Check investment
+            @php
+                try {
+                    $hasInvestments = \App\Models\Invest::where('user_id', auth()->id())->exists();
+                } catch (\Exception $e) {
+                    $hasInvestments = false;
+                }
+            @endphp
+            @if($hasInvestments)
+            completedSteps++;
+            @endif
+
+            // Check deposit
+            @php
+                try {
+                    $hasDeposits = \App\Models\Deposit::where('user_id', auth()->id())->where('status', 1)->exists();
+                } catch (\Exception $e) {
+                    $hasDeposits = false;
+                }
+            @endphp
+            @if($hasDeposits)
+            completedSteps++;
+            @endif
+
+            let progress = Math.round((completedSteps / totalSteps) * 100);
+            document.getElementById('setup-progress').textContent = progress + '%';
+            document.getElementById('setup-progress-bar').style.width = progress + '%';
+
+            // Auto-dismiss if 100% complete
+            if (progress >= 100) {
+                setTimeout(function() {
+                    var modal = bootstrap.Modal.getInstance(document.getElementById('webInstallSuggestionModal'));
+                    if (modal) {
+                        modal.hide();
+                    }
+                    localStorage.setItem('install_suggestion_dismissed', 'true');
+                }, 3000);
+            }
+            @endif
+        }
+
+        // Handle don't show again
+        document.getElementById('dontShowAgain').addEventListener('change', function() {
+            if (this.checked) {
+                localStorage.setItem('install_suggestion_dismissed', 'true');
+            } else {
+                localStorage.removeItem('install_suggestion_dismissed');
+            }
+        });
+
+        // Handle get started button
+        document.getElementById('getStartedBtn').addEventListener('click', function() {
+            @if(!auth()->check())
+                window.location.href = '{{ route("register") }}';
+            @else
+                // Navigate to first incomplete step
+                @if(empty(auth()->user()->firstname) || empty(auth()->user()->lastname))
+                    window.location.href = '{{ route("profile.edit") }}';
+                @elseif(!auth()->user()->email_verified_at)
+                    window.location.href = '{{ route("verification.notice") }}';
+                @else
+                    @php
+                        try {
+                            $hasInvestments = \App\Models\Invest::where('user_id', auth()->id())->exists();
+                            $hasDeposits = \App\Models\Deposit::where('user_id', auth()->id())->where('status', 1)->exists();
+                        } catch (\Exception $e) {
+                            $hasInvestments = false;
+                            $hasDeposits = false;
+                        }
+                    @endphp
+                    @if(!$hasInvestments)
+                        window.location.href = '{{ route("invest.index") }}';
+                    @elseif(!$hasDeposits)
+                        window.location.href = '{{ route("deposit.index") }}';
+                    @else
+                        window.location.href = '{{ route("user.dashboard") }}';
+                    @endif
+                @endif
+            @endif
+        });
+
+        // Update progress on page load
+        updateSetupProgress();
+
+        // Handle modal close with session storage
+        document.getElementById('webInstallSuggestionModal').addEventListener('hidden.bs.modal', function() {
+            if (document.getElementById('dontShowAgain').checked) {
+                // Make AJAX call to server to set session
+                @if(auth()->check())
+                    var url = '{{ route("user.dismiss-install-suggestion") }}';
+                @else
+                    var url = '{{ route("guest.dismiss-install-suggestion") }}';
+                @endif
+                
+                fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    }
+                }).catch(function(error) {
+                    console.log('Note: Session storage not available');
+                });
+            }
+        });
+    });
+    </script>
+    @endif
+    <!-- End Auto-Suggestion Web Install System -->
     <div class="page">
          <!-- app-header -->
          <header class="app-header">

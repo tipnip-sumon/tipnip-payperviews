@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\ServerTimeController;
 // use App\Http\Controllers\Api\DebugController; // Commented out - controller doesn't exist
 use App\Http\Controllers\Api\TicketValidationController;
 use App\Http\Controllers\Api\ModalController;
+use App\Http\Controllers\Api\ModalApiController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -241,4 +242,12 @@ Route::middleware('auth')->group(function () {
             ]);
         }
     });
+});
+
+// Dynamic Modal API Routes
+Route::prefix('modals')->group(function () {
+    Route::get('/get-modals', [ModalApiController::class, 'getModals'])->name('api.modals.get');
+    Route::post('/record-show', [ModalApiController::class, 'recordShow'])->name('api.modals.record-show');
+    Route::post('/record-click', [ModalApiController::class, 'recordClick'])->name('api.modals.record-click');
+    Route::post('/record-dismiss', [ModalApiController::class, 'recordDismiss'])->name('api.modals.record-dismiss');
 });

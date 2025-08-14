@@ -2,7 +2,7 @@
 
 @section('page-title', 'Modal Management')
 
-@section('style')
+@section('style') 
 <style>
     .modal-card {
         transition: transform 0.2s;

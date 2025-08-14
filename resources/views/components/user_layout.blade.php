@@ -1154,6 +1154,9 @@
 }
 </style>
 
+<!-- Dynamic Modal Styles -->
+<link href="{{asset('css/dynamic-modal.css')}}" rel="stylesheet">
+
 </head>
 
 <body>

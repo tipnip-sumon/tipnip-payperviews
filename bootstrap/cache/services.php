@@ -34,8 +34,9 @@
     30 => 'Yajra\\DataTables\\DataTablesServiceProvider',
     31 => 'App\\Providers\\AppServiceProvider',
     32 => 'App\\Providers\\MailConfigServiceProvider',
-    33 => 'Yajra\\DataTables\\DataTablesServiceProvider',
-    34 => 'PrevailExcel\\Nowpayments\\NowpaymentsServiceProvider',
+    33 => 'App\\Providers\\ModalServiceProvider',
+    34 => 'Yajra\\DataTables\\DataTablesServiceProvider',
+    35 => 'PrevailExcel\\Nowpayments\\NowpaymentsServiceProvider',
   ),
   'eager' => 
   array (
@@ -58,8 +59,9 @@
     16 => 'Yajra\\DataTables\\DataTablesServiceProvider',
     17 => 'App\\Providers\\AppServiceProvider',
     18 => 'App\\Providers\\MailConfigServiceProvider',
-    19 => 'Yajra\\DataTables\\DataTablesServiceProvider',
-    20 => 'PrevailExcel\\Nowpayments\\NowpaymentsServiceProvider',
+    19 => 'App\\Providers\\ModalServiceProvider',
+    20 => 'Yajra\\DataTables\\DataTablesServiceProvider',
+    21 => 'PrevailExcel\\Nowpayments\\NowpaymentsServiceProvider',
   ),
   'deferred' => 
   array (

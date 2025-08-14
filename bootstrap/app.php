@@ -13,6 +13,7 @@ use App\Http\Middleware\DeviceDetectionMiddleware;
 use App\Http\Middleware\AdminSessionHandler;
 use App\Http\Middleware\FreshLogin;
 use App\Http\Middleware\SessionCleanup;
+use App\Http\Middleware\TrackModalSession;
 // use App\Http\Middleware\SessionSecurity; // REMOVED - no longer needed
 use Illuminate\Foundation\Application;
 use App\Http\Middleware\AdminMiddleware;
@@ -45,6 +46,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin.session' => AdminSessionHandler::class,
             'fresh.login' => FreshLogin::class,
             'session.cleanup' => SessionCleanup::class,
+            'track.modal.session' => TrackModalSession::class,
             // 'session.security' => SessionSecurity::class, // REMOVED - was causing route access issues
         ]);
         $middleware->appendToGroup('ensure.admin', [
@@ -54,6 +56,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // Add device detection to web group for smart layouts
         $middleware->appendToGroup('web', [
             DeviceDetectionMiddleware::class,
+            TrackModalSession::class,
             // SessionCleanup::class, // MOVED to alias only - can be applied selectively
         ]);
         
