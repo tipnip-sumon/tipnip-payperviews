@@ -822,8 +822,8 @@ Route::prefix('admin')->group(function () {
         Route::post('/modals/bulk-action', 'bulkAction')->name('admin.modal.bulk-action');
         Route::get('/modals/quick-stats', 'quickStats')->name('admin.modal.quick-stats');
     });
-
-    // Markdown File Management Routes
+    
+    // Markdown File Management Routes (within admin prefix)
     Route::controller(App\Http\Controllers\admin\MarkdownFileController::class)->middleware(['auth:admin'])->group(function () {
         Route::get('/markdown', 'index')->name('admin.markdown.index');
         Route::get('/markdown/create', 'create')->name('admin.markdown.create');
@@ -833,11 +833,32 @@ Route::prefix('admin')->group(function () {
         Route::put('/markdown/{id}', 'update')->name('admin.markdown.update');
         Route::delete('/markdown/{id}', 'destroy')->name('admin.markdown.destroy');
         Route::post('/markdown/{id}/toggle-status', 'toggleStatus')->name('admin.markdown.toggle-status');
+        Route::post('/markdown/{id}/publish', 'publish')->name('admin.markdown.publish');
+        Route::post('/markdown/{id}/feature', 'toggleFeature')->name('admin.markdown.feature');
         Route::post('/markdown/{id}/duplicate', 'duplicate')->name('admin.markdown.duplicate');
         Route::get('/markdown/{id}/export', 'export')->name('admin.markdown.export');
         Route::get('/markdown/{id}/preview', 'preview')->name('admin.markdown.preview');
         Route::post('/markdown/import', 'importFromDirectory')->name('admin.markdown.import');
         Route::get('/markdown/statistics', 'statistics')->name('admin.markdown.statistics');
+        
+        // Additional routes for admin menu
+        Route::get('/markdown/categories', 'categories')->name('admin.markdown.categories');
+        Route::get('/markdown/stats', 'stats')->name('admin.markdown.stats');
+        Route::get('/markdown/export-all', 'exportAll')->name('admin.markdown.export-all');
+        Route::get('/markdown/import-form', 'importForm')->name('admin.markdown.import-form');
+        
+        // Debug route for testing
+        Route::get('/markdown/{id}/debug', function($id) {
+            $file = \App\Models\MarkdownFile::findOrFail($id);
+            return response()->json([
+                'file_found' => true,
+                'id' => $file->id,
+                'title' => $file->title,
+                'status' => $file->status,
+                'is_published' => $file->is_published,
+                'is_featured' => $file->is_featured ?? 'column_missing'
+            ]);
+        })->name('admin.markdown.debug');
     });
 
     // Admin Popup Management Routes
@@ -991,7 +1012,7 @@ Route::prefix('admin')->group(function () {
         Route::post('/test-bypass', [App\Http\Controllers\admin\MaintenanceController::class, 'testBypass'])->name('test-bypass');
         Route::post('/validate-secret', [App\Http\Controllers\admin\MaintenanceController::class, 'validateSecret'])->name('validate-secret');
     });
-
+});
     // Catch-all route for admin URL manipulation attempts
     Route::any('/{any}', function($any) {
         // Check if admin is authenticated
@@ -1013,7 +1034,7 @@ Route::prefix('admin')->group(function () {
     })->where('any', '.*')->name('admin.catch-all');
 
     
-});
+
 
 // =============================================================================
 // USER MANAGEMENT & PROFILE

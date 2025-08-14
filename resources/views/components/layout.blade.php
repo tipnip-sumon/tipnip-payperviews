@@ -912,6 +912,7 @@ console.log('Early openTestEmailModal definition loaded');
                 {{ $transfer_member ?? '' }}
                 @yield('breadcrumb')
                 @yield('content')
+                {{ $slot ?? '' }}
             <!-- Top Dashboard -->
 
             </div>

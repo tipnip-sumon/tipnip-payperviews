@@ -370,6 +370,111 @@
     </li>
     <!-- User Management Menu End -->
     @endcanAccessMenu
+
+    <!-- Markdown Management Menu Start -->
+    <li class="slide has-sub">
+        <a href="javascript:void(0);" class="side-menu__item">
+            <i class="fe fe-file-text side-menu__icon"></i>
+            <span class="side-menu__label">📝 Markdown Management</span>
+            @php
+                try {
+                    $draftCount = \App\Models\MarkdownFile::where('status', 'draft')->count();
+                    $publishedCount = \App\Models\MarkdownFile::where('is_published', true)->count();
+                    $totalFiles = \App\Models\MarkdownFile::count();
+                } catch (\Exception $e) {
+                    \Log::error('AdminMenu markdown data error: ' . $e->getMessage());
+                    $draftCount = 0;
+                    $publishedCount = 0;
+                    $totalFiles = 0;
+                }
+            @endphp
+            <i class="fe fe-chevron-right side-menu__angle"></i>
+        </a>
+        <ul class="slide-menu child1">
+            <li class="slide side-menu__label1">
+                <a href="javascript:void(0)">Markdown Management</a>
+            </li>
+            
+            <!-- All Files -->
+            <li class="slide">
+                <a href="{{ route('admin.markdown.index') }}" class="side-menu__item">
+                    <i class="fe fe-list me-2"></i>
+                    <span class="side-menu__label">All Files</span>
+                    <span class="badge badge-primary ms-auto">{{ $totalFiles }}</span>
+                </a>
+            </li>
+
+            <!-- Create New -->
+            <li class="slide">
+                <a href="{{ route('admin.markdown.create') }}" class="side-menu__item">
+                    <i class="fe fe-plus me-2"></i>
+                    <span class="side-menu__label">Create New</span>
+                    <span class="badge badge-success ms-auto">+</span>
+                </a>
+            </li>
+
+            <!-- Draft Files -->
+            <li class="slide">
+                <a href="{{ route('admin.markdown.index', ['status' => 'draft']) }}" class="side-menu__item">
+                    <i class="fe fe-edit me-2"></i>
+                    <span class="side-menu__label">Draft Files</span>
+                    @if($draftCount > 0)
+                        <span class="badge badge-warning ms-auto">{{ $draftCount }}</span>
+                    @endif
+                </a>
+            </li>
+
+            <!-- Published Files -->
+            <li class="slide">
+                <a href="{{ route('admin.markdown.index', ['status' => 'published']) }}" class="side-menu__item">
+                    <i class="fe fe-check-circle me-2"></i>
+                    <span class="side-menu__label">Published Files</span>
+                    <span class="badge badge-info ms-auto">{{ $publishedCount }}</span>
+                </a>
+            </li>
+
+            <!-- Categories -->
+            <li class="slide">
+                <a href="{{ route('admin.markdown.categories') }}" class="side-menu__item">
+                    <i class="fe fe-folder me-2"></i>
+                    <span class="side-menu__label">Categories</span>
+                </a>
+            </li>
+
+            <!-- Statistics -->
+            <li class="slide">
+                <a href="{{ route('admin.markdown.stats') }}" class="side-menu__item">
+                    <i class="fe fe-bar-chart me-2"></i>
+                    <span class="side-menu__label">Statistics</span>
+                    <span class="badge badge-secondary ms-auto">📊</span>
+                </a>
+            </li>
+
+            <!-- Import/Export -->
+            <li class="slide has-sub">
+                <a href="javascript:void(0);" class="side-menu__item">
+                    <i class="fe fe-download me-2"></i>
+                    <span class="side-menu__label">Import/Export</span>
+                    <i class="fe fe-chevron-right side-menu__angle"></i>
+                </a>
+                <ul class="slide-menu child2">
+                    <li class="slide">
+                        <a href="{{ route('admin.markdown.import') }}" class="side-menu__item">
+                            <i class="fe fe-upload me-2"></i>
+                            <span class="side-menu__label">Import Files</span>
+                        </a>
+                    </li>
+                    <li class="slide">
+                        <a href="{{ route('admin.markdown.export-all') }}" class="side-menu__item">
+                            <i class="fe fe-download me-2"></i>
+                            <span class="side-menu__label">Export Files</span>
+                        </a>
+                    </li>
+                </ul>
+            </li>
+        </ul>
+    </li>
+    <!-- Markdown Management Menu End -->
     
     @hasPermission('users.verification')
     <!-- User Verification System Menu Start -->

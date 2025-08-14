@@ -24,6 +24,7 @@ class MarkdownFile extends Model
         'tags',
         'status',
         'is_published',
+        'is_featured',
         'published_at',
         'author_id',
         'view_count',
@@ -35,6 +36,7 @@ class MarkdownFile extends Model
     protected $casts = [
         'tags' => 'array',
         'is_published' => 'boolean',
+        'is_featured' => 'boolean',
         'published_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
