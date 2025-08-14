@@ -1686,6 +1686,79 @@
                 transform: translateY(0);
             }
         }
+
+        /* Documentation Section Styles */
+        .documentation-section {
+            background: linear-gradient(135deg, #f8f9ff 0%, #e8efff 100%);
+        }
+
+        .hover-lift {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .hover-lift:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1) !important;
+        }
+
+        .documentation-section .card {
+            border: none;
+            border-radius: 15px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .documentation-section .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+        }
+
+        .documentation-section .card-body {
+            background: white;
+        }
+
+        .documentation-section .btn {
+            border-radius: 25px;
+            padding: 12px 24px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .documentation-section .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Dropdown Styles for Navigation */
+        .navbar .dropdown-menu {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            padding: 10px 0;
+            margin-top: 10px;
+        }
+
+        .navbar .dropdown-item {
+            padding: 12px 20px;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .navbar .dropdown-item:hover {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            transform: translateX(5px);
+        }
+
+        .navbar .dropdown-item i {
+            width: 20px;
+            text-align: center;
+        }
+
+        .navbar .dropdown-divider {
+            margin: 8px 16px;
+            border-top: 1px solid #e9ecef;
+        }
     </style>
 </head>
 <body>
@@ -1714,6 +1787,26 @@
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="#about">About</a>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="helpDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-question-circle me-1"></i> Help
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="helpDropdown">
+                            <li><a class="dropdown-item" href="{{ route('docs.index') }}">
+                                <i class="fas fa-book me-2"></i> Documentation
+                            </a></li>
+                            <li><a class="dropdown-item" href="{{ route('faq') }}">
+                                <i class="fas fa-question-answer me-2"></i> FAQ
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ route('privacy-policy') }}">
+                                <i class="fas fa-shield-alt me-2"></i> Privacy Policy
+                            </a></li>
+                            <li><a class="dropdown-item" href="{{ route('terms-and-conditions') }}">
+                                <i class="fas fa-file-contract me-2"></i> Terms & Conditions
+                            </a></li>
+                        </ul>
                     </li>
                     <li class="nav-item ms-2">
                         <a class="btn btn-outline-primary btn-modern me-2" href="{{ route('login') }}">
@@ -2304,6 +2397,105 @@
                         <p class="text-muted">
                             Track your earnings, viewing history, and progress with detailed analytics and insights to maximize your income.
                         </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Documentation Section -->
+    <section class="documentation-section bg-light py-5">
+        <div class="container">
+            <div class="row">
+                <div class="col-12 text-center mb-5" data-aos="fade-up">
+                    <h2 class="display-5 fw-bold">Need Help Getting Started?</h2>
+                    <p class="lead text-muted">
+                        Everything you need to know about earning with PayPerViews
+                    </p>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-lg-3 col-md-6 mb-4" data-aos="fade-up" data-aos-delay="100">
+                    <div class="card h-100 border-0 shadow-sm hover-lift">
+                        <div class="card-body text-center p-4">
+                            <div class="mb-3">
+                                <i class="fas fa-book text-primary" style="font-size: 2.5rem;"></i>
+                            </div>
+                            <h5 class="card-title">Documentation</h5>
+                            <p class="card-text text-muted mb-4">
+                                Complete guides on how to use our platform, earn money, and manage your account.
+                            </p>
+                            <a href="{{ route('docs.index') }}" class="btn btn-outline-primary">
+                                Read Docs <i class="fas fa-arrow-right ms-1"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-3 col-md-6 mb-4" data-aos="fade-up" data-aos-delay="200">
+                    <div class="card h-100 border-0 shadow-sm hover-lift">
+                        <div class="card-body text-center p-4">
+                            <div class="mb-3">
+                                <i class="fas fa-question-circle text-info" style="font-size: 2.5rem;"></i>
+                            </div>
+                            <h5 class="card-title">FAQ</h5>
+                            <p class="card-text text-muted mb-4">
+                                Quick answers to the most common questions about our video earning platform.
+                            </p>
+                            <a href="{{ route('faq') }}" class="btn btn-outline-info">
+                                View FAQ <i class="fas fa-arrow-right ms-1"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-3 col-md-6 mb-4" data-aos="fade-up" data-aos-delay="300">
+                    <div class="card h-100 border-0 shadow-sm hover-lift">
+                        <div class="card-body text-center p-4">
+                            <div class="mb-3">
+                                <i class="fas fa-shield-alt text-success" style="font-size: 2.5rem;"></i>
+                            </div>
+                            <h5 class="card-title">Privacy & Security</h5>
+                            <p class="card-text text-muted mb-4">
+                                Learn how we protect your data and ensure your privacy while you earn.
+                            </p>
+                            <a href="{{ route('privacy-policy') }}" class="btn btn-outline-success">
+                                Privacy Policy <i class="fas fa-arrow-right ms-1"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-3 col-md-6 mb-4" data-aos="fade-up" data-aos-delay="400">
+                    <div class="card h-100 border-0 shadow-sm hover-lift">
+                        <div class="card-body text-center p-4">
+                            <div class="mb-3">
+                                <i class="fas fa-file-contract text-warning" style="font-size: 2.5rem;"></i>
+                            </div>
+                            <h5 class="card-title">Terms & Conditions</h5>
+                            <p class="card-text text-muted mb-4">
+                                Understand our platform rules and earning policies before you get started.
+                            </p>
+                            <a href="{{ route('terms-and-conditions') }}" class="btn btn-outline-warning">
+                                Read Terms <i class="fas fa-arrow-right ms-1"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mt-4">
+                <div class="col-12 text-center" data-aos="fade-up" data-aos-delay="500">
+                    <div class="bg-primary bg-gradient rounded-3 p-4 text-white">
+                        <h4 class="mb-3">Still Have Questions?</h4>
+                        <p class="mb-3">Our support team is here to help you succeed!</p>
+                        <a href="{{ route('register') }}" class="btn btn-light me-2">
+                            <i class="fas fa-user-plus me-1"></i> Get Started Now
+                        </a>
+                        <a href="{{ route('docs.index') }}" class="btn btn-outline-light">
+                            <i class="fas fa-book me-1"></i> Browse All Docs
+                        </a>
                     </div>
                 </div>
             </div>

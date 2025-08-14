@@ -823,6 +823,23 @@ Route::prefix('admin')->group(function () {
         Route::get('/modals/quick-stats', 'quickStats')->name('admin.modal.quick-stats');
     });
 
+    // Markdown File Management Routes
+    Route::controller(App\Http\Controllers\admin\MarkdownFileController::class)->middleware(['auth:admin'])->group(function () {
+        Route::get('/markdown', 'index')->name('admin.markdown.index');
+        Route::get('/markdown/create', 'create')->name('admin.markdown.create');
+        Route::post('/markdown', 'store')->name('admin.markdown.store');
+        Route::get('/markdown/{id}', 'show')->name('admin.markdown.show');
+        Route::get('/markdown/{id}/edit', 'edit')->name('admin.markdown.edit');
+        Route::put('/markdown/{id}', 'update')->name('admin.markdown.update');
+        Route::delete('/markdown/{id}', 'destroy')->name('admin.markdown.destroy');
+        Route::post('/markdown/{id}/toggle-status', 'toggleStatus')->name('admin.markdown.toggle-status');
+        Route::post('/markdown/{id}/duplicate', 'duplicate')->name('admin.markdown.duplicate');
+        Route::get('/markdown/{id}/export', 'export')->name('admin.markdown.export');
+        Route::get('/markdown/{id}/preview', 'preview')->name('admin.markdown.preview');
+        Route::post('/markdown/import', 'importFromDirectory')->name('admin.markdown.import');
+        Route::get('/markdown/statistics', 'statistics')->name('admin.markdown.statistics');
+    });
+
     // Admin Popup Management Routes
     Route::controller(App\Http\Controllers\admin\PopupController::class)->middleware(['auth:admin'])->group(function () {
         Route::get('/popups', 'index')->name('admin.popups.index');
@@ -1430,6 +1447,39 @@ Route::group(['prefix' => 'api/modals', 'middleware' => ['web']], function () {
         }
     })->name('api.modals.track');
 });
+
+// =============================================================================
+// USER MARKDOWN VIEWING ROUTES
+// =============================================================================
+
+// Public markdown viewing routes
+Route::controller(App\Http\Controllers\User\MarkdownViewController::class)->group(function () {
+    // Main documentation/help center
+    Route::get('/docs', 'index')->name('docs.index');
+    
+    // Category-based viewing
+    Route::get('/docs/{category}', 'category')->name('docs.category');
+    
+    // Individual document viewing
+    Route::get('/docs/{category}/{slug}', 'show')->name('docs.show');
+    
+    // API endpoints for search and listing
+    Route::get('/api/docs/search', 'search')->name('api.docs.search');
+    Route::get('/api/docs/list', 'list')->name('api.docs.list');
+    Route::post('/api/docs/{id}/view', 'recordView')->name('api.docs.view');
+});
+
+// Test route for debugging JavaScript
+Route::get('/docs/test', function () {
+    return view('user.docs.simple-test');
+})->name('docs.test');
+
+// Quick access routes for important pages
+Route::get('/privacy-policy', [App\Http\Controllers\User\MarkdownViewController::class, 'showPrivacy'])->name('privacy-policy');
+
+Route::get('/terms-and-conditions', [App\Http\Controllers\User\MarkdownViewController::class, 'showTerms'])->name('terms-and-conditions');
+
+Route::get('/faq', [App\Http\Controllers\User\MarkdownViewController::class, 'showFaq'])->name('faq');
 
 // =============================================================================
 // FALLBACK ROUTE (KEEP AT END)
