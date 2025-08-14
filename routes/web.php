@@ -183,7 +183,7 @@ Route::get('/user/dashboard/{any}', function($any) {
         'full_url' => request()->fullUrl()
     ]);
     abort(403, 'URL manipulation detected. Parameters are not allowed in dashboard URLs.');
-})->where('any', '.*')->middleware(['auth']);
+})->where('any', '[0-9a-zA-Z_-]+')->middleware(['auth']); // Only catch simple alphanumeric parameters, not paths
 
 // =============================================================================
 // AUTHENTICATION ROUTES  
@@ -1012,8 +1012,8 @@ Route::prefix('admin')->group(function () {
         Route::post('/test-bypass', [App\Http\Controllers\admin\MaintenanceController::class, 'testBypass'])->name('test-bypass');
         Route::post('/validate-secret', [App\Http\Controllers\admin\MaintenanceController::class, 'validateSecret'])->name('validate-secret');
     });
-});
-    // Catch-all route for admin URL manipulation attempts
+
+    // Catch-all route for admin URL manipulation attempts (MOVED INSIDE ADMIN GROUP)
     Route::any('/{any}', function($any) {
         // Check if admin is authenticated
         if (!Auth::guard('admin')->check()) {
@@ -1032,6 +1032,7 @@ Route::prefix('admin')->group(function () {
             ]
         ], 404);
     })->where('any', '.*')->name('admin.catch-all');
+});
 
     
 
@@ -1503,7 +1504,7 @@ Route::get('/terms-and-conditions', [App\Http\Controllers\User\MarkdownViewContr
 Route::get('/faq', [App\Http\Controllers\User\MarkdownViewController::class, 'showFaq'])->name('faq');
 
 // =============================================================================
-// FALLBACK ROUTE (KEEP AT END)
+// FALLBACK ROUTE (KEEP AT END) - Enhanced security fallback route
 // =============================================================================
 
 Route::fallback(function () {
