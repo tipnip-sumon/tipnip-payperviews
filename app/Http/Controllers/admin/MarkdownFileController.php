@@ -517,15 +517,40 @@ class MarkdownFileController extends Controller
     }
 
     /**
-     * Show categories management page
+     * Show categories management page or return categories as JSON
      */
-    public function categories()
+    public function categories(Request $request)
     {
         $categories = MarkdownFile::selectRaw('category, COUNT(*) as count')
                                   ->groupBy('category')
+                                  ->orderBy('category')
                                   ->get();
 
-        return view('admin.markdown.categories', compact('categories'));
+        // If AJAX request, return JSON
+        if ($request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'categories' => $categories->map(function($cat) {
+                    return [
+                        'value' => $cat->category,
+                        'label' => ucfirst(str_replace('-', ' ', $cat->category)),
+                        'count' => $cat->count
+                    ];
+                })
+            ]);
+        }
+
+        // Otherwise return view (though the view doesn't exist yet)
+        return response()->json([
+            'success' => true,
+            'categories' => $categories->map(function($cat) {
+                return [
+                    'value' => $cat->category,
+                    'label' => ucfirst(str_replace('-', ' ', $cat->category)),
+                    'count' => $cat->count
+                ];
+            })
+        ]);
     }
 
     /**

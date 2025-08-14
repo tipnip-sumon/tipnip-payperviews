@@ -48,18 +48,7 @@
                     <div class="col-md-3">
                         <select class="form-select" id="categoryFilter">
                             <option value="">All Categories</option>
-                            <option value="general">General</option>
-                            <option value="documentation">Documentation</option>
-                            <option value="help">Help</option>
-                            <option value="tutorial">Tutorial</option>
-                            <option value="announcement">Announcement</option>
-                            <option value="policy">Policy</option>
-                            <option value="terms">Terms</option>
-                            <option value="privacy">Privacy</option>
-                            <option value="faq">FAQ</option>
-                            <option value="guide">Guide</option>
-                            <option value="api">API</option>
-                            <option value="changelog">Changelog</option>
+                            <!-- Categories will be loaded dynamically -->
                         </select>
                     </div>
                     <div class="col-md-3">
@@ -121,6 +110,9 @@
 $(document).ready(function() {
     console.log('jQuery loaded:', typeof $);
     console.log('DataTable function:', typeof $.fn.DataTable);
+    
+    // Load categories dynamically
+    loadCategories();
     
     if (typeof $.fn.DataTable === 'undefined') {
         console.error('DataTable is not loaded!');
@@ -317,6 +309,39 @@ $(document).ready(function() {
         setTimeout(function() {
             $('.alert').alert('close');
         }, 5000);
+    }
+
+    function loadCategories() {
+        $.ajax({
+            url: "{{ route('admin.markdown.categories') }}",
+            method: 'GET',
+            dataType: 'json',
+            success: function(response) {
+                if (response.success && response.categories) {
+                    var categorySelect = $('#categoryFilter');
+                    categorySelect.find('option:not(:first)').remove(); // Keep "All Categories" option
+                    
+                    response.categories.forEach(function(category) {
+                        categorySelect.append(
+                            '<option value="' + category.value + '">' + 
+                            category.label + ' (' + category.count + ')</option>'
+                        );
+                    });
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error loading categories:', {
+                    url: "{{ route('admin.markdown.categories') }}",
+                    referrer: window.location.href,
+                    timestamp: new Date().toISOString()
+                });
+                console.log('404 Error occurred:', {
+                    url: "{{ route('admin.markdown.categories') }}",
+                    referrer: window.location.href,
+                    timestamp: new Date().toISOString()
+                });
+            }
+        });
     }
 });
 </script>
