@@ -101,7 +101,7 @@ class HistoricalLotteryDrawSeeder extends Seeder
                 '3' => ['name' => '3rd Prize', 'type' => 'fixed_amount', 'amount' => '100'],
             ]),
             'winning_numbers' => null, // Will be set after winners
-            'max_tickets' => fake()->numberBetween(500, 2000),
+            'max_tickets' => rand(500, 2000),
             'ticket_price' => 2.00,
             'admin_commission_percentage' => 10.00,
             'auto_draw' => true,
@@ -126,9 +126,9 @@ class HistoricalLotteryDrawSeeder extends Seeder
     private function createTicketsForDraw($draw)
     {
         // Realistic ticket sales distribution
-        $minTickets = fake()->numberBetween(50, 200);
-        $maxTickets = min($draw->max_tickets, fake()->numberBetween(300, 800));
-        $realTicketCount = fake()->numberBetween($minTickets, $maxTickets);
+        $minTickets = rand(50, 200);
+        $maxTickets = min($draw->max_tickets, rand(300, 800));
+        $realTicketCount = rand($minTickets, $maxTickets);
         
         // Only 1 virtual ticket per draw
         $virtualTicketCount = 1;
@@ -138,7 +138,7 @@ class HistoricalLotteryDrawSeeder extends Seeder
         
         // Create all tickets as virtual tickets with user_id = 1 to avoid conflicts with future real users
         for ($i = 0; $i < $realTicketCount; $i++) {
-            $purchaseTime = fake()->dateTimeBetween(
+            $purchaseTime = $this->randomDateBetween(
                 $draw->draw_date->copy()->subDays(6), 
                 $draw->draw_time->copy()->subHour()
             );
@@ -156,7 +156,7 @@ class HistoricalLotteryDrawSeeder extends Seeder
                 'purchased_at' => $purchaseTime,
                 'status' => 'active', // Will be updated if winner
                 'payment_method' => 'balance',
-                'transaction_reference' => 'VIRTUAL_' . fake()->uuid(),
+                'transaction_reference' => 'VIRTUAL_' . \Illuminate\Support\Str::uuid(),
                 'is_virtual' => true, // Mark as virtual
                 'token_type' => 'lottery', // Use allowed enum value
                 'is_valid_token' => true,
@@ -171,7 +171,7 @@ class HistoricalLotteryDrawSeeder extends Seeder
         
         // Create one additional system virtual ticket
         for ($i = 0; $i < $virtualTicketCount; $i++) {
-            $purchaseTime = fake()->dateTimeBetween(
+            $purchaseTime = $this->randomDateBetween(
                 $draw->draw_date->copy()->subDays(6), 
                 $draw->draw_time->copy()->subHour()
             );
@@ -184,7 +184,7 @@ class HistoricalLotteryDrawSeeder extends Seeder
                 'purchased_at' => $purchaseTime,
                 'status' => 'active',
                 'payment_method' => 'balance',
-                'transaction_reference' => 'VIRTUAL_' . fake()->uuid(),
+                'transaction_reference' => 'VIRTUAL_' . \Illuminate\Support\Str::uuid(),
                 'is_virtual' => true,
                 'virtual_user_type' => 'system',
                 'virtual_metadata' => json_encode(['type' => 'system_generated']),
@@ -238,11 +238,11 @@ class HistoricalLotteryDrawSeeder extends Seeder
                 'winner_index' => 1,
                 'prize_name' => $prizeData['name'],
                 'prize_amount' => $prizeAmount,
-                'claim_status' => fake()->randomElement(['claimed', 'claimed', 'claimed', 'pending']), // Most are claimed
-                'prize_distributed' => fake()->boolean(85),
+                'claim_status' => ['claimed', 'claimed', 'claimed', 'pending'][rand(0, 3)], // Most are claimed
+                'prize_distributed' => rand(1, 100) <= 85, // 85% chance
                 'is_manual_selection' => false,
                 'selected_at' => $draw->draw_time,
-                'claimed_at' => fake()->boolean(85) ? fake()->dateTimeBetween($draw->draw_time, $draw->draw_time->copy()->addDays(7)) : null,
+                'claimed_at' => rand(1, 100) <= 85 ? $this->randomDateBetween($draw->draw_time, $draw->draw_time->copy()->addDays(7)) : null,
                 'claim_method' => 'auto',
                 'created_at' => $draw->draw_time,
                 'updated_at' => $draw->draw_time,
@@ -300,11 +300,23 @@ class HistoricalLotteryDrawSeeder extends Seeder
     private function generateTicketNumber($draw, $sequence, $isVirtual = false)
     {
         // Generate hexadecimal format like: 340B-660D-3DE4-5A6A
-        $part1 = strtoupper(dechex(fake()->numberBetween(0x1000, 0xFFFF)));
-        $part2 = strtoupper(dechex(fake()->numberBetween(0x1000, 0xFFFF)));
-        $part3 = strtoupper(dechex(fake()->numberBetween(0x1000, 0xFFFF)));
-        $part4 = strtoupper(dechex(fake()->numberBetween(0x1000, 0xFFFF)));
+        $part1 = strtoupper(dechex(rand(0x1000, 0xFFFF)));
+        $part2 = strtoupper(dechex(rand(0x1000, 0xFFFF)));
+        $part3 = strtoupper(dechex(rand(0x1000, 0xFFFF)));
+        $part4 = strtoupper(dechex(rand(0x1000, 0xFFFF)));
         
         return $part1 . '-' . $part2 . '-' . $part3 . '-' . $part4;
+    }
+
+    private function randomDateBetween($start, $end)
+    {
+        // Convert to timestamps
+        $startTime = $start instanceof Carbon ? $start->timestamp : Carbon::parse($start)->timestamp;
+        $endTime = $end instanceof Carbon ? $end->timestamp : Carbon::parse($end)->timestamp;
+        
+        // Generate random timestamp between start and end
+        $randomTime = rand($startTime, $endTime);
+        
+        return Carbon::createFromTimestamp($randomTime);
     }
 }
