@@ -10,17 +10,14 @@ use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
-use Faker\Factory as Faker;
 
 class HistoricalLotteryDrawSeeder extends Seeder
 {
-    private $faker;
     private $users;
     private $virtualUser;
 
     public function run()
     {
-        $this->faker = Faker::create();
         
         // Get all regular users and virtual user
         $this->users = User::where('username', '!=', 'lottery_virtual_user')->where('status', 1)->get();
@@ -104,7 +101,7 @@ class HistoricalLotteryDrawSeeder extends Seeder
                 '3' => ['name' => '3rd Prize', 'type' => 'fixed_amount', 'amount' => '100'],
             ]),
             'winning_numbers' => null, // Will be set after winners
-            'max_tickets' => $this->faker->numberBetween(500, 2000),
+            'max_tickets' => fake()->numberBetween(500, 2000),
             'ticket_price' => 2.00,
             'admin_commission_percentage' => 10.00,
             'auto_draw' => true,
@@ -129,9 +126,9 @@ class HistoricalLotteryDrawSeeder extends Seeder
     private function createTicketsForDraw($draw)
     {
         // Realistic ticket sales distribution
-        $minTickets = $this->faker->numberBetween(50, 200);
-        $maxTickets = min($draw->max_tickets, $this->faker->numberBetween(300, 800));
-        $realTicketCount = $this->faker->numberBetween($minTickets, $maxTickets);
+        $minTickets = fake()->numberBetween(50, 200);
+        $maxTickets = min($draw->max_tickets, fake()->numberBetween(300, 800));
+        $realTicketCount = fake()->numberBetween($minTickets, $maxTickets);
         
         // Only 1 virtual ticket per draw
         $virtualTicketCount = 1;
@@ -141,7 +138,7 @@ class HistoricalLotteryDrawSeeder extends Seeder
         
         // Create all tickets as virtual tickets with user_id = 1 to avoid conflicts with future real users
         for ($i = 0; $i < $realTicketCount; $i++) {
-            $purchaseTime = $this->faker->dateTimeBetween(
+            $purchaseTime = fake()->dateTimeBetween(
                 $draw->draw_date->copy()->subDays(6), 
                 $draw->draw_time->copy()->subHour()
             );
@@ -159,7 +156,7 @@ class HistoricalLotteryDrawSeeder extends Seeder
                 'purchased_at' => $purchaseTime,
                 'status' => 'active', // Will be updated if winner
                 'payment_method' => 'balance',
-                'transaction_reference' => 'VIRTUAL_' . $this->faker->uuid(),
+                'transaction_reference' => 'VIRTUAL_' . fake()->uuid(),
                 'is_virtual' => true, // Mark as virtual
                 'token_type' => 'lottery', // Use allowed enum value
                 'is_valid_token' => true,
@@ -174,7 +171,7 @@ class HistoricalLotteryDrawSeeder extends Seeder
         
         // Create one additional system virtual ticket
         for ($i = 0; $i < $virtualTicketCount; $i++) {
-            $purchaseTime = $this->faker->dateTimeBetween(
+            $purchaseTime = fake()->dateTimeBetween(
                 $draw->draw_date->copy()->subDays(6), 
                 $draw->draw_time->copy()->subHour()
             );
@@ -187,7 +184,7 @@ class HistoricalLotteryDrawSeeder extends Seeder
                 'purchased_at' => $purchaseTime,
                 'status' => 'active',
                 'payment_method' => 'balance',
-                'transaction_reference' => 'VIRTUAL_' . $this->faker->uuid(),
+                'transaction_reference' => 'VIRTUAL_' . fake()->uuid(),
                 'is_virtual' => true,
                 'virtual_user_type' => 'system',
                 'virtual_metadata' => json_encode(['type' => 'system_generated']),
@@ -241,11 +238,11 @@ class HistoricalLotteryDrawSeeder extends Seeder
                 'winner_index' => 1,
                 'prize_name' => $prizeData['name'],
                 'prize_amount' => $prizeAmount,
-                'claim_status' => $this->faker->randomElement(['claimed', 'claimed', 'claimed', 'pending']), // Most are claimed
-                'prize_distributed' => $this->faker->boolean(85),
+                'claim_status' => fake()->randomElement(['claimed', 'claimed', 'claimed', 'pending']), // Most are claimed
+                'prize_distributed' => fake()->boolean(85),
                 'is_manual_selection' => false,
                 'selected_at' => $draw->draw_time,
-                'claimed_at' => $this->faker->boolean(85) ? $this->faker->dateTimeBetween($draw->draw_time, $draw->draw_time->copy()->addDays(7)) : null,
+                'claimed_at' => fake()->boolean(85) ? fake()->dateTimeBetween($draw->draw_time, $draw->draw_time->copy()->addDays(7)) : null,
                 'claim_method' => 'auto',
                 'created_at' => $draw->draw_time,
                 'updated_at' => $draw->draw_time,
@@ -303,10 +300,10 @@ class HistoricalLotteryDrawSeeder extends Seeder
     private function generateTicketNumber($draw, $sequence, $isVirtual = false)
     {
         // Generate hexadecimal format like: 340B-660D-3DE4-5A6A
-        $part1 = strtoupper(dechex($this->faker->numberBetween(0x1000, 0xFFFF)));
-        $part2 = strtoupper(dechex($this->faker->numberBetween(0x1000, 0xFFFF)));
-        $part3 = strtoupper(dechex($this->faker->numberBetween(0x1000, 0xFFFF)));
-        $part4 = strtoupper(dechex($this->faker->numberBetween(0x1000, 0xFFFF)));
+        $part1 = strtoupper(dechex(fake()->numberBetween(0x1000, 0xFFFF)));
+        $part2 = strtoupper(dechex(fake()->numberBetween(0x1000, 0xFFFF)));
+        $part3 = strtoupper(dechex(fake()->numberBetween(0x1000, 0xFFFF)));
+        $part4 = strtoupper(dechex(fake()->numberBetween(0x1000, 0xFFFF)));
         
         return $part1 . '-' . $part2 . '-' . $part3 . '-' . $part4;
     }
