@@ -586,13 +586,18 @@ class LotteryDraw extends Model
     }
 
     /**
-     * Get display draw number starting from 50+
-     * This ensures users see draw numbers starting from at least 50
+     * Get display draw number for frontend
+     * Use custom draw_number if available, otherwise use ID
      */
     public function getDisplayDrawNumberAttribute()
     {
-        // Start display numbers from 50 and add the actual ID
-        return 50 + $this->id;
+        // If we have a custom draw_number like "DRAW_50", extract the number
+        if ($this->draw_number && preg_match('/DRAW_(\d+)/', $this->draw_number, $matches)) {
+            return (int)$matches[1];
+        }
+        
+        // Fallback to just the ID (removing the +50)
+        return $this->id;
     }
 
     /**
