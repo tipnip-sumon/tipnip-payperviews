@@ -168,10 +168,16 @@ class KycController extends Controller
             $userKycPath = 'kyc_documents/' . $user->id;
 
             // Store uploaded files with proper naming
+            Log::info('About to process document_front', ['file_size' => $request->file('document_front')->getSize()]);
             $documentFront = $this->storeKycFile($request->file('document_front'), $userKycPath, 'front');
-            $documentBack = $request->hasFile('document_back') 
-                ? $this->storeKycFile($request->file('document_back'), $userKycPath, 'back')
-                : null;
+            
+            $documentBack = null;
+            if ($request->hasFile('document_back')) {
+                Log::info('About to process document_back', ['file_size' => $request->file('document_back')->getSize()]);
+                $documentBack = $this->storeKycFile($request->file('document_back'), $userKycPath, 'back');
+            }
+            
+            Log::info('About to process selfie_image', ['file_size' => $request->file('selfie_image')->getSize()]);
             $selfieImage = $this->storeKycFile($request->file('selfie_image'), $userKycPath, 'selfie');
             
             // Create KYC verification record
@@ -333,15 +339,8 @@ class KycController extends Controller
                 $maxSize = 600;  // Smaller dimensions for selfies
                 $quality = 50;   // Lower quality for selfies
                 
-                // More aggressive resizing for selfies
-                if ($originalWidth > $maxSize || $originalHeight > $maxSize) {
-                    $image->resize($maxSize, $maxSize, function ($constraint) {
-                        $constraint->aspectRatio();
-                        $constraint->upsize();
-                    });
-                }
-                
-                Log::info('Selfie optimization - aggressive compression', [
+                Log::info('SELFIE OPTIMIZATION PATH SELECTED', [
+                    'type' => $type,
                     'max_size' => $maxSize,
                     'quality' => $quality,
                     'target' => '30-50KB'
@@ -352,30 +351,30 @@ class KycController extends Controller
                 $maxSize = 1400;  // Larger dimensions for documents
                 $quality = 85;    // Higher quality for documents
                 
-                // Less aggressive resizing for documents
-                if ($originalWidth > $maxSize || $originalHeight > $maxSize) {
-                    $image->resize($maxSize, $maxSize, function ($constraint) {
-                        $constraint->aspectRatio();
-                        $constraint->upsize();
-                    });
-                }
-                
-                // Adjust quality based on original file size for documents
-                if ($originalSize > 1000 * 1024) {
-                    $quality = 75; // Slightly lower for very large files
-                } elseif ($originalSize > 2000 * 1024) {
-                    $quality = 70; // More compression for extremely large files
-                }
-                
-                Log::info('Document optimization - maintain quality', [
+                Log::info('DOCUMENT OPTIMIZATION PATH SELECTED', [
+                    'type' => $type,
                     'max_size' => $maxSize,
                     'quality' => $quality,
                     'target' => 'High readability'
                 ]);
+                
+                // Adjust quality based on original file size for documents
+                if ($originalSize > 1000 * 1024) {
+                    $quality = 75; // Slightly lower for very large files
+                    Log::info('Quality adjusted for large file', ['new_quality' => $quality]);
+                } elseif ($originalSize > 2000 * 1024) {
+                    $quality = 70; // More compression for extremely large files
+                    Log::info('Quality adjusted for very large file', ['new_quality' => $quality]);
+                }
             }
             
             // Resize image maintaining aspect ratio if needed
             if ($originalWidth > $maxSize || $originalHeight > $maxSize) {
+                $image->resize($maxSize, $maxSize, function ($constraint) {
+                    $constraint->aspectRatio();
+                    $constraint->upsize();
+                });
+                
                 Log::info('Image resized', [
                     'from' => $originalWidth . 'x' . $originalHeight,
                     'to' => $image->width() . 'x' . $image->height(),
