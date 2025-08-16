@@ -324,15 +324,6 @@
                                 <i class="fas fa-paper-plane me-2"></i>Submit Application
                             </button>
                         </div>
-                        
-                        <!-- TESTING: Direct submit button -->
-                        <div class="mt-3 p-3 bg-warning rounded">
-                            <h6>⚠️ Testing Mode</h6>
-                            <p class="mb-2 small">Direct form submission for testing (bypasses step validation):</p>
-                            <button type="submit" class="btn btn-danger" id="directSubmitBtn">
-                                <i class="fas fa-upload me-2"></i>Direct Submit (Testing)
-                            </button>
-                        </div>
                     </form>
                 </div>
             </div>
@@ -464,16 +455,6 @@
         const totalSteps = 3;
 
         $(document).ready(function() {
-            // TEMPORARY: Skip validation for testing
-            window.skipValidation = true;
-            console.log('Validation skipping enabled for testing');
-            
-            // Remove HTML5 required attributes to prevent browser validation conflicts
-            $('#kycForm input[required], #kycForm select[required], #kycForm textarea[required]').each(function() {
-                $(this).removeAttr('required');
-                console.log('Removed required attribute from:', $(this).attr('name'));
-            });
-            
             // Initialize form
             showStep(currentStep);
             
@@ -485,14 +466,16 @@
                 }
             });
             
-            // Form submission - COMPLETELY DISABLED FOR TESTING
+            // Form submission
             $('#kycForm').on('submit', function(e) {
-                console.log('KYC Form submission triggered - allowing natural submission');
+                if (!validateStep(currentStep)) {
+                    e.preventDefault();
+                    return false;
+                }
                 
                 // Show loading state
                 $('#submitBtn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>Submitting...');
                 
-                // Allow natural form submission - NO validation checks
                 return true;
             });            // Document type change handler
             $('#document_type').on('change', function() {
@@ -547,9 +530,10 @@
 
         function changeStep(direction) {
             if (direction === 1 && currentStep < totalSteps) {
-                // Skip validation for testing - just move to next step
-                currentStep++;
-                showStep(currentStep);
+                if (validateStep(currentStep)) {
+                    currentStep++;
+                    showStep(currentStep);
+                }
             } else if (direction === -1 && currentStep > 1) {
                 currentStep--;
                 showStep(currentStep);
@@ -557,8 +541,24 @@
         }
 
         function validateStep(step) {
-            // Validation disabled for testing
-            return true;
+            let isValid = true;
+            const currentStepEl = $('#step' + step);
+            
+            // Check required fields in current step
+            currentStepEl.find('input[required], select[required], textarea[required]').each(function() {
+                if (!$(this).val() || ($(this).attr('type') === 'checkbox' && !$(this).is(':checked'))) {
+                    $(this).addClass('is-invalid');
+                    isValid = false;
+                } else {
+                    $(this).removeClass('is-invalid');
+                }
+            });
+            
+            if (!isValid) {
+                alert('Please fill in all required fields.');
+            }
+            
+            return isValid;
         }
 
         function checkDocumentNumber(documentNumber) {

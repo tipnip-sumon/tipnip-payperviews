@@ -69,23 +69,25 @@ class KycController extends Controller
                     $request->merge(['dial_code' => $country->dial_code]);
                 }
             }
-            // Process mobile number: remove leading 0 and combine with dial code
-            $phoneNumber = $request->phone_number;
-            $dialCode = $request->dial_code ?? '';
-            // Remove leading zero from phone number if exists
-            if (str_starts_with($phoneNumber, '0')) {
-                $phoneNumber = substr($phoneNumber, 1);
-            }
-            // Combine dial code with processed phone number
-            $fullMobileNumber = $dialCode . $phoneNumber;
             // Check if user already has a pending or approved KYC
             if ($user->kv == 2 || $user->kv == 1) {
                 return redirect()->route('user.kyc.index')
                     ->with('error', 'You already have a KYC verification request.');
             }
+
             $request->validate(KycVerification::getValidationRules('step1'),);
             $request->validate(KycVerification::getValidationRules('step2'));
             $request->validate(KycVerification::getValidationRules('step3'));
+
+            // Process mobile number: remove leading 0 and combine with dial code
+            $phoneNumber = $request->phone_number;
+            $dialCode = $request->dial_code ?? '';
+            // Remove leading zero from phone number if exists
+            if ($phoneNumber && str_starts_with($phoneNumber, '0')) {
+                $phoneNumber = substr($phoneNumber, 1);
+            }
+            // Combine dial code with processed phone number
+            $fullMobileNumber = $dialCode . $phoneNumber;
 
             // Create directory for user KYC files
             $userKycPath = 'kyc_documents/' . $user->id;
