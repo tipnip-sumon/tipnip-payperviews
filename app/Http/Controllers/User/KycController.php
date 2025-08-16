@@ -11,10 +11,34 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Barryvdh\DomPDF\Facade\Pdf; // Correct import for PDF generation
-use Intervention\Image\ImageManagerStatic as Image;
 
 class KycController extends Controller
 {
+    /**
+     * Check if image optimization is available
+     */
+    private function isImageOptimizationAvailable()
+    {
+        try {
+            // Check if GD extension is loaded
+            if (!extension_loaded('gd')) {
+                Log::warning('GD extension not available for image optimization');
+                return false;
+            }
+            
+            // Check if Intervention Image class exists
+            if (!class_exists('Intervention\Image\ImageManagerStatic')) {
+                Log::warning('Intervention Image not available');
+                return false;
+            }
+            
+            return true;
+        } catch (\Exception $e) {
+            Log::error('Error checking image optimization availability', ['error' => $e->getMessage()]);
+            return false;
+        }
+    }
+
     /**
      * Display KYC status page
      */
@@ -321,8 +345,23 @@ class KycController extends Controller
         ]);
         
         try {
+            // Check if GD extension is available
+            if (!extension_loaded('gd')) {
+                Log::warning('GD extension not loaded, using fallback copy');
+                copy($sourcePath, $destinationPath);
+                return;
+            }
+            
+            // Check if Intervention Image class exists
+            if (!class_exists('Intervention\Image\ImageManagerStatic')) {
+                Log::warning('Intervention Image not available, using fallback copy');
+                copy($sourcePath, $destinationPath);
+                return;
+            }
+            
             // Create image instance with Intervention Image v2
-            $image = Image::make($sourcePath);
+            $imageManagerClass = '\Intervention\Image\ImageManagerStatic';
+            $image = $imageManagerClass::make($sourcePath);
             
             // Get original dimensions
             $originalWidth = $image->width();
@@ -418,7 +457,7 @@ class KycController extends Controller
                 throw new \Exception('Failed to copy original file as fallback');
             }
             
-            Log::info('Used original file as fallback');
+            Log::info('Used original file as fallback due to optimization error');
         }
     }
 
