@@ -327,17 +327,55 @@ class KycController extends Controller
                 'type' => $type
             ]);
             
-            // Set optimal dimensions based on document type
-            $maxSize = ($type === 'selfie') ? 800 : 1200;  // Selfies smaller, documents larger
+            // Set different optimization settings based on image type
+            if ($type === 'selfie') {
+                // Aggressive compression for selfies - target 30-50KB
+                $maxSize = 600;  // Smaller dimensions for selfies
+                $quality = 50;   // Lower quality for selfies
+                
+                // More aggressive resizing for selfies
+                if ($originalWidth > $maxSize || $originalHeight > $maxSize) {
+                    $image->resize($maxSize, $maxSize, function ($constraint) {
+                        $constraint->aspectRatio();
+                        $constraint->upsize();
+                    });
+                }
+                
+                Log::info('Selfie optimization - aggressive compression', [
+                    'max_size' => $maxSize,
+                    'quality' => $quality,
+                    'target' => '30-50KB'
+                ]);
+                
+            } else {
+                // Higher quality for documents (front/back) - maintain readability
+                $maxSize = 1400;  // Larger dimensions for documents
+                $quality = 85;    // Higher quality for documents
+                
+                // Less aggressive resizing for documents
+                if ($originalWidth > $maxSize || $originalHeight > $maxSize) {
+                    $image->resize($maxSize, $maxSize, function ($constraint) {
+                        $constraint->aspectRatio();
+                        $constraint->upsize();
+                    });
+                }
+                
+                // Adjust quality based on original file size for documents
+                if ($originalSize > 1000 * 1024) {
+                    $quality = 75; // Slightly lower for very large files
+                } elseif ($originalSize > 2000 * 1024) {
+                    $quality = 70; // More compression for extremely large files
+                }
+                
+                Log::info('Document optimization - maintain quality', [
+                    'max_size' => $maxSize,
+                    'quality' => $quality,
+                    'target' => 'High readability'
+                ]);
+            }
             
             // Resize image maintaining aspect ratio if needed
             if ($originalWidth > $maxSize || $originalHeight > $maxSize) {
-                // Use proper Intervention Image v2 syntax - resize so that the largest side fits within the limit
-                $image->resize($maxSize, $maxSize, function ($constraint) {
-                    $constraint->aspectRatio();
-                    $constraint->upsize();
-                });
-                
                 Log::info('Image resized', [
                     'from' => $originalWidth . 'x' . $originalHeight,
                     'to' => $image->width() . 'x' . $image->height(),
@@ -345,20 +383,13 @@ class KycController extends Controller
                 ]);
             }
             
-            // Set compression quality based on original file size
-            $quality = 85; // Default quality
-            if ($originalSize > 500 * 1024) {
-                $quality = 70; // More compression for large files
-            } elseif ($originalSize > 1000 * 1024) {
-                $quality = 60; // Even more compression for very large files
-            }
-            
             Log::info('Applying compression', [
+                'type' => $type,
                 'quality' => $quality,
                 'final_dimensions' => $image->width() . 'x' . $image->height()
             ]);
             
-            // Save as optimized JPEG with compression
+            // Save as optimized JPEG with type-specific compression
             $image->save($destinationPath, $quality, 'jpg');
             
             $finalSize = filesize($destinationPath);
@@ -371,7 +402,8 @@ class KycController extends Controller
                 'dimensions' => $image->width() . 'x' . $image->height(),
                 'saved' => round(($originalSize - $finalSize) / 1024, 2) . ' KB',
                 'compression_ratio' => $compressionRatio . '%',
-                'quality' => $quality
+                'quality' => $quality,
+                'optimization_type' => $type === 'selfie' ? 'Aggressive (Small Size)' : 'Balanced (High Quality)'
             ]);
             
         } catch (\Exception $e) {
@@ -621,8 +653,14 @@ class KycController extends Controller
                     ]);
                 }
 
-                // Calculate compression preview
-                $estimatedCompressed = round($originalSize * 0.3); // Estimated 70% compression
+                // Calculate compression preview based on image type
+                if ($request->input('type') === 'selfie') {
+                    $estimatedCompressed = round($originalSize * 0.15); // Aggressive 85% compression for selfies
+                    $optimizationType = 'Selfie (Small Size)';
+                } else {
+                    $estimatedCompressed = round($originalSize * 0.4); // Moderate 60% compression for documents
+                    $optimizationType = 'Document (High Quality)';
+                }
                 
                 return response()->json([
                     'valid' => true,
@@ -631,7 +669,8 @@ class KycController extends Controller
                         'original_size' => round($originalSize / 1024, 2) . ' KB',
                         'dimensions' => $width . 'x' . $height,
                         'estimated_compressed' => round($estimatedCompressed / 1024, 2) . ' KB',
-                        'estimated_savings' => round(($originalSize - $estimatedCompressed) / 1024, 2) . ' KB'
+                        'estimated_savings' => round(($originalSize - $estimatedCompressed) / 1024, 2) . ' KB',
+                        'optimization_type' => $optimizationType
                     ]
                 ]);
 
