@@ -1287,7 +1287,7 @@ Route::controller(App\Http\Controllers\User\KycController::class)->middleware('a
 });
 
 // KYC Image Processing Routes
-Route::controller(App\Http\Controllers\User\KycImageController::class)->middleware('auth')->group(function () {
+Route::controller(App\Http\Controllers\User\KycController::class)->middleware('auth')->group(function () {
     Route::post('/user/kyc/validate-image', 'validateImage')->name('user.kyc.validate-image');
     Route::post('/user/kyc/preview-processed', 'previewProcessedImage')->name('user.kyc.preview-processed');
 });

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\User;
 
 use App\Models\User;
+use Exception;
 use Illuminate\Http\Request;
 use App\Models\KycVerification;
 use App\Services\KycImageService;
@@ -743,5 +744,69 @@ class KycController extends Controller
                 'message' => 'Image validation failed'
             ]);
         }
+    }
+
+    /**
+     * Preview processed image with optimization applied
+     */
+    public function previewProcessedImage(Request $request)
+    {
+        try {
+            $request->validate([
+                'image' => 'required|image|mimes:jpeg,jpg,png,gif,webp|max:10240', // 10MB max
+            ]);
+
+            $file = $request->file('image');
+            $originalSize = $file->getSize();
+
+            // Apply the same optimization logic as in main KYC submission
+            $tempPath = $file->store('temp', 'local');
+            $optimizedImageData = $this->optimizeImage(storage_path('app/' . $tempPath), null, 'selfie');
+            
+            if ($optimizedImageData) {
+                // Calculate compression ratio
+                $optimizedSize = strlen($optimizedImageData);
+                $compressionRatio = round((1 - ($optimizedSize / $originalSize)) * 100, 1);
+                
+                return response()->json([
+                    'success' => true,
+                    'original_size' => $this->formatBytes($originalSize),
+                    'optimized_size' => $this->formatBytes($optimizedSize),
+                    'compression_ratio' => $compressionRatio . '%',
+                    'preview_url' => 'data:image/jpeg;base64,' . base64_encode($optimizedImageData),
+                    'message' => 'Image processed successfully'
+                ]);
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Image optimization not available - original image will be used',
+                    'original_size' => $this->formatBytes($originalSize),
+                    'optimized_size' => $this->formatBytes($originalSize),
+                    'compression_ratio' => '0%'
+                ]);
+            }
+
+        } catch (Exception $e) {
+            Log::error('KYC image preview failed: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Image preview failed: ' . $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Format bytes to human readable format
+     */
+    private function formatBytes($bytes, $precision = 2)
+    {
+        $units = array('B', 'KB', 'MB', 'GB', 'TB');
+        
+        for ($i = 0; $bytes > 1024 && $i < count($units) - 1; $i++) {
+            $bytes /= 1024;
+        }
+        
+        return round($bytes, $precision) . ' ' . $units[$i];
     }
 }
