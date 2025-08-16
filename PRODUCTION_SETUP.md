@@ -54,6 +54,7 @@ The code now includes robust fallback mechanisms:
 1. **Container Resolution Error** (from your stack trace):
    ```
    Error: Target class does not exist or cannot be resolved
+   Illuminate\Container\Container->build()
    ```
    
    **Solution**: Clear all caches and ensure dependencies are installed:
@@ -63,9 +64,17 @@ The code now includes robust fallback mechanisms:
    php artisan cache:clear
    php artisan route:clear
    php artisan view:clear
+   php artisan optimize:clear
+   composer dump-autoload --optimize
    ```
 
-2. **Missing GD Extension**:
+2. **Emergency Container Fix** (if above doesn't work):
+   ```bash
+   chmod +x emergency-fix-production.sh
+   ./emergency-fix-production.sh
+   ```
+
+3. **Missing GD Extension**:
    ```bash
    # Check if GD is installed
    php -m | grep -i gd
@@ -73,6 +82,15 @@ The code now includes robust fallback mechanisms:
    # If not found, install it
    sudo apt-get install php-gd
    sudo service apache2 restart
+   ```
+
+4. **Intervention Image Issues**:
+   ```bash
+   # Check installation
+   composer show intervention/image
+   
+   # Reinstall if needed
+   composer require intervention/image:^2.7 --update-with-dependencies
    ```
 
 ## Environment Configuration

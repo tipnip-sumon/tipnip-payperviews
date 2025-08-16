@@ -40,6 +40,24 @@ class KycController extends Controller
     }
 
     /**
+     * Get Intervention Image instance safely
+     */
+    private function getImageManager()
+    {
+        try {
+            if (!$this->isImageOptimizationAvailable()) {
+                return null;
+            }
+            
+            $class = 'Intervention\Image\ImageManagerStatic';
+            return $class;
+        } catch (\Exception $e) {
+            Log::error('Failed to get image manager', ['error' => $e->getMessage()]);
+            return null;
+        }
+    }
+
+    /**
      * Display KYC status page
      */
     public function index()
@@ -345,23 +363,18 @@ class KycController extends Controller
         ]);
         
         try {
-            // Check if GD extension is available
-            if (!extension_loaded('gd')) {
-                Log::warning('GD extension not loaded, using fallback copy');
-                copy($sourcePath, $destinationPath);
-                return;
-            }
-            
-            // Check if Intervention Image class exists
-            if (!class_exists('Intervention\Image\ImageManagerStatic')) {
-                Log::warning('Intervention Image not available, using fallback copy');
-                copy($sourcePath, $destinationPath);
+            // Get image manager safely
+            $imageManager = $this->getImageManager();
+            if (!$imageManager) {
+                Log::warning('Image optimization not available, copying original file');
+                if (!copy($sourcePath, $destinationPath)) {
+                    throw new \Exception('Failed to copy original file');
+                }
                 return;
             }
             
             // Create image instance with Intervention Image v2
-            $imageManagerClass = '\Intervention\Image\ImageManagerStatic';
-            $image = $imageManagerClass::make($sourcePath);
+            $image = $imageManager::make($sourcePath);
             
             // Get original dimensions
             $originalWidth = $image->width();
