@@ -1,6 +1,10 @@
 #!/bin/bash
 
-# Production Emergency Deployment Script
+# Production Emergency echo "4. Clear caches:"
+echo "   php artisan cache:clear"
+echo "   php artisan config:clear"
+echo ""
+echo "5. Test the KYC system and video gallery"yment Script
 # This script will push the emergency fixes to production
 
 echo "🚀 PRODUCTION EMERGENCY DEPLOYMENT"
@@ -15,7 +19,7 @@ fi
 
 echo "📝 Staging emergency fixes..."
 git add .
-git commit -m "Emergency fix: Add missing database columns (video_limit, video_access_enabled) and production repair script"
+git commit -m "Emergency fix: Correct database column references and clean up test files"
 
 echo "🚀 Pushing to production..."
 git push origin main
@@ -31,13 +35,10 @@ echo ""
 echo "2. Pull the latest changes:"
 echo "   git pull origin main"
 echo ""
-echo "3. Run the emergency database fix:"
+echo "3. Run the emergency database fix (if needed):"
 echo "   php production_database_emergency_fix.php"
 echo ""
-echo "4. Run pending migrations:"
-echo "   php artisan migrate --force"
-echo ""
-echo "5. Clear caches:"
+echo "4. Clear caches:"
 echo "   php artisan cache:clear"
 echo "   php artisan config:clear"
 echo ""
