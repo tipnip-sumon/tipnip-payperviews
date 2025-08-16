@@ -178,7 +178,7 @@ class EmailCampaignController extends Controller
 
             $count = 0;
             foreach ($users as $user) {
-                SendKycPendingReminderJob::dispatch($user)->onQueue('emails');
+                SendKycPendingReminderJob::dispatchSync($user);
                 $count++;
             }
 
@@ -240,7 +240,7 @@ class EmailCampaignController extends Controller
 
             $count = 0;
             foreach ($users as $user) {
-                SendMonthlyPasswordResetJob::dispatch($user)->onQueue('emails');
+                SendMonthlyPasswordResetJob::dispatchSync($user);
                 $count++;
             }
 
@@ -305,7 +305,7 @@ class EmailCampaignController extends Controller
 
             $count = 0;
             foreach ($users as $user) {
-                SendInactiveUserReminderJob::dispatch($user)->onQueue('emails');
+                SendInactiveUserReminderJob::dispatchSync($user);
                 $count++;
             }
 

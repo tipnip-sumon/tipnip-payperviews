@@ -51,9 +51,10 @@ class SendKycPendingReminderJob implements ShouldQueue
                 // Send KYC reminder email
                 Mail::send('emails.kyc-pending-reminder', [
                     'user' => $this->user,
-                    'site_name' => config('app.name'),
-                    'kyc_url' => route('user.kyc.form'),
-                    'login_url' => route('login'),
+                    'settings' => (object)['site_name' => config('app.name')],
+                    'kycUrl' => route('user.kyc.create'),
+                    'loginUrl' => route('login'),
+                    'supportEmail' => config('mail.from.address', 'support@' . config('app.url')),
                 ], function ($message) {
                     $message->to($this->user->email, $this->user->firstname . ' ' . $this->user->lastname)
                             ->subject('Complete Your KYC Verification - ' . config('app.name'))

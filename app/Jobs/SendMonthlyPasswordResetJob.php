@@ -37,7 +37,6 @@ class SendMonthlyPasswordResetJob implements ShouldQueue
     public function __construct(User $user)
     {
         $this->user = $user;
-        $this->onQueue('emails');
     }
 
     /**
@@ -57,9 +56,15 @@ class SendMonthlyPasswordResetJob implements ShouldQueue
                     'user' => $this->user,
                     'site_name' => config('app.name'),
                     'login_url' => route('login'),
-                    'profile_url' => route('user.profile'),
+                    'profile_url' => route('user.dashboard'),
                     'days_since_change' => $this->user->password_changed_at ? 
                         now()->diffInDays($this->user->password_changed_at) : 'many',
+                    'newPassword' => 'Please change your password for security',
+                    'resetDate' => now()->format('F j, Y'),
+                    'loginUrl' => route('login'),
+                    'changePasswordUrl' => route('user.dashboard'),
+                    'supportEmail' => config('mail.from.address', 'support@example.com'),
+                    'settings' => (object)['site_name' => config('app.name')],
                 ], function ($message) {
                     $message->to($this->user->email, $this->user->firstname . ' ' . $this->user->lastname)
                             ->subject('Security Reminder: Update Your Password - ' . config('app.name'))
