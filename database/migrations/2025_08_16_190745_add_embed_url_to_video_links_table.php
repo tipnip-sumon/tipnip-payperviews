@@ -13,10 +13,10 @@ return new class extends Migration
     {
         Schema::table('video_links', function (Blueprint $table) {
             // Add embed_url column after description
-            $table->text('embed_url')->nullable()->after('description');
-            
-            // Add earning_per_view column after cost_per_click  
-            $table->decimal('earning_per_view', 8, 2)->nullable()->after('cost_per_click');
+            $table->string('embed_url')->nullable()->after('description');
+
+            // Add earning_per_view column after cost_per_click
+            $table->decimal('earning_per_view', 8, 2)->default(0.00)->after('cost_per_click');
         });
     }
 
