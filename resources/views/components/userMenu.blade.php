@@ -18,7 +18,7 @@
     @endif 
 
 <ul class="main-menu">
-    <!-- 🏠 DASHBOARD -->
+    <!-- DASHBOARD -->
     <li class="slide">
         <a href="{{route('user.dashboard')}}" class="side-menu__item">
             <i class="fe fe-home side-menu__icon"></i>
@@ -26,11 +26,11 @@
         </a>
     </li>
 
-    <!-- 💳 ADD FUND (DEDICATED SECTION) -->
+    <!-- ADD FUND (DEDICATED SECTION) -->
     <li class="slide has-sub">
         <a href="javascript:void(0);" class="side-menu__item">
             <i class="fe fe-credit-card side-menu__icon"></i>
-            <span class="side-menu__label">💳 Add Fund</span>
+            <span class="side-menu__label">Add Fund</span>
             @auth
                 @php
                     $totalDeposits = auth()->user()->deposits()->where('status', 1)->sum('amount');
@@ -43,14 +43,14 @@
         </a>
         <ul class="slide-menu child1">
             <li class="slide side-menu__label1">
-                <a href="javascript:void(0)">💳 Add Fund</a>
+                <a href="javascript:void(0)">Add Fund</a>
             </li>
             
             <!-- Deposit Funds -->
             <li class="slide">
                 <a href="{{ route('deposit.index') }}" class="side-menu__item">
                     <i class="fe fe-plus-circle me-2 text-success"></i>
-                    <span class="side-menu__label">💳 Deposit Funds</span>
+                    <span class="side-menu__label">Deposit Funds</span>
                     <span class="badge badge-success ms-auto">Add Money</span>
                 </a>
             </li>
@@ -73,11 +73,11 @@
         </ul>
     </li>
     
-    <!-- 🎬 MOST IMPORTANT: VIDEO WATCH (TOP PRIORITY) -->
+    <!-- VIDEO WATCH (TOP PRIORITY) -->
     <li class="slide">
         <a href="{{ route('user.video-views.gallery') }}" class="side-menu__item">
             <i class="fe fe-play-circle side-menu__icon"></i>
-            <span class="side-menu__label">🎬 Watch Videos & Earn</span>
+            <span class="side-menu__label">Watch Videos & Earn</span>
             @auth
                 @php
                     $totalVideoEarnings = Auth::user()->videoViews()->sum('earned_amount');
@@ -91,11 +91,11 @@
         </a>
     </li>
 
-    <!-- 🎟️ BUY LOTTERY TICKETS (2ND PRIORITY) -->
+    <!-- BUY LOTTERY TICKETS (2ND PRIORITY) -->
     <li class="slide">
         <a href="{{ route('lottery.index') }}" class="side-menu__item">
             <i class="fas fa-ticket-alt side-menu__icon"></i>
-            <span class="side-menu__label">🎟️ Buy Lottery Tickets</span>
+            <span class="side-menu__label">Buy Lottery Tickets</span>
             @auth
                 @php
                     $currentDraw = \App\Models\LotteryDraw::where('status', 'pending')->first();
@@ -111,11 +111,11 @@
         </a>
     </li>
 
-    <!-- 💰 ESSENTIAL FINANCIAL OPERATIONS -->
+    <!-- ESSENTIAL FINANCIAL OPERATIONS -->
     <li class="slide has-sub">
         <a href="javascript:void(0);" class="side-menu__item">
             <i class="fe fe-dollar-sign side-menu__icon"></i>
-            <span class="side-menu__label">💰 Financial Hub</span>
+            <span class="side-menu__label">Financial Hub</span>
             @auth
                 @php
                     $totalBalance = (auth()->user()->deposit_wallet ?? 0) + (auth()->user()->interest_wallet ?? 0);
@@ -128,14 +128,14 @@
         </a>
         <ul class="slide-menu child1">
             <li class="slide side-menu__label1">
-                <a href="javascript:void(0)">💰 Financial Hub</a>
+                <a href="javascript:void(0)">Financial Hub</a>
             </li>
             
             <!-- Withdraw (4th Priority) -->
             <li class="slide">
                 <a href="{{ route('user.withdraw.wallet') }}" class="side-menu__item">
                     <i class="fe fe-minus-circle me-2 text-warning"></i>
-                    <span class="side-menu__label">🏧 Withdraw Wallet</span>
+                    <span class="side-menu__label">Withdraw Wallet</span>
                     @auth
                         @if($totalBalance > 0)
                             <span class="badge badge-warning ms-auto">${{ number_format($totalBalance, 2) }}</span>
@@ -148,7 +148,7 @@
             <li class="slide">
                 <a href="{{route('user.transfer_funds')}}" class="side-menu__item">
                     <i class="fe fe-send me-2 text-info"></i>
-                    <span class="side-menu__label">💸 Transfer Funds</span>
+                    <span class="side-menu__label">Transfer Funds</span>
                     <span class="badge badge-info ms-auto">Send Money</span>
                 </a>
             </li>
@@ -157,7 +157,7 @@
             <li class="slide">
                 <a href="{{ route('user.withdraw') }}" class="side-menu__item">
                     <i class="fe fe-shield me-2 text-danger"></i>
-                    <span class="side-menu__label">🛡️ Withdraw Security Package</span>
+                    <span class="side-menu__label">Withdraw Security Package</span>
                     @auth
                         @php
                             $activeDeposit = auth()->user()->invests()->where('status', 1)->first();
@@ -171,11 +171,11 @@
         </ul>
     </li>
 
-    <!-- 🛡️ SECURITY PACKAGE -->
+    <!-- SECURITY PACKAGE -->
     <li class="slide has-sub">
         <a href="javascript:void(0);" class="side-menu__item">
             <i class="fe fe-shield side-menu__icon"></i>
-            <span class="side-menu__label">🛡️ Security Package</span>
+            <span class="side-menu__label">Security Package</span>
             @auth
                 @php
                     $currentDeposit = auth()->user()->invests()->where('status', 1)->first();
@@ -190,7 +190,7 @@
         </a>
         <ul class="slide-menu child1">
             <li class="slide side-menu__label1">
-                <a href="javascript:void(0)">🛡️ Security Package</a>
+                <a href="javascript:void(0)">Security Package</a>
             </li>
             <li class="slide">
                 <a href="{{route('invest.index')}}" class="side-menu__item">
@@ -208,11 +208,11 @@
         </ul>
     </li>
 
-    <!-- 🎰 LOTTERY COMPLETE SYSTEM -->
+    <!-- LOTTERY COMPLETE SYSTEM -->
     <li class="slide has-sub">
         <a href="javascript:void(0);" class="side-menu__item">
             <i class="fas fa-dice side-menu__icon"></i>
-            <span class="side-menu__label">🎰 Lottery System</span>
+            <span class="side-menu__label">Lottery System</span>
             @auth
                 @if($userTicketsCount > 0)
                     <span class="badge badge-success ms-2">{{ $userTicketsCount }} tickets</span>
@@ -222,7 +222,7 @@
         </a>
         <ul class="slide-menu child1">
             <li class="slide side-menu__label1">
-                <a href="javascript:void(0)">🎰 Lottery System</a>
+                <a href="javascript:void(0)">Lottery System</a>
             </li>
             <li class="slide">
                 <a href="{{ route('lottery.unified.index') }}" class="side-menu__item">
@@ -251,11 +251,11 @@
         </ul>
     </li>
 
-    <!-- 👥 TEAM & REFERRALS -->
+    <!-- TEAM & REFERRALS -->
     <li class="slide has-sub">
         <a href="javascript:void(0);" class="side-menu__item">
             <i class="fe fe-users side-menu__icon"></i>
-            <span class="side-menu__label">👥 Team & Referrals</span>
+            <span class="side-menu__label">Team & Referrals</span>
             @auth
                 @php
                     $totalCommissions = \App\Models\ReferralCommission::where('referrer_user_id', auth()->id())->sum('commission_amount');
@@ -268,7 +268,7 @@
         </a>
         <ul class="slide-menu child1">
             <li class="slide side-menu__label1">
-                <a href="javascript:void(0)">👥 Team & Referrals</a>
+                <a href="javascript:void(0)">Team & Referrals</a>
             </li>
             <li class="slide">
                 <a href="{{ route('user.sponsor-list') }}" class="side-menu__item">
@@ -299,11 +299,11 @@
         </ul>
     </li>
 
-    <!-- 👤 PROFILE & ACCOUNT -->
+    <!-- PROFILE & ACCOUNT -->
     <li class="slide has-sub">
         <a href="javascript:void(0);" class="side-menu__item">
             <i class="fe fe-user side-menu__icon"></i>
-            <span class="side-menu__label">👤 Profile & Account</span>
+            <span class="side-menu__label">Profile & Account</span>
             @if(auth()->check() && !auth()->user()->hasVerifiedEmail())
                 <span class="badge badge-warning ms-2">Unverified</span>
             @elseif(auth()->check())
@@ -313,7 +313,7 @@
         </a>
         <ul class="slide-menu child1">
             <li class="slide side-menu__label1">
-                <a href="javascript:void(0)">👤 Profile & Account</a>
+                <a href="javascript:void(0)">Profile & Account</a>
             </li>
             <li class="slide">
                 <a href="{{ route('profile.index') }}" class="side-menu__item">
@@ -385,11 +385,11 @@
         </ul>
     </li>
 
-    <!-- 🔒 KYC VERIFICATION -->
+    <!-- KYC VERIFICATION -->
     <li class="slide has-sub">
         <a href="javascript:void(0);" class="side-menu__item">
             <i class="fe fe-shield side-menu__icon"></i>
-            <span class="side-menu__label">🔒 KYC Verification</span>
+            <span class="side-menu__label">KYC Verification</span>
             @auth
                 @if(Auth::user()->kv == 0)
                     <span class="badge badge-danger ms-2">Not Verified</span>
@@ -403,7 +403,7 @@
         </a>
         <ul class="slide-menu child1">
             <li class="slide side-menu__label1">
-                <a href="javascript:void(0)">🔒 KYC Verification</a>
+                <a href="javascript:void(0)">KYC Verification</a>
             </li>
             <li class="slide">
                 <a href="{{ route('user.kyc.index') }}" class="side-menu__item">
@@ -431,11 +431,11 @@
         </ul>
     </li>
 
-    <!-- 💬 COMMUNICATION -->
+    <!-- COMMUNICATION -->
     <li class="slide has-sub">
         <a href="javascript:void(0);" class="side-menu__item">
             <i class="fe fe-message-circle side-menu__icon"></i>
-            <span class="side-menu__label">💬 Communication</span>
+            <span class="side-menu__label">Communication</span>
             @auth
                 @php
                     $unreadNotifications = \App\Models\UserNotification::where('user_id', auth()->id())->unread()->notExpired()->count();
@@ -450,7 +450,7 @@
         </a>
         <ul class="slide-menu child1">
             <li class="slide side-menu__label1">
-                <a href="javascript:void(0)">💬 Communication</a>
+                <a href="javascript:void(0)">Communication</a>
             </li>
             <!-- Notifications -->
             <li class="slide">
@@ -479,16 +479,16 @@
         </ul>
     </li>
 
-    <!-- 📊 CONSOLIDATED REPORTS -->
+    <!-- CONSOLIDATED REPORTS -->
     <li class="slide has-sub">
         <a href="javascript:void(0);" class="side-menu__item">
             <i class="fe fe-bar-chart-2 side-menu__icon"></i>
-            <span class="side-menu__label">📊 Reports & History</span>
+            <span class="side-menu__label">Reports & History</span>
             <i class="fe fe-chevron-right side-menu__angle"></i>
         </a>
         <ul class="slide-menu child1">
             <li class="slide side-menu__label1">
-                <a href="javascript:void(0)">📊 Reports & History</a>
+                <a href="javascript:void(0)">Reports & History</a>
             </li>
             
             <!-- Financial Reports -->
@@ -582,11 +582,11 @@
         </ul>
     </li>
 
-    <!-- 🚪 LOGOUT -->
+    <!-- LOGOUT -->
     <li class="slide">
         <a href="javascript:void(0);" class="side-menu__item" onclick="performLogout();">
             <i class="si si-logout side-menu__icon"></i>
-            <span class="side-menu__label">🚪 Logout</span>
+            <span class="side-menu__label">Logout</span>
         </a>
     </li>
 </ul>
@@ -596,19 +596,19 @@
     <li class="slide">
         <a href="{{route('login')}}" class="side-menu__item">
             <i class="fe fe-log-in side-menu__icon"></i>
-            <span class="side-menu__label">🔐 Login</span>
+            <span class="side-menu__label">Login</span>
         </a>
     </li>
     <li class="slide">
         <a href="{{route('register')}}" class="side-menu__item">
             <i class="fe fe-user-plus side-menu__icon"></i>
-            <span class="side-menu__label">📝 Register</span>
+            <span class="side-menu__label">Register</span>
         </a>
     </li>
     <li class="slide">
         <a href="/" class="side-menu__item">
             <i class="fe fe-home side-menu__icon"></i>
-            <span class="side-menu__label">🏠 Home</span>
+            <span class="side-menu__label">Home</span>
         </a>
     </li>
 </ul>
