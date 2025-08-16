@@ -502,6 +502,19 @@
             // Initialize form
             showStep(currentStep);
             
+            // Test route availability on page load
+            console.log('🔍 Testing KYC validation route...');
+            $.ajax({
+                url: '{{ route("user.kyc.validate-image") }}',
+                method: 'GET',
+                success: function() {
+                    console.log('✅ KYC validation route is accessible');
+                },
+                error: function(xhr) {
+                    console.error('❌ KYC validation route error:', xhr.status, xhr.statusText);
+                }
+            });
+            
             // Document number validation
             $('#document_number').on('input', function() {
                 const documentNumber = $(this).val().trim();
@@ -863,6 +876,8 @@
             `;
             $(`#${fieldId}`).parent().append(loadingHtml);
             
+            console.log('🔍 Validating image:', file.name, 'Size:', file.size, 'Type:', file.type);
+            
             $.ajax({
                 url: '{{ route("user.kyc.validate-image") }}',
                 method: 'POST',
@@ -873,6 +888,7 @@
                     'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
                 },
                 success: function(response) {
+                    console.log('✅ Image validation success:', response);
                     $(`#${fieldId}_validation`).remove();
                     
                     let alertClass = response.success ? 'text-success' : 'text-warning';
@@ -907,12 +923,29 @@
                     validationHtml += '</div>';
                     $(`#${fieldId}`).parent().append(validationHtml);
                 },
-                error: function() {
+                error: function(xhr, status, error) {
+                    console.error('❌ Image validation failed:', {
+                        status: xhr.status,
+                        statusText: xhr.statusText,
+                        responseText: xhr.responseText,
+                        error: error
+                    });
+                    
                     $(`#${fieldId}_validation`).remove();
+                    
+                    let errorMessage = 'Could not validate image';
+                    if (xhr.status === 500) {
+                        errorMessage = 'Server error - please check console for details';
+                    } else if (xhr.status === 404) {
+                        errorMessage = 'Validation endpoint not found';
+                    } else if (xhr.status === 422) {
+                        errorMessage = 'Invalid image format';
+                    }
+                    
                     const errorHtml = `
                         <div id="${fieldId}_validation" class="mt-2">
                             <small class="text-danger">
-                                <i class="fas fa-exclamation-circle"></i> Could not validate image
+                                <i class="fas fa-exclamation-circle"></i> ${errorMessage}
                             </small>
                         </div>
                     `;
