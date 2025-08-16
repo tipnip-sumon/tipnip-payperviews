@@ -458,7 +458,7 @@ class VideoLinkController extends Controller
         $displayPlans = Cache::remember('public_gallery_display_plans', 300, function() {
             return \App\Models\Plan::where('status', true)
                 ->where('video_access_enabled', true)
-                ->select(['id', 'name', 'fixed_amount', 'video_limit'])
+                ->select(['id', 'name', 'fixed_amount', 'daily_video_limit'])
                 ->orderBy('fixed_amount', 'asc')
                 ->limit(3)
                 ->get();
