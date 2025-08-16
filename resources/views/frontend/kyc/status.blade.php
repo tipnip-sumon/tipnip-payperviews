@@ -133,6 +133,17 @@
                                                     <div class="col-md-4 mb-3">
                                                         <div class="text-center">
                                                             <h6>Document Front</h6>
+                                                            <!-- Image Preview -->
+                                                            <div class="mb-2">
+                                                                <img src="{{ route('user.kyc.view', [$kycVerification->id, 'front']) }}" 
+                                                                     alt="Document Front" 
+                                                                     class="img-fluid border rounded" 
+                                                                     style="max-height: 200px; object-fit: cover;"
+                                                                     onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                                                <div style="display: none;" class="alert alert-warning">
+                                                                    <i class="fas fa-exclamation-triangle"></i> Image preview unavailable
+                                                                </div>
+                                                            </div>
                                                             <div class="btn-group d-block">
                                                                 <a href="{{ route('user.kyc.view', [$kycVerification->id, 'front']) }}" 
                                                                    class="btn btn-info btn-sm" target="_blank">
@@ -151,6 +162,17 @@
                                                     <div class="col-md-4 mb-3">
                                                         <div class="text-center">
                                                             <h6>Document Back</h6>
+                                                            <!-- Image Preview -->
+                                                            <div class="mb-2">
+                                                                <img src="{{ route('user.kyc.view', [$kycVerification->id, 'back']) }}" 
+                                                                     alt="Document Back" 
+                                                                     class="img-fluid border rounded" 
+                                                                     style="max-height: 200px; object-fit: cover;"
+                                                                     onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                                                <div style="display: none;" class="alert alert-warning">
+                                                                    <i class="fas fa-exclamation-triangle"></i> Image preview unavailable
+                                                                </div>
+                                                            </div>
                                                             <div class="btn-group d-block">
                                                                 <a href="{{ route('user.kyc.view', [$kycVerification->id, 'back']) }}" 
                                                                    class="btn btn-info btn-sm" target="_blank">
@@ -169,6 +191,17 @@
                                                     <div class="col-md-4 mb-3">
                                                         <div class="text-center">
                                                             <h6>Selfie Image</h6>
+                                                            <!-- Image Preview -->
+                                                            <div class="mb-2">
+                                                                <img src="{{ route('user.kyc.view', [$kycVerification->id, 'selfie']) }}" 
+                                                                     alt="Selfie Image" 
+                                                                     class="img-fluid border rounded" 
+                                                                     style="max-height: 200px; object-fit: cover;"
+                                                                     onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                                                <div style="display: none;" class="alert alert-warning">
+                                                                    <i class="fas fa-exclamation-triangle"></i> Image preview unavailable
+                                                                </div>
+                                                            </div>
                                                             <div class="btn-group d-block">
                                                                 <a href="{{ route('user.kyc.view', [$kycVerification->id, 'selfie']) }}" 
                                                                    class="btn btn-info btn-sm" target="_blank">

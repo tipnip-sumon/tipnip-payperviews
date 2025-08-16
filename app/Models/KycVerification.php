@@ -13,7 +13,7 @@ class KycVerification extends Model
         'user_id',
         'first_name',
         'last_name',
-        'date_of_birth', // Optional field for date of birth
+        'date_of_birth',
         'document_type',
         'document_number',
         'document_front',
@@ -28,14 +28,12 @@ class KycVerification extends Model
         'phone_number',
         'status',
         'admin_remarks',
-        'admin_notes',
         'submitted_at',
         'reviewed_at',
         'reviewed_by',
         'approved_at',
         'rejected_at',
         'under_review_at'
-        
     ];
 
     protected $casts = [
@@ -101,8 +99,8 @@ class KycVerification extends Model
     {
         $rules = [
             'step1' => [
-                'first_name' => 'required|string|max:50',
-                'last_name' => 'required|string|max:50',
+                'first_name' => 'required|string|max:40',
+                'last_name' => 'required|string|max:40',
                 'date_of_birth' => 'required|date|before:-18 years',
                 'nationality' => 'required|string|max:100',
                 'phone_number' => 'required|string|max:20',
@@ -117,9 +115,9 @@ class KycVerification extends Model
             'step3' => [
                 'document_type' => 'required|in:passport,national_id,driving_license',
                 'document_number' => 'required|string|max:50',
-                'document_front' => 'required|file|mimes:jpeg,jpg,png,pdf|max:5120',
-                'document_back' => 'nullable|file|mimes:jpeg,jpg,png,pdf|max:5120',
-                'selfie_image' => 'required|file|mimes:jpeg,jpg,png|max:5120',
+                'document_front' => 'required|file|mimes:jpeg,jpg,png,gif,webp,pdf|max:10240', // 10MB limit, will be optimized
+                'document_back' => 'nullable|file|mimes:jpeg,jpg,png,gif,webp,pdf|max:10240',
+                'selfie_image' => 'required|file|mimes:jpeg,jpg,png,gif,webp|max:10240', // No PDF for selfies
                 'terms' => 'required|accepted',
             ]
         ];

@@ -261,7 +261,10 @@
                                                 <label for="document_front" class="form-label">Document Front Side <span class="text-danger">*</span></label>
                                                 <input type="file" class="form-control @error('document_front') is-invalid @enderror" 
                                                        id="document_front" name="document_front" accept="image/*,.pdf" required>
-                                                <small class="form-text text-muted">Accepted formats: JPEG, PNG, JPG, PDF (Max size: 5MB)</small>
+                                                <small class="form-text text-muted">
+                                                    <i class="fas fa-magic text-primary"></i> Accepted formats: JPEG, PNG, GIF, WebP, PDF (Max size: 10MB)<br>
+                                                    <span class="text-success">✓ Images will be automatically optimized and compressed</span>
+                                                </small>
                                                 @error('document_front')
                                                     <div class="invalid-feedback">{{ $message }}</div>
                                                 @enderror
@@ -272,7 +275,10 @@
                                                 <label for="document_back" class="form-label">Document Back Side (if applicable)</label>
                                                 <input type="file" class="form-control @error('document_back') is-invalid @enderror" 
                                                        id="document_back" name="document_back" accept="image/*,.pdf">
-                                                <small class="form-text text-muted">Accepted formats: JPEG, PNG, JPG, PDF (Max size: 5MB)</small>
+                                                <small class="form-text text-muted">
+                                                    <i class="fas fa-magic text-primary"></i> Accepted formats: JPEG, PNG, GIF, WebP, PDF (Max size: 10MB)<br>
+                                                    <span class="text-success">✓ Images will be automatically optimized and compressed</span>
+                                                </small>
                                                 @error('document_back')
                                                     <div class="invalid-feedback">{{ $message }}</div>
                                                 @enderror
@@ -284,7 +290,10 @@
                                         <label for="selfie_image" class="form-label">Selfie with Document <span class="text-danger">*</span></label>
                                         <input type="file" class="form-control @error('selfie_image') is-invalid @enderror" 
                                                id="selfie_image" name="selfie_image" accept="image/*" required>
-                                        <small class="form-text text-muted">Take a clear selfie holding your document next to your face</small>
+                                        <small class="form-text text-muted">
+                                            <i class="fas fa-magic text-primary"></i> Take a clear selfie holding your document next to your face<br>
+                                            <span class="text-success">✓ Images will be automatically optimized and compressed</span>
+                                        </small>
                                         @error('selfie_image')
                                             <div class="invalid-feedback">{{ $message }}</div>
                                         @enderror
@@ -426,6 +435,41 @@
             color: #ffc107;
         }
 
+        /* Enhanced error states */
+        .phone-check-status, .document-check-status {
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .is-invalid {
+            animation: shake 0.5s ease-in-out;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        /* Toast notifications */
+        .toast {
+            min-width: 300px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .toast-header {
+            border-bottom: none;
+        }
+
+        .toast-body {
+            padding: 12px 15px;
+            line-height: 1.4;
+        }
+
         @media (max-width: 768px) {
             .progress-steps {
                 flex-direction: column;
@@ -466,6 +510,14 @@
                 }
             });
             
+            // Phone number validation
+            $('#phone_number').on('input', function() {
+                const phoneNumber = $(this).val().trim();
+                if (phoneNumber.length > 8) {
+                    checkPhoneNumber(phoneNumber);
+                }
+            });
+            
             // Form submission
             $('#kycForm').on('submit', function(e) {
                 if (!validateStep(currentStep)) {
@@ -473,8 +525,15 @@
                     return false;
                 }
                 
-                // Show loading state
-                $('#submitBtn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>Submitting...');
+                // Additional form validation before submission
+                if (!validateAllSteps()) {
+                    e.preventDefault();
+                    showErrorToast('Please complete all required fields correctly.');
+                    return false;
+                }
+                
+                // Show optimized loading state
+                $('#submitBtn').prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>Optimizing Images & Submitting...');
                 
                 return true;
             });            // Document type change handler
@@ -494,15 +553,24 @@
                 }
             });
             
-            // File upload validation
+            // File upload validation and preview
             $('input[type="file"]').on('change', function() {
                 const file = this.files[0];
                 const maxSize = 5 * 1024 * 1024; // 5MB
+                const fieldId = $(this).attr('id');
                 
                 if (file && file.size > maxSize) {
                     alert('File size must be less than 5MB');
                     $(this).val('');
                     return false;
+                }
+                
+                if (file) {
+                    // Show image preview
+                    showImagePreview(file, fieldId);
+                    
+                    // Validate image quality
+                    validateImageQuality(file, fieldId);
                 }
             });
         });
@@ -561,6 +629,124 @@
             return isValid;
         }
 
+        // Enhanced validation for all steps
+        function validateAllSteps() {
+            let allValid = true;
+            let errorMessages = [];
+            
+            // Validate Step 1
+            if (!$('#first_name').val().trim()) {
+                errorMessages.push('First name is required');
+                allValid = false;
+            }
+            if (!$('#last_name').val().trim()) {
+                errorMessages.push('Last name is required');
+                allValid = false;
+            }
+            if (!$('#date_of_birth').val()) {
+                errorMessages.push('Date of birth is required');
+                allValid = false;
+            }
+            if (!$('#phone_number').val().trim()) {
+                errorMessages.push('Phone number is required');
+                allValid = false;
+            }
+            
+            // Validate Step 2
+            if (!$('#address').val().trim()) {
+                errorMessages.push('Address is required');
+                allValid = false;
+            }
+            if (!$('#city').val().trim()) {
+                errorMessages.push('City is required');
+                allValid = false;
+            }
+            if (!$('#country').val()) {
+                errorMessages.push('Country is required');
+                allValid = false;
+            }
+            
+            // Validate Step 3
+            if (!$('#document_type').val()) {
+                errorMessages.push('Document type is required');
+                allValid = false;
+            }
+            if (!$('#document_number').val().trim()) {
+                errorMessages.push('Document number is required');
+                allValid = false;
+            }
+            if (!$('#document_front')[0].files.length) {
+                errorMessages.push('Document front image is required');
+                allValid = false;
+            }
+            if (!$('#selfie_image')[0].files.length) {
+                errorMessages.push('Selfie image is required');
+                allValid = false;
+            }
+            if (!$('#terms').is(':checked')) {
+                errorMessages.push('You must accept the terms and conditions');
+                allValid = false;
+            }
+            
+            if (!allValid) {
+                showErrorToast(errorMessages.join('<br>'));
+            }
+            
+            return allValid;
+        }
+
+        // Show error toast notification
+        function showErrorToast(message) {
+            // Remove existing toast if any
+            $('.error-toast').remove();
+            
+            const toast = $(`
+                <div class="error-toast position-fixed top-0 end-0 m-3" style="z-index: 9999;">
+                    <div class="toast show" role="alert">
+                        <div class="toast-header bg-danger text-white">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong class="me-auto">Validation Error</strong>
+                            <button type="button" class="btn-close btn-close-white" onclick="$('.error-toast').remove()"></button>
+                        </div>
+                        <div class="toast-body">
+                            ${message}
+                        </div>
+                    </div>
+                </div>
+            `);
+            
+            $('body').append(toast);
+            
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                toast.fadeOut(() => toast.remove());
+            }, 5000);
+        }
+
+        // Show success toast notification
+        function showSuccessToast(message) {
+            const toast = $(`
+                <div class="success-toast position-fixed top-0 end-0 m-3" style="z-index: 9999;">
+                    <div class="toast show" role="alert">
+                        <div class="toast-header bg-success text-white">
+                            <i class="fas fa-check-circle me-2"></i>
+                            <strong class="me-auto">Success</strong>
+                            <button type="button" class="btn-close btn-close-white" onclick="$('.success-toast').remove()"></button>
+                        </div>
+                        <div class="toast-body">
+                            ${message}
+                        </div>
+                    </div>
+                </div>
+            `);
+            
+            $('body').append(toast);
+            
+            setTimeout(() => {
+                toast.fadeOut(() => toast.remove());
+            }, 3000);
+        }
+
         function checkDocumentNumber(documentNumber) {
             const statusDiv = $('.document-check-status');
             statusDiv.removeClass('available unavailable').addClass('checking');
@@ -589,6 +775,35 @@
             });
         }
 
+        function checkPhoneNumber(phoneNumber) {
+            // Remove phone number status if exists
+            $('.phone-check-status').remove();
+            
+            $.ajax({
+                url: '{{ route("user.kyc.check-phone") }}',
+                method: 'POST',
+                data: {
+                    phone_number: phoneNumber,
+                    dial_code: $('#country').find(':selected').data('dial-code') || '+880',
+                    _token: '{{ csrf_token() }}'
+                },
+                beforeSend: function() {
+                    $('#phone_number').after('<div class="phone-check-status mt-1"><small class="text-info"><i class="fas fa-spinner fa-spin"></i> Checking phone number...</small></div>');
+                },
+                success: function(response) {
+                    $('.phone-check-status').remove();
+                    if (response.available) {
+                        $('#phone_number').after('<div class="phone-check-status mt-1"><small class="text-success"><i class="fas fa-check-circle"></i> Phone number is available</small></div>');
+                    } else {
+                        $('#phone_number').after('<div class="phone-check-status mt-1"><small class="text-danger"><i class="fas fa-times-circle"></i> ' + response.message + '</small></div>');
+                    }
+                },
+                error: function() {
+                    $('.phone-check-status').remove();
+                }
+            });
+        }
+
         // Allow clicking on steps to navigate (only to completed steps)
         $('.step').on('click', function() {
             const stepNumber = parseInt($(this).data('step'));
@@ -597,6 +812,114 @@
                 showStep(currentStep);
             }
         });
+        
+        // Image preview and validation functions
+        function showImagePreview(file, fieldId) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                // Remove existing preview
+                $(`#${fieldId}_preview`).remove();
+                
+                // Create preview container
+                const previewHtml = `
+                    <div id="${fieldId}_preview" class="mt-2">
+                        <div class="image-preview-container" style="max-width: 300px;">
+                            <img src="${e.target.result}" class="img-thumbnail" style="max-width: 100%; height: auto;">
+                            <div class="mt-1">
+                                <small class="text-muted">Preview: ${file.name}</small>
+                                <button type="button" class="btn btn-sm btn-outline-danger ms-2" onclick="removeImagePreview('${fieldId}')">
+                                    <i class="fas fa-trash"></i> Remove
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                $(`#${fieldId}`).parent().append(previewHtml);
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        function removeImagePreview(fieldId) {
+            $(`#${fieldId}_preview`).remove();
+            $(`#${fieldId}`).val('');
+            $(`#${fieldId}_validation`).remove();
+        }
+        
+        function validateImageQuality(file, fieldId) {
+            // Remove existing validation message
+            $(`#${fieldId}_validation`).remove();
+            
+            const formData = new FormData();
+            formData.append('image', file);
+            
+            // Show loading
+            const loadingHtml = `
+                <div id="${fieldId}_validation" class="mt-2">
+                    <small class="text-info">
+                        <i class="fas fa-spinner fa-spin"></i> Validating image quality...
+                    </small>
+                </div>
+            `;
+            $(`#${fieldId}`).parent().append(loadingHtml);
+            
+            $.ajax({
+                url: '{{ route("user.kyc.validate-image") }}',
+                method: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                },
+                success: function(response) {
+                    $(`#${fieldId}_validation`).remove();
+                    
+                    let alertClass = response.success ? 'text-success' : 'text-warning';
+                    let icon = response.success ? 'fa-check-circle' : 'fa-exclamation-triangle';
+                    
+                    let validationHtml = `
+                        <div id="${fieldId}_validation" class="mt-2">
+                            <small class="${alertClass}">
+                                <i class="fas ${icon}"></i> ${response.message}
+                            </small>
+                    `;
+                    
+                    if (response.image_info) {
+                        validationHtml += `
+                            <div class="mt-1">
+                                <small class="text-muted">
+                                    Resolution: ${response.image_info.width}x${response.image_info.height} | 
+                                    Size: ${(response.image_info.size / 1024).toFixed(1)}KB
+                                </small>
+                            </div>
+                        `;
+                    }
+                    
+                    if (response.recommendations && response.recommendations.length > 0) {
+                        validationHtml += '<div class="mt-1">';
+                        response.recommendations.forEach(function(rec) {
+                            validationHtml += `<small class="text-muted d-block">💡 ${rec}</small>`;
+                        });
+                        validationHtml += '</div>';
+                    }
+                    
+                    validationHtml += '</div>';
+                    $(`#${fieldId}`).parent().append(validationHtml);
+                },
+                error: function() {
+                    $(`#${fieldId}_validation`).remove();
+                    const errorHtml = `
+                        <div id="${fieldId}_validation" class="mt-2">
+                            <small class="text-danger">
+                                <i class="fas fa-exclamation-circle"></i> Could not validate image
+                            </small>
+                        </div>
+                    `;
+                    $(`#${fieldId}`).parent().append(errorHtml);
+                }
+            });
+        }
     </script>
     @endpush
 </x-smart_layout>
