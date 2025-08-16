@@ -11,6 +11,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Barryvdh\DomPDF\Facade\Pdf; // Correct import for PDF generation
+use Intervention\Image\ImageManagerStatic as Image;
 
 class KycController extends Controller
 {
@@ -302,110 +303,83 @@ class KycController extends Controller
     }
 
     /**
-     * Optimize image automatically - compress and resize
+     * Optimize image using Intervention Image v2 - compress and resize
      */
     private function optimizeImage($sourcePath, $destinationPath, $type)
     {
+        $originalSize = filesize($sourcePath);
+        
+        Log::info('Starting image optimization with Intervention Image v2', [
+            'type' => $type,
+            'original_size' => round($originalSize / 1024, 2) . ' KB'
+        ]);
+        
         try {
-            // Check if GD extension is available
-            if (!function_exists('imagecreatefromjpeg') || !function_exists('imagecreatetruecolor')) {
-                throw new \Exception('GD extension functions are not available');
-            }
+            // Create image instance with Intervention Image v2
+            $image = Image::make($sourcePath);
+            
+            // Get original dimensions
+            $originalWidth = $image->width();
+            $originalHeight = $image->height();
+            
+            Log::info('Image dimensions', [
+                'original' => $originalWidth . 'x' . $originalHeight,
+                'type' => $type
+            ]);
             
             // Set optimal dimensions based on document type
-            $maxWidth = ($type === 'selfie') ? 800 : 1200;  // Selfies smaller, documents larger
-            $maxHeight = ($type === 'selfie') ? 800 : 1600;
-            $quality = 85; // Good balance between quality and file size
+            $maxSize = ($type === 'selfie') ? 800 : 1200;  // Selfies smaller, documents larger
             
-            // Get image info
-            $imageInfo = \getimagesize($sourcePath);
-            if (!$imageInfo) {
-                throw new \Exception('Invalid image file');
+            // Resize image maintaining aspect ratio if needed
+            if ($originalWidth > $maxSize || $originalHeight > $maxSize) {
+                // Use proper Intervention Image v2 syntax - resize so that the largest side fits within the limit
+                $image->resize($maxSize, $maxSize, function ($constraint) {
+                    $constraint->aspectRatio();
+                    $constraint->upsize();
+                });
+                
+                Log::info('Image resized', [
+                    'from' => $originalWidth . 'x' . $originalHeight,
+                    'to' => $image->width() . 'x' . $image->height(),
+                    'max_size' => $maxSize
+                ]);
             }
             
-            $originalWidth = $imageInfo[0];
-            $originalHeight = $imageInfo[1];
-            $imageType = $imageInfo[2];
-            
-            // Calculate new dimensions while maintaining aspect ratio
-            $ratio = min($maxWidth / $originalWidth, $maxHeight / $originalHeight, 1);
-            $newWidth = (int)($originalWidth * $ratio);
-            $newHeight = (int)($originalHeight * $ratio);
-            
-            // Create image resource from source
-            switch ($imageType) {
-                case IMAGETYPE_JPEG:
-                    $sourceImage = \imagecreatefromjpeg($sourcePath);
-                    break;
-                case IMAGETYPE_PNG:
-                    $sourceImage = \imagecreatefrompng($sourcePath);
-                    break;
-                case IMAGETYPE_GIF:
-                    $sourceImage = \imagecreatefromgif($sourcePath);
-                    break;
-                case IMAGETYPE_WEBP:
-                    if (function_exists('imagecreatefromwebp')) {
-                        $sourceImage = \imagecreatefromwebp($sourcePath);
-                    } else {
-                        throw new \Exception('WebP support not available');
-                    }
-                    break;
-                default:
-                    throw new \Exception('Unsupported image format');
+            // Set compression quality based on original file size
+            $quality = 85; // Default quality
+            if ($originalSize > 500 * 1024) {
+                $quality = 70; // More compression for large files
+            } elseif ($originalSize > 1000 * 1024) {
+                $quality = 60; // Even more compression for very large files
             }
             
-            if (!$sourceImage) {
-                throw new \Exception('Failed to create image resource');
-            }
+            Log::info('Applying compression', [
+                'quality' => $quality,
+                'final_dimensions' => $image->width() . 'x' . $image->height()
+            ]);
             
-            // Create new optimized image
-            $optimizedImage = \imagecreatetruecolor($newWidth, $newHeight);
+            // Save as optimized JPEG with compression
+            $image->save($destinationPath, $quality, 'jpg');
             
-            // Preserve transparency for PNG
-            if ($imageType === IMAGETYPE_PNG) {
-                \imagealphablending($optimizedImage, false);
-                \imagesavealpha($optimizedImage, true);
-                $transparent = \imagecolorallocatealpha($optimizedImage, 255, 255, 255, 127);
-                \imagefill($optimizedImage, 0, 0, $transparent);
-            }
+            $finalSize = filesize($destinationPath);
+            $compressionRatio = round((1 - ($finalSize / $originalSize)) * 100, 2);
             
-            // Resize image with high quality
-            \imagecopyresampled(
-                $optimizedImage, $sourceImage,
-                0, 0, 0, 0,
-                $newWidth, $newHeight,
-                $originalWidth, $originalHeight
-            );
-            
-            // Save as optimized JPEG
-            $result = \imagejpeg($optimizedImage, $destinationPath, $quality);
-            
-            // Clean up memory
-            \imagedestroy($sourceImage);
-            \imagedestroy($optimizedImage);
-            
-            if (!$result) {
-                throw new \Exception('Failed to save optimized image');
-            }
-            
-            // Log optimization results
-            $originalSize = filesize($sourcePath);
-            $optimizedSize = filesize($destinationPath);
-            $compressionRatio = round((1 - ($optimizedSize / $originalSize)) * 100, 2);
-            
-            Log::info('Image optimization completed', [
+            Log::info('Image optimization completed successfully', [
                 'type' => $type,
-                'original_size' => $originalSize . ' bytes',
-                'optimized_size' => $optimizedSize . ' bytes',
-                'compression' => $compressionRatio . '%',
-                'dimensions' => $newWidth . 'x' . $newHeight
+                'original_size' => round($originalSize / 1024, 2) . ' KB',
+                'final_size' => round($finalSize / 1024, 2) . ' KB',
+                'dimensions' => $image->width() . 'x' . $image->height(),
+                'saved' => round(($originalSize - $finalSize) / 1024, 2) . ' KB',
+                'compression_ratio' => $compressionRatio . '%',
+                'quality' => $quality
             ]);
             
         } catch (\Exception $e) {
-            Log::error('Image optimization failed', [
+            Log::error('Intervention Image optimization failed', [
                 'error' => $e->getMessage(),
                 'type' => $type,
-                'source' => $sourcePath
+                'source' => $sourcePath,
+                'line' => $e->getLine()
             ]);
             
             // Fallback: Copy original file if optimization fails
@@ -591,5 +565,93 @@ class KycController extends Controller
             'available' => !$exists,
             'message' => $exists ? 'This phone number is already registered by another user' : 'Phone number is available'
         ]);
+    }
+
+    /**
+     * Validate uploaded image quality and format
+     */
+    public function validateImage(Request $request)
+    {
+        try {
+            if (!$request->hasFile('image')) {
+                return response()->json([
+                    'valid' => false,
+                    'message' => 'No image file provided'
+                ]);
+            }
+
+            $file = $request->file('image');
+            $originalSize = $file->getSize();
+            
+            // Basic validation
+            if ($originalSize > 10 * 1024 * 1024) { // 10MB limit
+                return response()->json([
+                    'valid' => false,
+                    'message' => 'File size too large (maximum 10MB)'
+                ]);
+            }
+
+            // Check if it's a valid image
+            $allowedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+            if (!in_array($file->getMimeType(), $allowedMimes)) {
+                return response()->json([
+                    'valid' => false,
+                    'message' => 'Invalid file format. Only JPEG, PNG, GIF, and WebP are allowed.'
+                ]);
+            }
+
+            // Try to read image dimensions
+            try {
+                $imageInfo = getimagesize($file->getPathname());
+                if (!$imageInfo) {
+                    return response()->json([
+                        'valid' => false,
+                        'message' => 'Could not read image information'
+                    ]);
+                }
+
+                $width = $imageInfo[0];
+                $height = $imageInfo[1];
+                
+                // Minimum dimension check
+                if ($width < 200 || $height < 200) {
+                    return response()->json([
+                        'valid' => false,
+                        'message' => 'Image too small. Minimum size is 200x200 pixels.'
+                    ]);
+                }
+
+                // Calculate compression preview
+                $estimatedCompressed = round($originalSize * 0.3); // Estimated 70% compression
+                
+                return response()->json([
+                    'valid' => true,
+                    'message' => 'Image is valid and ready for optimization',
+                    'details' => [
+                        'original_size' => round($originalSize / 1024, 2) . ' KB',
+                        'dimensions' => $width . 'x' . $height,
+                        'estimated_compressed' => round($estimatedCompressed / 1024, 2) . ' KB',
+                        'estimated_savings' => round(($originalSize - $estimatedCompressed) / 1024, 2) . ' KB'
+                    ]
+                ]);
+
+            } catch (\Exception $e) {
+                return response()->json([
+                    'valid' => false,
+                    'message' => 'Could not validate image: ' . $e->getMessage()
+                ]);
+            }
+
+        } catch (\Exception $e) {
+            Log::error('Image validation error', [
+                'error' => $e->getMessage(),
+                'line' => $e->getLine()
+            ]);
+            
+            return response()->json([
+                'valid' => false,
+                'message' => 'Image validation failed'
+            ]);
+        }
     }
 }
