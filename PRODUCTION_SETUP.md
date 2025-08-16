@@ -117,3 +117,29 @@ After deployment, test the KYC form to ensure:
 - Images upload successfully
 - Files are stored in `storage/app/public/kyc_documents/`
 - No errors in the Laravel logs
+
+## Database Schema Issues
+
+If you encounter "Column not found" errors like:
+```
+SQLSTATE[42S22]: Column not found: 1054 Unknown column 'embed_url' in 'field list'
+```
+
+This means the database schema is missing columns. Run the database fix:
+
+```bash
+# Create backup first
+mysqldump -u root -p viewcash > backup_$(date +%Y%m%d_%H%M%S).sql
+
+# Run migrations to add missing columns
+php artisan migrate --force
+
+# Verify the fix
+mysql -u root -p viewcash -e "DESCRIBE video_links;" | grep embed_url
+```
+
+Or use the automated fix script:
+```bash
+chmod +x fix-production-db.sh
+./fix-production-db.sh
+```
