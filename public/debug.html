@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Video Debug Test</title>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body>
+    <h1>Video System Debug Test</h1>
+    <div id="output"></div>
+    
+    <button onclick="testUrl()">Test URL Conversion</button>
+    <button onclick="testButton()">Test Button Click</button>
+    <button onclick="openGallery()">Open Gallery</button>
+    
+    <script>
+        function log(message) {
+            console.log(message);
+            document.getElementById('output').innerHTML += '<br>' + message;
+        }
+        
+        function testUrl() {
+            log('Testing URL conversion...');
+            
+            // Test YouTube URLs
+            const testUrls = [
+                'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+                'https://youtu.be/dQw4w9WgXcQ',
+                'https://www.youtube.com/watch?v=abc123&list=something'
+            ];
+            
+            testUrls.forEach(url => {
+                const converted = convertToEmbedUrl(url);
+                log(`Original: ${url}`);
+                log(`Converted: ${converted}`);
+                log('---');
+            });
+        }
+        
+        function convertToEmbedUrl(url) {
+            console.log('🔧 convertToEmbedUrl called with:', url);
+            
+            if (!url) {
+                console.error('❌ URL is null or undefined');
+                return null;
+            }
+            
+            if (typeof url !== 'string') {
+                console.error('❌ URL is not a string:', typeof url, url);
+                return null;
+            }
+            
+            const cleanUrl = url.trim();
+            console.log('🔧 Clean URL:', cleanUrl);
+            
+            // YouTube
+            if (cleanUrl.includes('youtube.com/watch')) {
+                const videoIdMatch = cleanUrl.match(/[?&]v=([^&]+)/);
+                if (videoIdMatch && videoIdMatch[1]) {
+                    const embedUrl = `https://www.youtube-nocookie.com/embed/${videoIdMatch[1]}?rel=0`;
+                    console.log('✅ YouTube embed URL created:', embedUrl);
+                    return embedUrl;
+                }
+                console.error('❌ Failed to extract YouTube video ID from:', cleanUrl);
+            }
+            
+            if (cleanUrl.includes('youtu.be/')) {
+                const videoId = cleanUrl.split('/').pop().split('?')[0];
+                if (videoId) {
+                    const embedUrl = `https://www.youtube-nocookie.com/embed/${videoId}?rel=0`;
+                    console.log('✅ YouTube short URL embed created:', embedUrl);
+                    return embedUrl;
+                }
+                console.error('❌ Failed to extract video ID from short YouTube URL:', cleanUrl);
+            }
+            
+            // Vimeo
+            if (cleanUrl.includes('vimeo.com/')) {
+                const videoIdMatch = cleanUrl.match(/vimeo\.com\/(\d+)/);
+                if (videoIdMatch && videoIdMatch[1]) {
+                    const embedUrl = `https://player.vimeo.com/video/${videoIdMatch[1]}`;
+                    console.log('✅ Vimeo embed URL created:', embedUrl);
+                    return embedUrl;
+                }
+                console.error('❌ Failed to extract Vimeo video ID from:', cleanUrl);
+            }
+            
+            // Already embed URL
+            if (cleanUrl.includes('/embed/')) {
+                console.log('✅ URL is already an embed URL:', cleanUrl);
+                return cleanUrl;
+            }
+            
+            // Fallback: return original URL and let iframe handle it
+            console.log('⚠️ Using original URL as fallback:', cleanUrl);
+            return cleanUrl;
+        }
+        
+        function testButton() {
+            log('Testing button functionality...');
+            window.open('/test-gallery', '_blank');
+        }
+        
+        function openGallery() {
+            window.open('/test-gallery', '_blank');
+        }
+        
+        log('Debug page loaded. Open console to see detailed logs.');
+    </script>
+</body>
+</html>

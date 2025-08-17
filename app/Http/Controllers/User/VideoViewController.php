@@ -362,6 +362,27 @@ class VideoViewController extends Controller
     }
 
     /**
+     * Simple gallery method for clean video viewing
+     */
+    public function simpleGallery()
+    {
+        $user = Auth::user();
+        
+        // Get videos for simple gallery (just get active videos)
+        $videos = VideoLink::where('status', 'active')
+            ->orderBy('created_at', 'desc')
+            ->take(12)
+            ->get();
+
+        $data = [
+            'pageTitle' => 'Watch Videos & Earn Money',
+            'videos' => $videos
+        ];
+
+        return view('frontend.video-views.gallery-simple', $data);
+    }
+
+    /**
      * Record video view and add earnings
      */
     public function recordView(Request $request, $videoId)

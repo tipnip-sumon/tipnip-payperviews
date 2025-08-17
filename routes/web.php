@@ -1336,12 +1336,17 @@ Route::prefix('user')->middleware(['auth', 'verified'])->group(function () {
     Route::get('/video-recent-activity', [VideoLinkController::class, 'recentActivity'])->name('video.recent-activity');
 });
 
+// Test route for simple gallery (no auth required)
+Route::get('/gallery-test', [VideoViewController::class, 'simpleGallery'])->name('gallery.test');
+
 Route::controller(VideoViewController::class)->middleware('auth')->group(function () {
     Route::get('/user/video-views/gallery', 'gallery')->name('user.video-views.gallery');
+    Route::get('/user/video-views/simple', 'simpleGallery')->name('user.video-views.simple');
     Route::get('/user/video-views', 'index')->name('user.video-views.index');
     Route::get('/user/video-views/history', 'history')->name('user.video-views.history');
     Route::get('/user/video-views/{video}/watch', 'showVideo')->name('user.video-views.show');
     Route::post('/user/video-views/watch', 'watch')->name('user.video-views.watch');
+    Route::post('/video/watch', 'watch')->name('video.watch'); // Simple alias for AJAX
     Route::post('/user/video-views/record-view/{videoId}', 'recordView')->name('user.video-views.record-view');
     Route::get('/user/video-views/earnings', 'earnings')->name('user.video-views.earnings');
     Route::get('/user/video-history','publicGallery')->name('gallery');
