@@ -19,54 +19,74 @@ class AutoSessionTimeout
      */
     public function handle(Request $request, Closure $next)
     {
-        // Skip timeout check for logout routes and AJAX requests that are part of logout process
-        if ($this->shouldSkipTimeoutCheck($request)) {
-            return $next($request);
-        }
-
-        // Check if user is authenticated
-        if (Auth::check()) {
-            $user = Auth::user();
-            $timeoutMinutes = $this->getSessionTimeoutMinutes($user->id);
-            
-            // Get last activity time
-            $lastActivity = session('last_activity_time', time());
-            $currentTime = time();
-            $inactiveTime = $currentTime - $lastActivity;
-            $inactiveMinutes = $inactiveTime / 60;
-
-            // Log activity for debugging
-            Log::info('Session timeout check', [
-                'user_id' => $user->id,
-                'last_activity' => date('Y-m-d H:i:s', $lastActivity),
-                'current_time' => date('Y-m-d H:i:s', $currentTime),
-                'inactive_minutes' => round($inactiveMinutes, 2),
-                'timeout_limit' => $timeoutMinutes,
-                'session_id' => session()->getId()
-            ]);
-
-            // Check if session has timed out
-            if ($inactiveMinutes > $timeoutMinutes) {
-                return $this->handleSessionTimeout($request, $user, $inactiveMinutes);
+        try {
+            // Skip timeout check for logout routes and AJAX requests that are part of logout process
+            if ($this->shouldSkipTimeoutCheck($request)) {
+                return $next($request);
             }
 
-            // Update last activity time for non-GET requests or important GET requests
-            if (!$request->isMethod('GET') || $this->shouldUpdateActivity($request)) {
-                session(['last_activity_time' => $currentTime]);
-            }
-
-            // Add timeout warning for AJAX requests
-            if ($request->ajax() && $inactiveMinutes > ($timeoutMinutes * 0.8)) {
-                $remainingMinutes = $timeoutMinutes - $inactiveMinutes;
-                $response = $next($request);
+            // Check if user is authenticated
+            if (Auth::check()) {
+                $user = Auth::user();
                 
-                if (method_exists($response, 'header')) {
-                    $response->header('X-Session-Timeout-Warning', 'true');
-                    $response->header('X-Session-Remaining-Minutes', round($remainingMinutes, 1));
+                // Ensure we have a valid user object
+                if (!$user) {
+                    return $next($request);
                 }
                 
-                return $response;
+                $timeoutMinutes = $this->getSessionTimeoutMinutes($user->id);
+                
+                // Get last activity time
+                $lastActivity = session('last_activity_time', time());
+                $currentTime = time();
+                $inactiveTime = $currentTime - $lastActivity;
+                $inactiveMinutes = $inactiveTime / 60;
+
+                // Log activity for debugging (only if not excessive) - reduce log frequency significantly
+                if (rand(1, 100) == 1) { // Log only 1% of requests to reduce log spam
+                    Log::info('Session timeout check', [
+                        'user_id' => $user->id,
+                        'last_activity' => date('Y-m-d H:i:s', $lastActivity),
+                        'current_time' => date('Y-m-d H:i:s', $currentTime),
+                        'inactive_minutes' => round($inactiveMinutes, 2),
+                        'timeout_limit' => $timeoutMinutes,
+                        'session_id' => session()->getId()
+                    ]);
+                }
+
+                // Check if session has timed out
+                if ($inactiveMinutes > $timeoutMinutes) {
+                    return $this->handleSessionTimeout($request, $user, $inactiveMinutes);
+                }
+
+                // Update last activity time for non-GET requests or important GET requests
+                if (!$request->isMethod('GET') || $this->shouldUpdateActivity($request)) {
+                    session(['last_activity_time' => $currentTime]);
+                }
+
+                // Add timeout warning for AJAX requests
+                if ($request->ajax() && $inactiveMinutes > ($timeoutMinutes * 0.8)) {
+                    $remainingMinutes = $timeoutMinutes - $inactiveMinutes;
+                    $response = $next($request);
+                    
+                    if (method_exists($response, 'header')) {
+                        $response->header('X-Session-Timeout-Warning', 'true');
+                        $response->header('X-Session-Remaining-Minutes', round($remainingMinutes, 1));
+                    }
+                    
+                    return $response;
+                }
             }
+        } catch (\Exception $e) {
+            // Log error but don't interrupt the request flow
+            Log::error('AutoSessionTimeout middleware error: ' . $e->getMessage(), [
+                'user_id' => Auth::id(),
+                'route' => $request->route() ? $request->route()->getName() : null,
+                'path' => $request->path(),
+                'exception' => $e->getTraceAsString()
+            ]);
+            
+            // Continue with the request to avoid breaking the application
         }
 
         return $next($request);
@@ -98,8 +118,7 @@ class AutoSessionTimeout
                 'type' => 'session_timeout',
                 'title' => 'Session Timeout',
                 'message' => "Your session was automatically logged out due to inactivity for " . round($inactiveMinutes, 1) . " minutes.",
-                'new_login_ip' => $request->ip(),
-                'action_taken' => 'automatic_timeout_logout'
+                'new_login_ip' => $request->ip()
             ]);
         } catch (\Exception $e) {
             Log::warning('Could not create timeout notification: ' . $e->getMessage());
@@ -218,16 +237,26 @@ class AutoSessionTimeout
      */
     private function shouldSkipTimeoutCheck(Request $request)
     {
+        // Skip if route is null (can happen during app bootstrap)
+        if (!$request->route()) {
+            return true;
+        }
+
         $skipRoutes = [
             'logout',
             'login',
             'register',
             'password.reset',
             'password.email',
+            'password.request',
+            'password.confirm',
             'verification.notice',
             'verification.verify',
+            'verification.send',
             'force.logout',
-            'simple.logout'
+            'simple.logout',
+            'admin.login',
+            'admin.logout'
         ];
 
         $skipPaths = [
@@ -237,19 +266,43 @@ class AutoSessionTimeout
             'password',
             'email/verify',
             'force-logout',
-            'simple-logout'
+            'simple-logout',
+            'admin/login',
+            'admin/logout',
+            'auth/',
+            'sanctum/'
         ];
 
         // Skip if route name matches
-        if (in_array($request->route()->getName(), $skipRoutes)) {
+        $routeName = $request->route()->getName();
+        if ($routeName && in_array($routeName, $skipRoutes)) {
             return true;
         }
 
         // Skip if path matches
-        foreach ($skipPaths as $path) {
-            if (str_contains($request->path(), $path)) {
+        $path = $request->path();
+        foreach ($skipPaths as $skipPath) {
+            if (str_contains($path, $skipPath)) {
                 return true;
             }
+        }
+
+        // Skip for POST requests to login (form submission)
+        if ($request->isMethod('POST') && (str_contains($path, 'login') || str_contains($path, 'auth'))) {
+            return true;
+        }
+
+        // Skip for session regeneration or CSRF token refresh requests
+        if ($request->ajax() && ($request->header('X-CSRF-TOKEN') || $request->has('_token'))) {
+            // Allow AJAX requests during login process
+            if (str_contains($path, 'login') || str_contains($path, 'auth')) {
+                return true;
+            }
+        }
+
+        // Skip if this is a guest user (not authenticated yet)
+        if (!Auth::check()) {
+            return true;
         }
 
         return false;
