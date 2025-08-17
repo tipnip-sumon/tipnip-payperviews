@@ -39,20 +39,26 @@ class LoginController extends Controller
      */
     protected function authenticated(\Illuminate\Http\Request $request, $user)
     {
-        // Clear any existing session data that might cause conflicts
+        // Allow multiple sessions - Clear only conflict-prone session data
         session()->forget(['login_attempts', 'lockout_time', 'temp_session_data']);
         
         // Regenerate session ID to prevent session fixation
         session()->regenerate();
         
-        // Set minimal essential session data only
+        // Set session data with unique browser identifier to avoid conflicts
+        $browserFingerprint = md5($request->userAgent() . $request->ip() . time());
         session([
             'auth_user_id' => $user->id, // For session security validation
             'login_timestamp' => time(),
-            'last_activity' => time()
+            'last_activity' => time(),
+            'browser_session_id' => $browserFingerprint, // Unique per browser/device
+            'allow_concurrent_sessions' => true // Flag to indicate multiple sessions are allowed
         ]);
         
-        // Update user login information
+        // Check for previous sessions and create notification if needed
+        $this->handleSessionNotification($user, $request);
+        
+        // Update user login information - store last login, not current session
         try {
             $user->update([
                 'last_login_at' => now(),
@@ -61,6 +67,16 @@ class LoginController extends Controller
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::warning('Could not update user login info: ' . $e->getMessage());
         }
+        
+        // Log multiple session info for monitoring (optional)
+        \Illuminate\Support\Facades\Log::info('User login - concurrent sessions allowed', [
+            'user_id' => $user->id,
+            'username' => $user->username,
+            'ip' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'session_id' => session()->getId(),
+            'browser_fingerprint' => $browserFingerprint
+        ]);
         
         // Clean redirect without excessive headers
         return redirect()->intended($this->redirectPath());
@@ -141,6 +157,38 @@ class LoginController extends Controller
             'lockExpiry'
         ));
     } 
+
+    /**
+     * Check if current session is valid for the authenticated user
+     * This handles multiple concurrent sessions gracefully
+     */
+    public function validateUserSession(\Illuminate\Http\Request $request)
+    {
+        if (!\Illuminate\Support\Facades\Auth::check()) {
+            return response()->json(['valid' => false, 'reason' => 'not_authenticated']);
+        }
+
+        $user = \Illuminate\Support\Facades\Auth::user();
+        $sessionUserId = session('auth_user_id');
+        $allowConcurrent = session('allow_concurrent_sessions', false);
+
+        // If concurrent sessions are allowed, just verify basic session integrity
+        if ($allowConcurrent) {
+            if ($sessionUserId && $sessionUserId == $user->id) {
+                return response()->json(['valid' => true, 'concurrent_allowed' => true]);
+            }
+        }
+
+        // Additional session validation if needed
+        $sessionValid = $sessionUserId === $user->id;
+        
+        return response()->json([
+            'valid' => $sessionValid,
+            'concurrent_allowed' => $allowConcurrent,
+            'session_browser_id' => session('browser_session_id'),
+            'user_id' => $user->id
+        ]);
+    }
 
     /**
      * Handle a login request to the application.
@@ -1122,6 +1170,93 @@ class LoginController extends Controller
                 'message' => 'An error occurred during login. Please try again.',
                 'error_type' => 'server_error'
             ], 500);
+        }
+    }
+
+    /**
+     * Handle session notification with enhanced features
+     */
+    private function handleSessionNotification($user, $request)
+    {
+        try {
+            // Get user's notification preferences
+            $settings = \Illuminate\Support\Facades\Cache::get("user_session_settings_{$user->id}", [
+                'notify_new_login' => true,
+                'notify_different_ip' => true,
+                'notify_different_device' => true,
+                'auto_logout_other_sessions' => false
+            ]);
+            
+            // Skip notifications if user has disabled them
+            if (!$settings['notify_new_login']) {
+                return;
+            }
+            
+            $currentIp = $request->ip();
+            $currentDevice = $this->getDeviceInfo($request->userAgent());
+            
+            // Check if this IP is in trusted IPs
+            $trustedIPs = \Illuminate\Support\Facades\Cache::get("trusted_ips_user_{$user->id}", []);
+            $isTrustedIP = collect($trustedIPs)->pluck('ip')->contains($currentIp);
+            
+            if ($isTrustedIP && !$settings['notify_different_device']) {
+                return; // Skip notification for trusted IP
+            }
+            
+            // Check recent login from different IP or device
+            $shouldNotify = false;
+            $notificationMessage = '';
+            
+            // Check if last login was from different IP
+            if ($settings['notify_different_ip'] && $user->last_login_ip && $user->last_login_ip !== $currentIp) {
+                $shouldNotify = true;
+                $notificationMessage = "New login detected from IP: {$currentIp}. Previous login was from: {$user->last_login_ip}";
+            }
+            
+            // Check for different device (simplified check)
+            $lastDevice = \Illuminate\Support\Facades\Cache::get("last_device_user_{$user->id}");
+            if ($settings['notify_different_device'] && $lastDevice && $lastDevice !== $currentDevice) {
+                $shouldNotify = true;
+                $notificationMessage .= $notificationMessage ? " Also detected different device: {$currentDevice}" : "New device detected: {$currentDevice}";
+            }
+            
+            // Store current device for next time
+            \Illuminate\Support\Facades\Cache::put("last_device_user_{$user->id}", $currentDevice, now()->addDays(30));
+            
+            if ($shouldNotify) {
+                // Check if we already notified about this IP in last 24 hours
+                $recentNotification = \App\Models\UserSessionNotification::where('user_id', $user->id)
+                    ->where('new_login_ip', $currentIp)
+                    ->where('created_at', '>=', now()->subHours(24))
+                    ->exists();
+                
+                if (!$recentNotification) {
+                    \App\Models\UserSessionNotification::create([
+                        'user_id' => $user->id,
+                        'type' => 'new_login_detected',
+                        'title' => 'New Login Detected',
+                        'message' => $notificationMessage,
+                        'new_login_ip' => $currentIp,
+                        'new_login_device' => $currentDevice,
+                        'new_login_location' => $this->getLocationFromIP($currentIp),
+                        'old_session_ip' => $user->last_login_ip,
+                        'is_read' => false,
+                        'session_id' => session()->getId()
+                    ]);
+                    
+                    // Add flash message for immediate user notification
+                    session()->flash('session_notification', [
+                        'type' => 'info',
+                        'title' => 'New Login Detected',
+                        'message' => 'We detected a login from a new location or device. Check your session notifications for details.',
+                        'action_url' => route('user.sessions.notifications'),
+                        'action_text' => 'View Details'
+                    ]);
+                }
+            }
+            
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::warning('Failed to handle session notification: ' . $e->getMessage());
         }
     }
 }

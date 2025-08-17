@@ -1427,6 +1427,23 @@ Route::controller(\App\Http\Controllers\User\SimpleVideoController::class)->midd
     Route::post('/video/simple-watch', 'simpleWatch')->name('video.simple-watch');
 });
 
+// Session Management Controller for enhanced session notifications and control
+Route::controller(\App\Http\Controllers\User\SessionManagementController::class)->middleware('auth')->group(function () {
+    Route::get('/user/sessions/dashboard', 'dashboard')->name('user.sessions.dashboard');
+    Route::get('/user/sessions/notifications', 'notifications')->name('user.sessions.notifications');
+    Route::get('/user/sessions/active', 'activeSessions')->name('user.sessions.active');
+    Route::post('/user/sessions/notifications/{id}/read', 'markNotificationRead')->name('user.sessions.notifications.mark-read');
+    Route::post('/user/sessions/notifications/mark-all-read', 'markAllNotificationsRead')->name('user.sessions.notifications.mark-all-read');
+    Route::delete('/user/sessions/notifications/{id}', 'deleteNotification')->name('user.sessions.notifications.delete');
+    Route::delete('/user/sessions/notifications/clear', 'clearNotifications')->name('user.sessions.notifications.clear');
+    Route::get('/user/sessions/security-settings', 'securitySettings')->name('user.sessions.security');
+    Route::post('/user/sessions/security-settings', 'updateSecuritySettings')->name('user.sessions.security.update');
+    Route::post('/user/sessions/trusted-ip', 'addTrustedIP')->name('user.sessions.trusted-ip.add');
+    Route::delete('/user/sessions/trusted-ip/{index}', 'removeTrustedIP')->name('user.sessions.trusted-ip.remove');
+    Route::post('/user/sessions/terminate', 'terminateSession')->name('user.sessions.terminate');
+    Route::post('/user/sessions/terminate-others', 'terminateOtherSessions')->name('user.sessions.terminate-others');
+});
+
 // =============================================================================
 // POLICIES ROUTES
 // =============================================================================

@@ -409,6 +409,74 @@
         </ul>
     </li>
 
+    <!-- SESSION MANAGEMENT -->
+    <li class="slide has-sub">
+        <a href="javascript:void(0);" class="side-menu__item">
+            <i class="fe fe-monitor side-menu__icon"></i>
+            <span class="side-menu__label">Session Management</span>
+            @auth
+                @php
+                    $unreadSessionNotifications = \Illuminate\Support\Facades\DB::table('user_session_notifications')
+                        ->where('user_id', auth()->id())
+                        ->where('is_read', false)
+                        ->where('created_at', '>=', now()->subDays(7))
+                        ->count();
+                @endphp
+                @if($unreadSessionNotifications > 0)
+                    <span class="badge badge-warning ms-2">{{ $unreadSessionNotifications }} new</span>
+                @else
+                    <span class="badge badge-success ms-2">Secure</span>
+                @endif
+            @endauth
+            <i class="fe fe-chevron-right side-menu__angle"></i>
+        </a>
+        <ul class="slide-menu child1">
+            <li class="slide side-menu__label1">
+                <a href="javascript:void(0)">Session Management</a>
+            </li>
+            
+            <!-- Session Dashboard -->
+            <li class="slide">
+                <a href="{{ route('user.sessions.dashboard') }}" class="side-menu__item">
+                    <i class="fe fe-monitor me-2 text-primary"></i>
+                    <span class="side-menu__label">Session Dashboard</span>
+                    <span class="badge badge-info ms-auto">Overview</span>
+                </a>
+            </li>
+            
+            <!-- Session Notifications -->
+            <li class="slide">
+                <a href="{{ route('user.sessions.notifications') }}" class="side-menu__item">
+                    <i class="fe fe-bell me-2 text-warning"></i>
+                    <span class="side-menu__label">Login Notifications</span>
+                    @auth
+                        @if($unreadSessionNotifications > 0)
+                            <span class="badge badge-warning ms-auto">{{ $unreadSessionNotifications }}</span>
+                        @endif
+                    @endauth
+                </a>
+            </li>
+            
+            <!-- Active Sessions -->
+            <li class="slide">
+                <a href="{{ route('user.sessions.active') }}" class="side-menu__item">
+                    <i class="fe fe-smartphone me-2 text-success"></i>
+                    <span class="side-menu__label">Active Sessions</span>
+                    <span class="badge badge-success ms-auto">Devices</span>
+                </a>
+            </li>
+            
+            <!-- Security Settings -->
+            <li class="slide">
+                <a href="{{ route('user.sessions.security') }}" class="side-menu__item">
+                    <i class="fe fe-lock me-2 text-danger"></i>
+                    <span class="side-menu__label">Security Settings</span>
+                    <span class="badge badge-info ms-auto">Configure</span>
+                </a>
+            </li>
+        </ul>
+    </li>
+
     <!-- KYC VERIFICATION -->
     <li class="slide has-sub">
         <a href="javascript:void(0);" class="side-menu__item">
