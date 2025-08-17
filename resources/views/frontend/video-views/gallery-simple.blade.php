@@ -1,8 +1,8 @@
 <x-smart_layout>
-    @section('top_title', $pageTitle)
-    @section('title', $pageTitle) 
-    @section('content') 
-    
+    @section('top_title', 'Video Gallery')
+    @section('title', 'Video Gallery')
+    @section('content')
+
     <!-- Simple Video Gallery -->
     <div class="container-fluid py-4">
         <div class="row">

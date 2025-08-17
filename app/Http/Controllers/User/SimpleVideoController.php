@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Http\Controllers\user;
+namespace App\Http\Controllers\User;
 
 use App\Models\VideoLink;
 use App\Models\VideoView;
 use App\Models\Invest;
-use App\Models\Plan;
+use App\Models\User;
 use App\Models\DailyVideoAssignment;
 use App\Services\DailyVideoService;
 use App\Services\DailyVideoViewService;
@@ -15,20 +15,54 @@ use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 
-class VideoViewController extends Controller 
+class SimpleVideoController extends Controller 
 {
-    /**
-     * Redirect to the new daily video gallery
-     */
-    public function index(Request $request) 
+    public function simpleGallery()
     {
-        return redirect()->route('user.video-views.gallery');
+        $user = Auth::user();
+        
+        // Check if user is logged in
+        if (!$user) {
+            return redirect()->route('login')->with('error', 'Please login to access videos.');
+        }
+        // Check if today's assignments already exist
+        $todayAssignments = DailyVideoAssignment::forUser($user->id)
+            ->forDate(today())
+            ->count();
+
+        $videoService = new DailyVideoService();
+        if ($todayAssignments > 0) {
+            $result = $videoService->getTodaysVideos($user);
+        } else {
+            // No assignments for today, create them
+            $result = $videoService->assignDailyVideos($user);
+        }
+
+        // Get user's total video earnings using optimized system
+        $videoViewService = new DailyVideoViewService();
+        $userTotalEarnings = $videoViewService->getUserTotalEarnings($user);
+
+        // Check if user has active investment
+        $activeInvest = Invest::where('user_id', $user->id)->where('status', 1)->with('plan')->first();
+        $hasActiveInvestment = $activeInvest !== null;
+
+        $data = [
+            'pageTitle' => 'Daily Video Gallery - Fresh Videos Every Day!',
+            'videos' => $result['videos'] ?? [],
+            'userStats' => $result['stats'] ?? [],
+            'userTotalEarnings' => $userTotalEarnings,
+            'hasActiveInvestment' => $hasActiveInvestment, 
+            'message' => $result['message'] ?? ''
+        ];
+
+        return view('frontend.video-views.gallery-simple', $data);
     }
 
     /**
-     * Handle video watch request
+     * Simple watch method for gallery-simple.blade.php
+     * This bypasses the complex daily assignment system
      */
-    public function watch(Request $request)
+    public function simpleWatch(Request $request)
     {
         if (!Auth::check()) {
             return response()->json([
@@ -45,16 +79,35 @@ class VideoViewController extends Controller
         $user = Auth::user();
         $video = VideoLink::findOrFail($request->video_id);
         
-        // Check if user has today's assignment that includes this video (optimized JSON structure)
+        // Check if user has today's assignment that includes this video
         $assignment = DailyVideoAssignment::forUser($user->id)
             ->forDate(today())
             ->first();
             
         if (!$assignment) {
-            return response()->json([
-                'success' => false,
-                'message' => 'You don\'t have any video assignments for today.'
-            ]);
+            // Auto-create daily assignments if none exist for today
+            try {
+                $dailyVideoService = new DailyVideoService();
+                $dailyVideoService->assignDailyVideos($user);
+                
+                // Try to get the assignment again after creation
+                $assignment = DailyVideoAssignment::forUser($user->id)
+                    ->forDate(today())
+                    ->first();
+                    
+                if (!$assignment) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Unable to create video assignments. Please contact support.'
+                    ]);
+                }
+            } catch (\Exception $e) {
+                Log::error('Failed to auto-create daily video assignment: ' . $e->getMessage());
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unable to create video assignments. Please try again later.'
+                ]);
+            }
         }
         
         // Parse video IDs from JSON structure
@@ -77,20 +130,17 @@ class VideoViewController extends Controller
             ]);
         }
         
-        // Get user's active investment for earning rate
+        // Get user's earning rate
         $activeInvest = Invest::where('user_id', $user->id)->where('status', 1)->with('plan')->first();
         $earningRate = $activeInvest && $activeInvest->plan 
             ? $activeInvest->plan->video_earning_rate 
             : 0.0001;
 
-        // Calculate minimum watch time based on video duration
-        $videoDuration = (int) $video->duration ?: 30;
-        $minimumWatchTime = min(max(ceil($videoDuration * 0.8), 15), $videoDuration);
-        
-        if ($request->watch_duration < $minimumWatchTime) {
+        // Simple minimum watch time check (20 seconds)
+        if ($request->watch_duration < 20) {
             return response()->json([
                 'success' => false,
-                'message' => "Please watch at least {$minimumWatchTime} seconds of the video to earn money."
+                'message' => "Please watch at least 20 seconds of the video to earn money."
             ]);
         }
 
@@ -100,14 +150,6 @@ class VideoViewController extends Controller
             // Use optimized single-row video view system
             $videoViewService = new DailyVideoViewService();
             
-            // Check if video was already watched today using optimized method
-            if ($videoViewService->hasWatchedVideoToday($user, $video->id)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'You have already earned from this video today.'
-                ]);
-            }
-
             // Record video view in optimized single-row format
             $viewResult = $videoViewService->recordVideoView($user, $video, [
                 'ip_address' => $request->ip(),
@@ -123,62 +165,28 @@ class VideoViewController extends Controller
                 ]);
             }
 
-            // Mark video as watched in the optimized JSON structure
-            $videoService = new \App\Services\DailyVideoService();
+            // Mark video as watched in the assignment
+            $videoService = new DailyVideoService();
             $videoService->markVideoWatched($user, $video->id, $earningRate);
 
             // Update video statistics
             $video->increment('views_count');
-            $video->increment('clicks_count');
-
-            // Add earnings using daily aggregation service (ONE TRANSACTION PER DAY)
-            $earningService = new \App\Services\DailyVideoEarningService();
-            $earningResult = $earningService->addEarning($user, $earningRate);
-            
-            if (!$earningResult['success']) {
-                throw new \Exception('Failed to process daily earnings: ' . $earningResult['error']);
-            }
-            
-            $currentBalance = $earningResult['current_balance'];
 
             DB::commit();
 
-            // Get today's stats using optimized methods
-            $todaysViewingSummary = $videoViewService->getTodaysViewingSummary($user->id);
-            $todayEarnings = $earningService->getTodaysTotalEarnings($user);
-
-            // Send video watching income notification
-            try {
-                //notifyVideoWatchingIncome($user->id, $earningRate, $video->title, $request->watch_duration);
-                
-                // Check if daily quota is completed and send quota notification
-                $assignedVideos = count(json_decode($assignment->video_ids ?? '[]', true) ?: []);
-                if ($todaysViewingSummary['total_videos'] >= $assignedVideos) {
-                    notifyDailyVideoQuota($user->id, $todaysViewingSummary['total_videos'], $assignedVideos, $todayEarnings);
-                }
-            } catch (\Exception $e) {
-                Log::error("Failed to send video watching notification: " . $e->getMessage());
-            }
+            $currentBalance = $user->interest_balance + $earningRate;
 
             return response()->json([
                 'success' => true,
-                'message' => 'Congratulations! You earned $' . number_format($earningRate, 4) . ' from today\'s video!',
+                'message' => 'Congratulations! You earned $' . number_format($earningRate, 4) . ' from this video!',
                 'earned_amount' => $earningRate,
-                'total_earnings' => $currentBalance,
                 'user_balance' => $currentBalance,
-                'today_earnings' => $todayEarnings,
-                'todays_views' => $todaysViewingSummary['total_videos'], // From optimized single row
-                'remaining_videos' => max(0, count(json_decode($assignment->video_ids ?? '[]', true) ?: []) - $todaysViewingSummary['total_videos'])
-                // 'optimization_info' => [
-                //     'single_row_system' => true,
-                //     'total_videos_today' => $viewResult['total_videos_today'],
-                //     'total_earned_today' => $viewResult['total_earned_today']
-                // ]
+                'formatted_earning' => number_format($earningRate, 4)
             ]);
 
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Error recording optimized video view: ' . $e->getMessage());
+            Log::error('Error in simple video watch: ' . $e->getMessage());
             
             return response()->json([
                 'success' => false,
@@ -302,7 +310,7 @@ class VideoViewController extends Controller
             });
 
         $data = [
-            'pageTitle' => 'Video Earnings Report',
+            // 'pageTitle' => 'Video Earnings Report',
             'overallStats' => $overallStats,
             'timeStats' => $timeStats,
             'categoryEarnings' => $categoryEarnings,
@@ -318,49 +326,6 @@ class VideoViewController extends Controller
 
         return view('frontend.video-views.earnings', $data);
     }
-    public function gallery()
-    {
-        $user = Auth::user();
-        
-        // Check if user is logged in
-        if (!$user) {
-            return redirect()->route('login')->with('error', 'Please login to access videos.');
-        }
-        
-        
-        // Check if today's assignments already exist
-        $todayAssignments = DailyVideoAssignment::forUser($user->id)
-            ->forDate(today())
-            ->count();
-
-        $videoService = new DailyVideoService();
-        if ($todayAssignments > 0) {
-            $result = $videoService->getTodaysVideos($user);
-        } else {
-            // No assignments for today, create them
-            $result = $videoService->assignDailyVideos($user);
-        }
-
-        // Get user's total video earnings using optimized system
-        $videoViewService = new DailyVideoViewService();
-        $userTotalEarnings = $videoViewService->getUserTotalEarnings($user);
-
-        // Check if user has active investment
-        $activeInvest = Invest::where('user_id', $user->id)->where('status', 1)->with('plan')->first();
-        $hasActiveInvestment = $activeInvest !== null;
-
-        $data = [
-            'pageTitle' => 'Daily Video Gallery - Fresh Videos Every Day!',
-            'videos' => $result['videos'] ?? [],
-            'userStats' => $result['stats'] ?? [],
-            'userTotalEarnings' => $userTotalEarnings,
-            'hasActiveInvestment' => $hasActiveInvestment, 
-            'message' => $result['message'] ?? ''
-        ];
-
-        return view('frontend.video-views.gallery', $data);
-    }
-
     /**
      * Record video view and add earnings
      */
@@ -452,75 +417,6 @@ class VideoViewController extends Controller
     }
 
     /**
-     * Get user's video viewing history
-     */
-    // public function viewingHistory()
-    // {
-    //     if (!Auth::check()) {
-    //         return redirect()->route('login');
-    //     }
-
-    //     $viewHistory = VideoView::with('videoLink')
-    //         ->where('user_id', Auth::id())
-    //         ->orderBy('viewed_at', 'desc')
-    //         ->paginate(20);
-
-    //     // Calculate stats for the view
-    //     $totalEarnings = VideoView::where('user_id', Auth::id())->sum('earned_amount');
-    //     $totalVideosWatched = VideoView::where('user_id', Auth::id())->count();
-    //     $uniqueVideosWatched = VideoView::where('user_id', Auth::id())->distinct('video_link_id')->count();
-    //     $averagePerVideo = $totalVideosWatched > 0 ? $totalEarnings / $totalVideosWatched : 0;
-    //     $todayEarnings = VideoView::where('user_id', Auth::id())
-    //         ->whereDate('viewed_at', today())
-    //         ->sum('earned_amount');
-    //     $thisWeekEarnings = VideoView::where('user_id', Auth::id())
-    //         ->whereBetween('viewed_at', [now()->startOfWeek(), now()->endOfWeek()])
-    //         ->sum('earned_amount');
-    //     $thisMonthEarnings = VideoView::where('user_id', Auth::id())
-    //         ->whereMonth('viewed_at', now()->month)
-    //         ->whereYear('viewed_at', now()->year)
-    //         ->sum('earned_amount');
-    //     $thisMonthVideos = VideoView::where('user_id', Auth::id())
-    //         ->whereMonth('viewed_at', now()->month)
-    //         ->whereYear('viewed_at', now()->year)
-    //         ->count();
-    //     $recentActivity = VideoView::where('user_id', Auth::id())
-    //         ->where('viewed_at', '>=', now()->subDays(7))
-    //         ->count();
-    //     $topEarningVideos = VideoView::where('user_id', Auth::id())
-    //         ->with('videoLink')
-    //         ->selectRaw('video_link_id, SUM(earned_amount) as total_earned, COUNT(*) as view_count')
-    //         ->groupBy('video_link_id')
-    //         ->orderByDesc('total_earned')
-    //         ->limit(5)
-    //         ->get();
-    //     $dailyEarnings = VideoView::where('user_id', Auth::id())
-    //         ->where('viewed_at', '>=', now()->subDays(30))
-    //         ->selectRaw('DATE(viewed_at) as date, SUM(earned_amount) as daily_total, COUNT(*) as videos_count')
-    //         ->groupBy('date')
-    //         ->orderBy('date', 'desc')
-    //         ->get();
-
-    //     $data = [
-    //         'pageTitle' => 'Video Viewing History',
-    //         'viewHistory' => $viewHistory,
-    //         'totalEarnings' => $totalEarnings,
-    //         'totalVideosWatched' => $totalVideosWatched,
-    //         'uniqueVideosWatched' => $uniqueVideosWatched,
-    //         'averagePerVideo' => $averagePerVideo,
-    //         'todayEarnings' => $todayEarnings,
-    //         'thisWeekEarnings' => $thisWeekEarnings,
-    //         'thisMonthEarnings' => $thisMonthEarnings,
-    //         'thisMonthVideos' => $thisMonthVideos,
-    //         'recentActivity' => $recentActivity,
-    //         'topEarningVideos' => $topEarningVideos,
-    //         'dailyEarnings' => $dailyEarnings
-    //     ];
-
-    //     return view('frontend.video-views.user-video-history', $data);
-    // }
-
-    /**
      * Display user's video viewing history with detailed stats
      */
     public function history(Request $request)
@@ -557,7 +453,7 @@ class VideoViewController extends Controller
         $dailyEarnings = $dailyVideoViewService->getDailyEarningsChart($user->id, 30);
 
         $data = [
-            'pageTitle' => 'Video Viewing History',
+            // 'pageTitle' => 'Video Viewing History',
             'videoHistory' => $videoHistory,
             'stats' => $stats,
             'dailyEarnings' => $dailyEarnings,
@@ -590,7 +486,7 @@ class VideoViewController extends Controller
             ->sum('earned_amount');
 
         $data = [
-            'pageTitle' => 'Watch Video - ' . ($video->title ?: 'Earn Money'),
+            // 'pageTitle' => 'Watch Video - ' . ($video->title ?: 'Earn Money'),
             'video' => $video,
             'todayEarnings' => $todayEarnings
         ];
@@ -620,7 +516,7 @@ class VideoViewController extends Controller
             ->paginate(12);
 
         $data = [
-            'pageTitle' => 'Public Video Gallery',
+            // 'pageTitle' => 'Public Video Gallery',
             'videos' => $videos,
             'totalVideos' => VideoLink::where('status', 'active')->count(),
             'totalViews' => VideoLink::sum('views_count'),
@@ -629,6 +525,4 @@ class VideoViewController extends Controller
 
         return view('frontend.public-gallery', $data);
     }
-    
-
 }

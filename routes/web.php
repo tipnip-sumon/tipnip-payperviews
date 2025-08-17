@@ -1410,17 +1410,21 @@ Route::post('/debug-watch', function(\Illuminate\Http\Request $request) {
 
 Route::controller(VideoViewController::class)->middleware('auth')->group(function () {
     Route::get('/user/video-views/gallery', 'gallery')->name('user.video-views.gallery');
-    Route::get('/user/video-views/simple', 'simpleGallery')->name('user.video-views.simple');
     Route::get('/user/video-views', 'index')->name('user.video-views.index');
     Route::get('/user/video-views/history', 'history')->name('user.video-views.history');
     Route::get('/user/video-views/{video}/watch', 'showVideo')->name('user.video-views.show');
     Route::post('/user/video-views/watch', 'watch')->name('user.video-views.watch');
     Route::post('/video/watch', 'watch')->name('video.watch'); // Simple alias for AJAX
-    Route::post('/video/simple-watch', 'simpleWatch')->name('video.simple-watch'); // Simple watch without assignments
     Route::post('/user/video-views/record-view/{videoId}', 'recordView')->name('user.video-views.record-view');
     Route::get('/user/video-views/earnings', 'earnings')->name('user.video-views.earnings');
     Route::get('/user/video-history','publicGallery')->name('gallery');
     Route::get('/videos/{id}','show')->name('video.show');
+});
+
+// Simple Video Controller for gallery-simple.blade.php (separate from main VideoViewController)
+Route::controller(\App\Http\Controllers\User\SimpleVideoController::class)->middleware('auth')->group(function () {
+    Route::get('/user/video-views/simple', 'simpleGallery')->name('user.video-views.simple');
+    Route::post('/video/simple-watch', 'simpleWatch')->name('video.simple-watch');
 });
 
 // =============================================================================
