@@ -840,7 +840,7 @@ class LoginController extends Controller
     }
 
     /**
-     * Log the user out of the application.
+     * Log the user out of the application with complete session destruction.
      * Handles both GET and POST requests without requiring authentication middleware.
      *
      * @param  \Illuminate\Http\Request  $request
@@ -850,7 +850,8 @@ class LoginController extends Controller
     {
         // Check if user is actually logged in
         if (!\Illuminate\Support\Facades\Auth::check()) {
-            // User is not logged in, redirect to login with info message
+            // User is not logged in, clear any remaining session data and redirect
+            $this->completeSessionDestruction($request);
             return redirect()->route('login', ['t' => time()])
                 ->with('info', 'You were already logged out.');
         }
@@ -858,6 +859,7 @@ class LoginController extends Controller
         $user = \Illuminate\Support\Facades\Auth::user();
         $userId = $user->id;
         $username = $user->username ?? 'Unknown';
+        $sessionId = session()->getId();
 
         // Log the logout attempt for security
         \Illuminate\Support\Facades\Log::info('User logout initiated', [
@@ -865,69 +867,186 @@ class LoginController extends Controller
             'username' => $username,
             'ip' => $request->ip(),
             'user_agent' => $request->userAgent(),
-            'method' => $request->method()
+            'method' => $request->method(),
+            'session_id' => $sessionId
         ]);
 
         // Store user info before logout for logging
         $userInfo = [
             'user_id' => $userId,
             'username' => $username,
-            'ip' => $request->ip()
+            'ip' => $request->ip(),
+            'session_id' => $sessionId
         ];
 
-        // Perform the actual logout FIRST
-        $this->guard()->logout();
-
-        // Simple session cleanup - avoid complex database operations during session invalidation
+        // Create logout notification (before session destruction)
         try {
-            $request->session()->invalidate();
-            $request->session()->regenerateToken();
+            if (class_exists('\App\Models\UserSessionNotification')) {
+                \App\Models\UserSessionNotification::create([
+                    'user_id' => $userId,
+                    'type' => 'logout',
+                    'title' => 'User Logged Out',
+                    'message' => 'You have successfully logged out from your account.',
+                    'new_login_ip' => $request->ip(),
+                    'action_taken' => 'manual_logout'
+                ]);
+            }
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::warning('Session invalidation warning during logout: ' . $e->getMessage());
-            // Continue with logout even if session cleanup fails
+            \Illuminate\Support\Facades\Log::warning('Could not create logout notification: ' . $e->getMessage());
         }
 
-        // Clear user-specific cache AFTER session invalidation (more reliable)
+        // STEP 1: Perform the actual logout (removes authentication)
+        $this->guard()->logout();
+
+        // STEP 2: Complete session destruction
+        $this->completeSessionDestruction($request);
+
+        // STEP 3: Clear user-specific cache AFTER session invalidation
         try {
-            \Illuminate\Support\Facades\Cache::forget('user_' . $userId);
-            \Illuminate\Support\Facades\Cache::forget('user_session_' . $userId);
-            \Illuminate\Support\Facades\Cache::forget('user_data_' . $userId);
+            $this->clearUserCache($userId);
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::warning('Cache cleanup warning during logout: ' . $e->getMessage());
         }
 
-        // Log successful logout
-        \Illuminate\Support\Facades\Log::info('User logged out successfully', $userInfo);
+        // STEP 4: Clear any remember tokens if they exist
+        try {
+            if ($user && method_exists($user, 'setRememberToken')) {
+                $user->setRememberToken(null);
+                $user->save();
+            }
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::warning('Remember token cleanup warning: ' . $e->getMessage());
+        }
 
-        // Check if this is an AJAX request for cache clearing
+        // Log successful logout
+        \Illuminate\Support\Facades\Log::info('User logged out successfully - session completely destroyed', $userInfo);
+
+        // Check if this is an AJAX request
         if ($request->ajax() || $request->wantsJson()) {
             return response()->json([
                 'success' => true,
-                'message' => 'Logged out successfully',
+                'message' => 'Logged out successfully - session destroyed',
                 'redirect_url' => route('login'),
                 'clear_cache' => true,
+                'session_destroyed' => true,
                 'cache_version' => time()
             ]);
         }
 
-        // Simple redirect to login page without aggressive parameters
+        // Create response with complete cache invalidation headers
         $redirectUrl = route('login');
-
-        // Add simple logout success message
         $response = redirect($redirectUrl)->with([
-            'success' => 'You have been logged out successfully.',
-            'logout_completed' => true
+            'success' => 'You have been logged out successfully. Your session has been completely destroyed.',
+            'logout_completed' => true,
+            'session_destroyed' => true
         ]);
         
-        // Add comprehensive cache control headers to prevent caching issues
-        $response->headers->set('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
+        // Add the most comprehensive cache control headers possible
+        return $this->addSessionDestructionHeaders($response);
+    }
+
+    /**
+     * Complete session destruction - destroys all session data
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return void
+     */
+    private function completeSessionDestruction(\Illuminate\Http\Request $request)
+    {
+        try {
+            // Get session ID before destruction for logging
+            $sessionId = session()->getId();
+            
+            // CRITICAL: Completely invalidate the session
+            $request->session()->invalidate();
+            
+            // CRITICAL: Regenerate CSRF token
+            $request->session()->regenerateToken();
+            
+            // CRITICAL: Flush all session data (Laravel's most aggressive session clearing)
+            $request->session()->flush();
+            
+            // CRITICAL: Start fresh session to prevent any lingering data
+            $request->session()->regenerate(true);
+            
+            // CRITICAL: Clear any session cookies
+            if ($request->hasSession()) {
+                $sessionName = config('session.cookie');
+                if ($sessionName) {
+                    setcookie($sessionName, '', time() - 3600, '/', '', false, true);
+                }
+            }
+            
+            \Illuminate\Support\Facades\Log::info('Session completely destroyed', [
+                'old_session_id' => $sessionId,
+                'new_session_id' => session()->getId(),
+                'ip' => $request->ip()
+            ]);
+            
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Critical error during session destruction: ' . $e->getMessage());
+            
+            // Emergency fallback - try to clear session manually
+            try {
+                session()->flush();
+                session()->regenerate(true);
+            } catch (\Exception $fallbackException) {
+                \Illuminate\Support\Facades\Log::critical('Emergency session cleanup also failed: ' . $fallbackException->getMessage());
+            }
+        }
+    }
+
+    /**
+     * Clear all user-specific cache data
+     *
+     * @param  int  $userId
+     * @return void
+     */
+    private function clearUserCache($userId)
+    {
+        $cacheKeys = [
+            'user_' . $userId,
+            'user_session_' . $userId,
+            'user_data_' . $userId,
+            'user_preferences_' . $userId,
+            'user_settings_' . $userId,
+            'user_permissions_' . $userId,
+            'trusted_ips_user_' . $userId,
+            'user_session_settings_notifications_' . $userId,
+            'user_session_settings_security_' . $userId
+        ];
+
+        foreach ($cacheKeys as $key) {
+            try {
+                \Illuminate\Support\Facades\Cache::forget($key);
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::warning("Could not clear cache key {$key}: " . $e->getMessage());
+            }
+        }
+    }
+
+    /**
+     * Add comprehensive headers to prevent any caching after logout
+     *
+     * @param  \Illuminate\Http\Response  $response
+     * @return \Illuminate\Http\Response
+     */
+    private function addSessionDestructionHeaders($response)
+    {
+        $response->headers->set('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0, private');
         $response->headers->set('Pragma', 'no-cache');
         $response->headers->set('Expires', 'Thu, 01 Jan 1970 00:00:00 GMT');
         $response->headers->set('Last-Modified', gmdate('D, d M Y H:i:s T'));
         
-        // Add a custom header to help with debugging
+        // Additional headers to ensure complete cache invalidation
         $response->headers->set('X-Logout-Completed', 'true');
-
+        $response->headers->set('X-Session-Destroyed', 'true');
+        $response->headers->set('X-Cache-Control', 'no-cache');
+        $response->headers->set('Vary', 'Accept-Encoding');
+        
+        // Set cookies to expire immediately
+        $response->withCookie(cookie('logout_timestamp', time(), -1));
+        
         return $response;
     }
 

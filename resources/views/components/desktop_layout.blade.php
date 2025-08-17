@@ -2856,35 +2856,106 @@
     @stack('script')
 
     <script>
-    // COMPREHENSIVE LOGOUT SYSTEM WITH SECURITY VALIDATION
+    // COMPREHENSIVE LOGOUT SYSTEM WITH COMPLETE SESSION DESTRUCTION
     function performLogout() {
-        // First: Clear local storage and session data
+        console.log('Starting complete logout with session destruction...');
+        
+        // Step 1: Clear all client-side storage
         try {
             localStorage.clear();
             sessionStorage.clear();
+            console.log('Client storage cleared');
         } catch(e) {
             console.warn('Could not clear local storage:', e);
         }
         
-        // Primary: Simple logout with session validation
-        performSecureLogout();
+        // Step 2: Clear all cookies for this domain
+        try {
+            document.cookie.split(";").forEach(function(c) { 
+                document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+            });
+            console.log('Cookies cleared');
+        } catch(e) {
+            console.warn('Could not clear cookies:', e);
+        }
+        
+        // Step 3: Perform server-side logout with complete session destruction
+        performCompleteServerLogout();
     }
     
-    // Secure logout with session validation
+    // Complete server logout with session destruction
+    function performCompleteServerLogout() {
+        // Show loading indicator
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: 'Logging out...',
+                text: 'Destroying session and clearing all data...',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                willOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+        }
+        
+        // Use fetch API for better control over logout process
+        fetch("{{ route('logout') }}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({
+                complete_logout: true,
+                destroy_session: true,
+                timestamp: Math.floor(Date.now() / 1000)
+            })
+        })
+        .then(response => {
+            console.log('Logout response received:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('Logout successful:', data);
+            
+            if (typeof Swal !== 'undefined') {
+                Swal.close();
+            }
+            
+            // Force complete page reload to clear any remaining state
+            window.location.replace(data.redirect_url || "{{ route('login') }}?logged_out=1&t=" + Math.floor(Date.now() / 1000));
+        })
+        .catch(error => {
+            console.error('Logout error, using fallback:', error);
+            
+            if (typeof Swal !== 'undefined') {
+                Swal.close();
+            }
+            
+            // Fallback to standard logout
+            performLogoutFallback();
+        });
+    }
+    
+    // Secure logout with session validation (legacy method)
     function performSecureLogout() {
         // Add timestamp and user validation to prevent cross-user access
-        const logoutUrl = "{{ route('simple.logout') }}" + 
+        const logoutUrl = "{{ route('logout') }}" + 
                          "?user_verify={{ auth()->check() ? auth()->id() : 'guest' }}" +
                          "&session_token=" + generateSessionToken() +
+                         "&complete_destroy=1" +
                          "&t=" + Math.floor(Date.now() / 1000);
         
         window.location.href = logoutUrl;
     }
     
-    // Generate session token for logout validation - SIMPLIFIED to prevent 419 errors
+    // Generate session token for logout validation
     function generateSessionToken() {
         try {
-            // Simplified token generation to prevent btoa() issues
             const timestamp = Math.floor(Date.now() / 1000);
             return 'token_' + timestamp + '_' + Math.random().toString(36).substring(7);
         } catch(e) {
@@ -2892,12 +2963,48 @@
         }
     }
     
-    // Fallback logout function
+    // Enhanced fallback logout function with complete cleanup
     function performLogoutFallback() {
+        console.log('Using fallback logout with complete session destruction...');
+        
         // Clear storage first
         try {
             localStorage.clear();
             sessionStorage.clear();
+            
+            // Clear all cookies
+            document.cookie.split(";").forEach(function(c) { 
+                document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+            });
+        } catch(e) {
+            console.warn('Storage/cookie cleanup failed:', e);
+        }
+        
+        // Create form for POST logout with complete destruction flag
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = "{{ route('logout') }}";
+        
+        // Add CSRF token
+        const csrfToken = document.querySelector('meta[name="csrf-token"]');
+        if (csrfToken) {
+            const tokenInput = document.createElement('input');
+            tokenInput.type = 'hidden';
+            tokenInput.name = '_token';
+            tokenInput.value = csrfToken.getAttribute('content');
+            form.appendChild(tokenInput);
+        }
+        
+        // Add complete destruction flag
+        const destroyInput = document.createElement('input');
+        destroyInput.type = 'hidden';
+        destroyInput.name = 'complete_destroy';
+        destroyInput.value = '1';
+        form.appendChild(destroyInput);
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
         } catch(e) {}
         
         // Fallback: Try standard logout with CSRF
