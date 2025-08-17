@@ -50,7 +50,7 @@ class LoginController extends Controller
         session([
             'auth_user_id' => $user->id, // For session security validation
             'login_timestamp' => time(),
-            'last_activity' => time(),
+            'last_activity_time' => time(), // Initialize activity tracking for auto-timeout
             'browser_session_id' => $browserFingerprint, // Unique per browser/device
             'allow_concurrent_sessions' => true // Flag to indicate multiple sessions are allowed
         ]);

@@ -56,6 +56,24 @@
                                                 <span class="badge bg-danger">Inactive</span>
                                             @endauth
                                         </p>
+                                        @auth
+                                        @php
+                                            $lastActivity = session('last_activity_time', time());
+                                            $inactiveMinutes = (time() - $lastActivity) / 60;
+                                            $timeoutMinutes = 30; // Default
+                                            $userSettings = \Illuminate\Support\Facades\Cache::get("user_session_settings_security_" . auth()->id(), []);
+                                            if (isset($userSettings['session_timeout_hours'])) {
+                                                $timeoutMinutes = $userSettings['session_timeout_hours'] * 60;
+                                            }
+                                        @endphp
+                                        <p><strong>Inactive Time:</strong> {{ round($inactiveMinutes, 1) }} minutes</p>
+                                        <p><strong>Timeout Limit:</strong> {{ $timeoutMinutes }} minutes</p>
+                                        <p><strong>Remaining Time:</strong> 
+                                            <span class="badge {{ ($timeoutMinutes - $inactiveMinutes) < 5 ? 'bg-danger' : 'bg-success' }}">
+                                                {{ max(0, round($timeoutMinutes - $inactiveMinutes, 1)) }} minutes
+                                            </span>
+                                        </p>
+                                        @endauth
                                     </div>
                                 </div>
                             </div>
@@ -69,28 +87,68 @@
                             </div>
                             <div class="card-body">
                                 <div class="row">
-                                    <div class="col-md-4 mb-3">
+                                    <div class="col-md-3 mb-3">
                                         <button type="button" class="btn btn-danger w-100" onclick="testCompleteLogout()">
                                             <i class="fas fa-power-off me-2"></i>
                                             Complete Logout
                                             <small class="d-block">Enhanced with session destruction</small>
                                         </button>
                                     </div>
-                                    <div class="col-md-4 mb-3">
+                                    <div class="col-md-3 mb-3">
                                         <button type="button" class="btn btn-warning w-100" onclick="testStandardLogout()">
                                             <i class="fas fa-sign-out-alt me-2"></i>
                                             Standard Logout
                                             <small class="d-block">Normal Laravel logout</small>
                                         </button>
                                     </div>
-                                    <div class="col-md-4 mb-3">
+                                    <div class="col-md-3 mb-3">
                                         <button type="button" class="btn btn-info w-100" onclick="testAjaxLogout()">
                                             <i class="fas fa-wifi me-2"></i>
                                             AJAX Logout
                                             <small class="d-block">JSON response test</small>
                                         </button>
                                     </div>
+                                    <div class="col-md-3 mb-3">
+                                        <button type="button" class="btn btn-secondary w-100" onclick="testSessionTimeout()">
+                                            <i class="fas fa-clock me-2"></i>
+                                            Test Auto-Timeout
+                                            <small class="d-block">Force session timeout</small>
+                                        </button>
+                                    </div>
                                 </div>
+                            </div>
+                        </div>
+
+                        <!-- Session Activity Test -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h6 class="mb-0">Session Activity Monitoring</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-4 mb-3">
+                                        <button type="button" class="btn btn-success w-100" onclick="extendSession()">
+                                            <i class="fas fa-clock me-2"></i>
+                                            Extend Session
+                                            <small class="d-block">Reset activity timer</small>
+                                        </button>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <button type="button" class="btn btn-primary w-100" onclick="checkSessionStatus()">
+                                            <i class="fas fa-search me-2"></i>
+                                            Check Session
+                                            <small class="d-block">Get current status</small>
+                                        </button>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <button type="button" class="btn btn-warning w-100" onclick="simulateInactivity()">
+                                            <i class="fas fa-pause me-2"></i>
+                                            Simulate Inactivity
+                                            <small class="d-block">Test timeout warning</small>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div id="sessionStatusResult" class="mt-3"></div>
                             </div>
                         </div>
 
@@ -154,9 +212,123 @@
             });
         }
 
-        // Test standard logout
-        function testStandardLogout() {
-            window.location.href = "{{ route('logout') }}?test=standard";
+        // Test session timeout by setting old activity time
+        function testSessionTimeout() {
+            Swal.fire({
+                title: 'Test Session Timeout?',
+                text: 'This will simulate an inactive session and trigger automatic logout.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, Test Timeout'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Set a very old last activity time to trigger timeout
+                    fetch('/user/extend-session', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                        },
+                        body: JSON.stringify({
+                            test_timeout: true,
+                            old_activity_time: Math.floor(Date.now() / 1000) - (35 * 60) // 35 minutes ago
+                        })
+                    })
+                    .then(() => {
+                        Swal.fire('Test Started!', 'Session timeout simulation initiated. The system will detect this on next check.', 'info');
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 3000);
+                    });
+                }
+            });
+        }
+
+        // Extend session manually
+        function extendSession() {
+            fetch('/user/extend-session', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                },
+                body: JSON.stringify({
+                    extend_session: true
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire('Session Extended!', 'Your session activity has been updated.', 'success');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                Swal.fire('Error!', 'Failed to extend session', 'error');
+            });
+        }
+
+        // Check current session status
+        function checkSessionStatus() {
+            fetch('/user/session-check', {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                const resultDiv = document.getElementById('sessionStatusResult');
+                resultDiv.innerHTML = `
+                    <div class="alert alert-info">
+                        <h6>Session Status:</h6>
+                        <ul class="mb-0">
+                            <li><strong>Authenticated:</strong> ${data.authenticated ? 'Yes' : 'No'}</li>
+                            <li><strong>Inactive Time:</strong> ${data.inactive_minutes} minutes</li>
+                            <li><strong>Timeout Limit:</strong> ${data.timeout_minutes} minutes</li>
+                            <li><strong>Remaining Time:</strong> ${data.remaining_minutes} minutes</li>
+                            <li><strong>Status:</strong> ${data.remaining_minutes < 5 ? '<span class="text-danger">Warning - Expiring Soon</span>' : '<span class="text-success">Active</span>'}</li>
+                        </ul>
+                    </div>
+                `;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('sessionStatusResult').innerHTML = `
+                    <div class="alert alert-danger">
+                        <strong>Error:</strong> Failed to check session status. You may already be logged out.
+                    </div>
+                `;
+            });
+        }
+
+        // Simulate inactivity for testing
+        function simulateInactivity() {
+            if (window.autoSessionTimeout) {
+                window.autoSessionTimeout.destroy();
+            }
+            
+            // Create a new instance with very short timeout for testing
+            window.testTimeout = new AutoSessionTimeout({
+                timeoutMinutes: 1, // 1 minute for testing
+                warningMinutes: 0.5, // 30 seconds warning
+                checkInterval: 5000, // Check every 5 seconds
+                enableWarnings: true,
+                enableLogging: true
+            });
+            
+            Swal.fire({
+                title: 'Inactivity Simulation Started',
+                text: 'Timeout set to 1 minute with 30-second warning for testing. Do not move your mouse or interact with the page.',
+                icon: 'info',
+                timer: 3000,
+                showConfirmButton: false
+            });
         }
 
         // Test AJAX logout

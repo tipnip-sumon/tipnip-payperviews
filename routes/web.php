@@ -1444,6 +1444,42 @@ Route::controller(\App\Http\Controllers\User\SessionManagementController::class)
     Route::post('/user/sessions/terminate-others', 'terminateOtherSessions')->name('user.sessions.terminate-others');
 });
 
+// Session timeout and activity monitoring routes
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/user/session-check', function(\Illuminate\Http\Request $request) {
+        // Lightweight session check for auto-timeout monitoring
+        if (!\Illuminate\Support\Facades\Auth::check()) {
+            return response()->json(['error' => 'Not authenticated'], 401);
+        }
+        
+        $lastActivity = session('last_activity_time', time());
+        $timeoutMinutes = 30; // Default timeout
+        $inactiveMinutes = (time() - $lastActivity) / 60;
+        
+        return response()->json([
+            'authenticated' => true,
+            'inactive_minutes' => round($inactiveMinutes, 2),
+            'timeout_minutes' => $timeoutMinutes,
+            'remaining_minutes' => max(0, $timeoutMinutes - $inactiveMinutes)
+        ]);
+    })->name('user.session.check');
+    
+    Route::post('/user/extend-session', function(\Illuminate\Http\Request $request) {
+        // Extend session by updating last activity time
+        if (!\Illuminate\Support\Facades\Auth::check()) {
+            return response()->json(['error' => 'Not authenticated'], 401);
+        }
+        
+        session(['last_activity_time' => time()]);
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Session extended successfully',
+            'new_activity_time' => time()
+        ]);
+    })->name('user.session.extend');
+});
+
 // =============================================================================
 // POLICIES ROUTES
 // =============================================================================

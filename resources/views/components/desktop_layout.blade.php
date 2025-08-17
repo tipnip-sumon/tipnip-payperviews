@@ -1861,6 +1861,21 @@
             window.modalSystem = new DynamicModalSystem();
         });
     </script>
+    
+    <!-- Session Timeout Configuration -->
+    @auth
+    @php
+        $timeoutMinutes = 30; // Default timeout
+        $userSettings = \Illuminate\Support\Facades\Cache::get("user_session_settings_security_" . auth()->id(), []);
+        if (isset($userSettings['session_timeout_hours'])) {
+            $timeoutMinutes = $userSettings['session_timeout_hours'] * 60;
+        } elseif (env('AUTO_LOGOUT_MINUTES')) {
+            $timeoutMinutes = (int) env('AUTO_LOGOUT_MINUTES');
+        }
+    @endphp
+    <meta name="session-timeout" content="{{ $timeoutMinutes }}">
+    <meta name="session-warning" content="5">
+    @endauth
     </style>
 </head>
 
@@ -2852,6 +2867,11 @@
     <!-- SweetAlert2 Test Script (Debug Mode Only) -->
     <!-- Custom JS -->
     <script src="{{asset('assets/js/custom.js')}}"></script>
+    
+    <!-- Auto Session Timeout for authenticated users -->
+    @auth
+    <script src="{{asset('js/auto-session-timeout.js')}}"></script>
+    @endauth
 
     @stack('script')
 
@@ -3001,25 +3021,6 @@
         destroyInput.name = 'complete_destroy';
         destroyInput.value = '1';
         form.appendChild(destroyInput);
-        
-        document.body.appendChild(form);
-        form.submit();
-    }
-        } catch(e) {}
-        
-        // Fallback: Try standard logout with CSRF
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = "{{ route('logout') }}";
-        
-        const csrfToken = document.querySelector('meta[name="csrf-token"]');
-        if (csrfToken) {
-            const tokenInput = document.createElement('input');
-            tokenInput.type = 'hidden';
-            tokenInput.name = '_token';
-            tokenInput.value = csrfToken.getAttribute('content');
-            form.appendChild(tokenInput);
-        }
         
         document.body.appendChild(form);
         form.submit();

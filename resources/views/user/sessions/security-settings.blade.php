@@ -104,7 +104,7 @@
                                         <input class="form-check-input" type="checkbox" id="autoLogoutInactive" checked>
                                         <label class="form-check-label" for="autoLogoutInactive">
                                             <strong>Auto-logout Inactive Sessions</strong>
-                                            <small class="d-block text-muted">Automatically logout sessions after 24 hours of inactivity</small>
+                                            <small class="d-block text-muted">Automatically logout sessions after specified time of inactivity</small>
                                         </label>
                                     </div>
                                     
@@ -118,16 +118,22 @@
                                     
                                     <div class="form-group mb-3">
                                         <label for="sessionTimeout" class="form-label">
-                                            <strong>Session Timeout (hours)</strong>
+                                            <strong>Auto-Logout Timeout</strong>
                                         </label>
                                         <select class="form-select" id="sessionTimeout">
+                                            <option value="0.25">15 minutes</option>
+                                            <option value="0.5" selected>30 minutes (Recommended)</option>
                                             <option value="1">1 hour</option>
+                                            <option value="2">2 hours</option>
                                             <option value="4">4 hours</option>
                                             <option value="8">8 hours</option>
-                                            <option value="24" selected>24 hours</option>
-                                            <option value="168">1 week</option>
+                                            <option value="24">24 hours</option>
                                         </select>
-                                        <small class="text-muted">How long sessions remain active without activity</small>
+                                        <small class="text-muted">How long you can remain inactive before automatic logout with complete session destruction</small>
+                                        <div class="alert alert-info mt-2 small">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            <strong>Security Note:</strong> Shorter timeouts provide better security. You'll receive a warning 5 minutes before logout.
+                                        </div>
                                     </div>
                                     
                                     <button type="submit" class="btn btn-primary">
