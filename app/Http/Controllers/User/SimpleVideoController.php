@@ -73,11 +73,36 @@ class SimpleVideoController extends Controller
 
         $request->validate([
             'video_id' => 'required|exists:video_links,id',
-            'watch_duration' => 'required|integer|min:1'
+            'watch_duration' => 'required|integer|min:1',
+            'actual_watch_time' => 'sometimes|integer|min:1',
+            'required_time' => 'sometimes|integer|min:1',
+            'pause_count' => 'sometimes|integer|min:0'
         ]);
 
         $user = Auth::user();
         $video = VideoLink::findOrFail($request->video_id);
+        
+        // Enhanced validation using video duration from database
+        $videoDuration = $video->duration ?? 30; // Get from database or default
+        $requiredWatchTime = max(20, floor($videoDuration * 0.8)); // At least 80% of video or 20 seconds
+        $actualWatchTime = $request->actual_watch_time ?? $request->watch_duration;
+        $pauseCount = $request->pause_count ?? 0;
+        
+        // Validate watch time against video duration
+        if ($actualWatchTime < $requiredWatchTime) {
+            return response()->json([
+                'success' => false,
+                'message' => "Please watch at least {$requiredWatchTime} seconds of this {$videoDuration}-second video to earn money."
+            ]);
+        }
+        
+        // Check for excessive pauses (anti-cheat)
+        if ($pauseCount > 2) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Too many pauses detected. Please watch the video continuously to earn.'
+            ]);
+        }
         
         // Check if user has today's assignment that includes this video
         $assignment = DailyVideoAssignment::forUser($user->id)
@@ -136,26 +161,22 @@ class SimpleVideoController extends Controller
             ? $activeInvest->plan->video_earning_rate 
             : 0.0001;
 
-        // Simple minimum watch time check (20 seconds)
-        if ($request->watch_duration < 20) {
-            return response()->json([
-                'success' => false,
-                'message' => "Please watch at least 20 seconds of the video to earn money."
-            ]);
-        }
-
         try {
             DB::beginTransaction();
 
-            // Use optimized single-row video view system
+            // Use optimized single-row video view system with enhanced data
             $videoViewService = new DailyVideoViewService();
             
-            // Record video view in optimized single-row format
+            // Record video view in optimized single-row format with enhanced metadata
             $viewResult = $videoViewService->recordVideoView($user, $video, [
                 'ip_address' => $request->ip(),
                 'device_info' => $request->userAgent(),
                 'earned_amount' => $earningRate,
-                'watch_duration' => $request->watch_duration
+                'watch_duration' => $actualWatchTime,
+                'required_duration' => $requiredWatchTime,
+                'video_total_duration' => $videoDuration,
+                'pause_count' => $pauseCount,
+                'watch_quality_score' => $this->calculateWatchQualityScore($actualWatchTime, $requiredWatchTime, $pauseCount)
             ]);
 
             if (!$viewResult['success']) {
@@ -171,17 +192,32 @@ class SimpleVideoController extends Controller
 
             // Update video statistics
             $video->increment('views_count');
+            $video->increment('clicks_count');
+
+            // Add earnings using daily aggregation service (ONE TRANSACTION PER DAY)
+            $earningService = new \App\Services\DailyVideoEarningService();
+            $earningResult = $earningService->addEarning($user, $earningRate);
+            
+            if (!$earningResult['success']) {
+                throw new \Exception('Failed to process daily earnings: ' . $earningResult['error']);
+            }
 
             DB::commit();
 
-            $currentBalance = $user->interest_balance + $earningRate;
+            $updatedUser = User::find($user->id); // Get fresh user data
+            $newBalance = $updatedUser->interest_wallet; // Fix: use interest_wallet instead of interest_balance
 
             return response()->json([
                 'success' => true,
                 'message' => 'Congratulations! You earned $' . number_format($earningRate, 4) . ' from this video!',
-                'earned_amount' => $earningRate,
-                'user_balance' => $currentBalance,
-                'formatted_earning' => number_format($earningRate, 4)
+                'earning' => number_format($earningRate, 4),
+                'new_balance' => number_format($newBalance, 4),
+                'watch_stats' => [
+                    'duration' => $actualWatchTime,
+                    'required' => $requiredWatchTime,
+                    'pauses' => $pauseCount,
+                    'quality_score' => $this->calculateWatchQualityScore($actualWatchTime, $requiredWatchTime, $pauseCount)
+                ]
             ]);
 
         } catch (\Exception $e) {
@@ -193,6 +229,16 @@ class SimpleVideoController extends Controller
                 'message' => 'An error occurred while processing your view.'
             ], 500);
         }
+    }
+    
+    /**
+     * Calculate watch quality score for analytics
+     */
+    private function calculateWatchQualityScore($actualTime, $requiredTime, $pauseCount)
+    {
+        $timeScore = min(100, ($actualTime / $requiredTime) * 100);
+        $pausePenalty = $pauseCount * 10; // 10 points penalty per pause
+        return max(0, $timeScore - $pausePenalty);
     }
 
     /**
