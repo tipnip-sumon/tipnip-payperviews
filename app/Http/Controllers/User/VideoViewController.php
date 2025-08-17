@@ -1,11 +1,12 @@
 <?php
 
-namespace App\Http\Controllers\user;
+namespace App\Http\Controllers\User;
 
 use App\Models\VideoLink;
 use App\Models\VideoView;
 use App\Models\Invest;
 use App\Models\Plan;
+use App\Models\User;
 use App\Models\DailyVideoAssignment;
 use App\Services\DailyVideoService;
 use App\Services\DailyVideoViewService;
@@ -51,10 +52,29 @@ class VideoViewController extends Controller
             ->first();
             
         if (!$assignment) {
-            return response()->json([
-                'success' => false,
-                'message' => 'You don\'t have any video assignments for today.'
-            ]);
+            // Auto-create daily assignments if none exist for today
+            try {
+                $dailyVideoService = new DailyVideoService();
+                $dailyVideoService->assignDailyVideos($user);
+                
+                // Try to get the assignment again after creation
+                $assignment = DailyVideoAssignment::forUser($user->id)
+                    ->forDate(today())
+                    ->first();
+                    
+                if (!$assignment) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Unable to create video assignments. Please contact support.'
+                    ]);
+                }
+            } catch (\Exception $e) {
+                Log::error('Failed to auto-create daily video assignment: ' . $e->getMessage());
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unable to create video assignments. Please try again later.'
+                ]);
+            }
         }
         
         // Parse video IDs from JSON structure
@@ -179,6 +199,98 @@ class VideoViewController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Error recording optimized video view: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'An error occurred while processing your view.'
+            ], 500);
+        }
+    }
+
+    /**
+     * Simple watch method that bypasses daily assignment system
+     * Used for simple gallery where we don't enforce strict daily assignments
+     */
+    public function simpleWatch(Request $request)
+    {
+        if (!Auth::check()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Please login to earn money from videos.'
+            ], 401);
+        }
+
+        $request->validate([
+            'video_id' => 'required|exists:video_links,id',
+            'watch_duration' => 'required|integer|min:1'
+        ]);
+
+        $user = Auth::user();
+        $video = VideoLink::findOrFail($request->video_id);
+        
+        // Check if user has already watched this video today (simple check)
+        $todayWatched = VideoView::where('user_id', $user->id)
+            ->where('video_link_id', $video->id)
+            ->whereDate('created_at', today())
+            ->exists();
+            
+        if ($todayWatched) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You have already earned from this video today.'
+            ]);
+        }
+        
+        // Get user's earning rate
+        $activeInvest = Invest::where('user_id', $user->id)->where('status', 1)->with('plan')->first();
+        $earningRate = $activeInvest && $activeInvest->plan 
+            ? $activeInvest->plan->video_earning_rate 
+            : 0.0001;
+
+        // Simple minimum watch time check (20 seconds)
+        if ($request->watch_duration < 20) {
+            return response()->json([
+                'success' => false,
+                'message' => "Please watch at least 20 seconds of the video to earn money."
+            ]);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            // Create video view record
+            VideoView::create([
+                'user_id' => $user->id,
+                'video_link_id' => $video->id,
+                'ip_address' => $request->ip(),
+                'device_info' => $request->userAgent(),
+                'earned_amount' => $earningRate,
+                'watch_duration' => $request->watch_duration,
+                'created_at' => now(),
+            ]);
+
+            // Update user balance
+            DB::table('users')
+                ->where('id', $user->id)
+                ->increment('interest_balance', $earningRate);
+            
+            // Update video statistics
+            $video->increment('views_count');
+
+            DB::commit();
+
+            $currentBalance = $user->interest_balance + $earningRate;
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Congratulations! You earned $' . number_format($earningRate, 4) . ' from this video!',
+                'earned_amount' => $earningRate,
+                'user_balance' => $currentBalance
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error in simple video watch: ' . $e->getMessage());
             
             return response()->json([
                 'success' => false,
@@ -368,6 +480,28 @@ class VideoViewController extends Controller
     {
         $user = Auth::user();
         
+        // Auto-create daily assignments if user is authenticated
+        if ($user) {
+            try {
+                $dailyVideoService = new DailyVideoService();
+                $result = $dailyVideoService->assignDailyVideos($user);
+                Log::info('Simple gallery assignment result:', ['user_id' => $user->id, 'result' => $result]);
+                
+                // Double-check assignment exists
+                $todayAssignment = DailyVideoAssignment::forUser($user->id)->forDate(today())->first();
+                if (!$todayAssignment) {
+                    Log::warning('No assignment found after creation attempt', ['user_id' => $user->id]);
+                } else {
+                    Log::info('Assignment confirmed', ['assignment_id' => $todayAssignment->id, 'video_count' => count(json_decode($todayAssignment->video_ids ?? '[]', true))]);
+                }
+            } catch (\Exception $e) {
+                Log::error('Daily video assignment creation in simpleGallery failed: ' . $e->getMessage(), [
+                    'user_id' => $user->id ?? null,
+                    'trace' => $e->getTraceAsString()
+                ]);
+            }
+        }
+        
         // Get videos for simple gallery (just get active videos)
         $videos = VideoLink::where('status', 'active')
             ->orderBy('created_at', 'desc')
@@ -376,7 +510,8 @@ class VideoViewController extends Controller
 
         $data = [
             'pageTitle' => 'Watch Videos & Earn Money',
-            'videos' => $videos
+            'videos' => $videos,
+            'debug_user_id' => $user ? $user->id : null
         ];
 
         return view('frontend.video-views.gallery-simple', $data);

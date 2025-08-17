@@ -1339,6 +1339,75 @@ Route::prefix('user')->middleware(['auth', 'verified'])->group(function () {
 // Test route for simple gallery (no auth required)
 Route::get('/gallery-test', [VideoViewController::class, 'simpleGallery'])->name('gallery.test');
 
+// Debug route to manually create assignments
+Route::get('/debug-assignment', function() {
+    if (!Auth::check()) {
+        return response()->json(['error' => 'Not authenticated']);
+    }
+    
+    $user = Auth::user();
+    try {
+        $dailyVideoService = new \App\Services\DailyVideoService();
+        $result = $dailyVideoService->assignDailyVideos($user);
+        
+        $assignment = \App\Models\DailyVideoAssignment::forUser($user->id)->forDate(today())->first();
+        
+        return response()->json([
+            'success' => true,
+            'user_id' => $user->id,
+            'assignment_result' => $result,
+            'assignment_exists' => $assignment ? true : false,
+            'assignment_id' => $assignment ? $assignment->id : null,
+            'video_count' => $assignment ? count(json_decode($assignment->video_ids ?? '[]', true)) : 0
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+    }
+})->middleware('auth')->name('debug.assignment');
+
+// Debug route to test video watch
+Route::post('/debug-watch', function(\Illuminate\Http\Request $request) {
+    if (!Auth::check()) {
+        return response()->json(['error' => 'Not authenticated']);
+    }
+    
+    $user = Auth::user();
+    try {
+        // Check current assignment
+        $assignment = \App\Models\DailyVideoAssignment::forUser($user->id)->forDate(today())->first();
+        $assignmentInfo = null;
+        
+        if ($assignment) {
+            $videoIds = json_decode($assignment->video_ids ?? '[]', true) ?: [];
+            $watchedIds = json_decode($assignment->watched_video_ids ?? '[]', true) ?: [];
+            
+            $assignmentInfo = [
+                'assignment_id' => $assignment->id,
+                'assigned_videos' => $videoIds,
+                'watched_videos' => $watchedIds,
+                'total_assigned' => count($videoIds),
+                'total_watched' => count($watchedIds)
+            ];
+        }
+        
+        return response()->json([
+            'user_id' => $user->id,
+            'assignment_exists' => $assignment ? true : false,
+            'assignment_info' => $assignmentInfo,
+            'requested_video_id' => $request->video_id ?? null
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage()
+        ]);
+    }
+})->middleware('auth')->name('debug.watch');
+
 Route::controller(VideoViewController::class)->middleware('auth')->group(function () {
     Route::get('/user/video-views/gallery', 'gallery')->name('user.video-views.gallery');
     Route::get('/user/video-views/simple', 'simpleGallery')->name('user.video-views.simple');
@@ -1347,6 +1416,7 @@ Route::controller(VideoViewController::class)->middleware('auth')->group(functio
     Route::get('/user/video-views/{video}/watch', 'showVideo')->name('user.video-views.show');
     Route::post('/user/video-views/watch', 'watch')->name('user.video-views.watch');
     Route::post('/video/watch', 'watch')->name('video.watch'); // Simple alias for AJAX
+    Route::post('/video/simple-watch', 'simpleWatch')->name('video.simple-watch'); // Simple watch without assignments
     Route::post('/user/video-views/record-view/{videoId}', 'recordView')->name('user.video-views.record-view');
     Route::get('/user/video-views/earnings', 'earnings')->name('user.video-views.earnings');
     Route::get('/user/video-history','publicGallery')->name('gallery');

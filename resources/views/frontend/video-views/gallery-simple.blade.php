@@ -208,7 +208,7 @@
             button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Processing...');
             
             // Send AJAX request
-            $.post('{{ route("video.watch") }}', {
+            $.post('{{ route("video.simple-watch") }}', {
                 video_id: currentVideo.id,
                 watch_duration: watchDuration,
                 _token: '{{ csrf_token() }}'
