@@ -74,8 +74,8 @@
     </li>
     
     <!-- VIDEO WATCH (TOP PRIORITY) -->
-    <li class="slide">
-        <a href="{{ route('user.video-views.gallery') }}" class="side-menu__item">
+    <li class="slide has-sub">
+        <a href="javascript:void(0);" class="side-menu__item">
             <i class="fe fe-play-circle side-menu__icon"></i>
             <span class="side-menu__label">Watch Videos & Earn</span>
             @auth
@@ -88,7 +88,31 @@
                     <span class="badge badge-primary ms-2">Start Earning</span>
                 @endif
             @endauth
+            <i class="fe fe-chevron-right side-menu__angle"></i>
         </a>
+        <ul class="slide-menu child1">
+            <li class="slide side-menu__label1">
+                <a href="javascript:void(0)">Watch Videos & Earn</a>
+            </li>
+            
+            <!-- Gallery 1 - Original Video Gallery -->
+            <li class="slide">
+                <a href="{{ route('user.video-views.gallery') }}" class="side-menu__item">
+                    <i class="fe fe-grid me-2 text-primary"></i>
+                    <span class="side-menu__label">Watch Video Gallery-1</span>
+                    <span class="badge badge-info ms-auto">Original</span>
+                </a>
+            </li>
+            
+            <!-- Gallery 2 - Simple Video Gallery -->
+            <li class="slide">
+                <a href="{{ route('user.video-views.simple') }}" class="side-menu__item">
+                    <i class="fe fe-play me-2 text-success"></i>
+                    <span class="side-menu__label">Watch Video Gallery-2</span>
+                    <span class="badge badge-success ms-auto">Enhanced</span>
+                </a>
+            </li>
+        </ul>
     </li>
 
     <!-- BUY LOTTERY TICKETS (2ND PRIORITY) -->
