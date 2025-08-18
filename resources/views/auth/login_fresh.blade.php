@@ -531,11 +531,14 @@
             
             if (!csrfToken) {
                 console.log('No CSRF token found, refreshing session...');
-                await refreshCSRFToken();
+                await refreshCSRFToken().catch(err => console.log('CSRF refresh failed:', err));
                 return;
             }
             
             // Test session with a simple request
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+            
             const response = await fetch('/session/refresh', {
                 method: 'POST',
                 headers: {
@@ -543,12 +546,15 @@
                     'Accept': 'application/json',
                     'X-CSRF-TOKEN': csrfToken
                 },
-                credentials: 'same-origin'
+                credentials: 'same-origin',
+                signal: controller.signal
             });
+            
+            clearTimeout(timeoutId);
             
             if (response.status === 419) {
                 console.log('Session health check detected CSRF issue, fixing...');
-                await refreshCSRFToken();
+                await refreshCSRFToken().catch(err => console.log('CSRF refresh failed:', err));
             } else if (response.ok) {
                 const data = await response.json();
                 if (data.success) {
@@ -557,7 +563,11 @@
             }
             
         } catch (error) {
-            console.log('Session health check failed, will handle on form submission:', error);
+            if (error.name === 'AbortError') {
+                console.log('Session health check timed out');
+            } else {
+                console.log('Session health check failed, will handle on form submission:', error);
+            }
             // Don't show error to user, just log it and handle later
         }
     }
@@ -625,17 +635,23 @@
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Fresh login page loaded');
     
-    // CRITICAL: Check if user just logged out and force complete page refresh
-    handlePostLogoutState();
-    
-    // Proactive session health check to prevent issues
-    checkSessionHealth();
-    
-    // Browser Compatibility and Multi-Session Detection
-    initBrowserCompatibility();
-    
-    // Cache Detection and Warning
-    detectCacheIssues();
+    // Wrap everything in try-catch to prevent browser extension errors
+    try {
+        // CRITICAL: Check if user just logged out and force complete page refresh
+        handlePostLogoutState();
+        
+        // Proactive session health check to prevent issues
+        checkSessionHealth();
+        
+        // Browser Compatibility and Multi-Session Detection
+        initBrowserCompatibility();
+        
+        // Cache Detection and Warning
+        detectCacheIssues();
+    } catch (initError) {
+        console.log('Initialization error (possibly browser extension):', initError);
+        // Continue with basic functionality
+    }
     
     // Debug CSRF token
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
@@ -748,47 +764,68 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 1000);
     });
 
-    // Function to check user login attempts
+    // Check user login attempts function
     async function checkUserLoginAttempts(username) {
+        if (!username || username.length < 3) {
+            return;
+        }
+        
         try {
-            const response = await fetch('/login?' + new URLSearchParams({
-                check_attempts: '1',
-                username: username
-            }), {
-                method: 'GET',
+            const response = await fetch('/check-login-attempts', {
+                method: 'POST',
                 headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': getCSRFToken(),
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({ username: username }),
+                credentials: 'same-origin'
             });
-
+            
             if (response.ok) {
-                // Parse the response to extract attempt information
-                const html = await response.text();
+                const data = await response.json();
                 
-                // Check if there are warnings about remaining attempts
-                if (html.includes('remaining before your account will be temporarily locked')) {
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(html, 'text/html');
-                    const warningElement = doc.querySelector('.validation-message.warning');
-                    
-                    if (warningElement) {
-                        const warningText = warningElement.textContent.trim();
-                        showValidation('username', warningText, 'warning');
+                // Handle different response scenarios
+                if (data.is_locked) {
+                    if (data.lock_reason === 'Multiple failed login attempts') {
+                        // Account-level lock
+                        showValidation('username', data.message || `Account locked. Try again ${data.unlock_time_human}`, 'error');
+                    } else if (data.lock_reason === 'IP rate limiting') {
+                        // IP-level lock
+                        showValidation('username', data.message || `Too many attempts. Try again ${data.unlock_time_human}`, 'error');
+                    } else {
+                        // Generic lock
+                        showValidation('username', data.message || 'Account temporarily locked', 'error');
                     }
-                } else if (html.includes('Account temporarily locked')) {
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(html, 'text/html');
-                    const errorElement = doc.querySelector('.validation-message.error');
-                    
-                    if (errorElement) {
-                        const errorText = errorElement.textContent.trim();
-                        showValidation('username', errorText, 'error');
+                } else if (data.remaining_attempts !== undefined) {
+                    if (data.remaining_attempts === 0 && !data.is_locked) {
+                        showValidation('username', 'Next failed attempt will lock your account', 'error');
+                    } else if (data.remaining_attempts <= 1) {
+                        showValidation('username', data.message || `Warning: Only ${data.remaining_attempts} attempt remaining`, 'error');
+                    } else if (data.remaining_attempts <= 2) {
+                        showValidation('username', data.message || `Caution: ${data.remaining_attempts} attempts remaining`, 'warning');
+                    } else if (data.remaining_attempts < 5) {
+                        showValidation('username', data.message || `${data.remaining_attempts} attempts remaining`, 'info');
+                    } else {
+                        // All good - clear any previous messages
+                        hideValidation('username');
                     }
                 }
+                
+                // Handle fallback responses
+                if (data.fallback) {
+                    console.log('Login attempt check fallback:', data.message);
+                    // Don't show fallback messages to user, just log them
+                }
+                
+            } else {
+                console.log('Could not check login attempts - server response:', response.status);
+                // Don't show error to user for attempt checking failures
             }
         } catch (error) {
-            // Silently ignore errors to not disrupt user experience
             console.log('Could not check login attempts:', error);
+            // Don't show error to user, just log it
         }
     }
 
@@ -796,6 +833,9 @@ document.addEventListener('DOMContentLoaded', function() {
     async function refreshCSRFToken() {
         try {
             console.log('Attempting to refresh CSRF token via session refresh...');
+            
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
             
             // Use our new session refresh endpoint for more reliable token refresh
             const response = await fetch('/session/refresh', {
@@ -805,8 +845,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     'Accept': 'application/json',
                     'Cache-Control': 'no-cache'
                 },
-                credentials: 'same-origin'
+                credentials: 'same-origin',
+                signal: controller.signal
             });
+            
+            clearTimeout(timeoutId);
             
             if (response.ok) {
                 const data = await response.json();
@@ -831,12 +874,22 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 // Fallback to original method if endpoint fails
                 console.log('Session refresh endpoint failed, trying fallback method...');
-                return await refreshCSRFTokenFallback();
+                return await refreshCSRFTokenFallback().catch(err => {
+                    console.log('Fallback CSRF refresh failed:', err);
+                    return null;
+                });
             }
         } catch (error) {
-            console.error('CSRF token refresh failed:', error);
+            if (error.name === 'AbortError') {
+                console.log('CSRF token refresh timed out');
+            } else {
+                console.error('CSRF token refresh failed:', error);
+            }
             console.log('Using fallback method...');
-            return await refreshCSRFTokenFallback();
+            return await refreshCSRFTokenFallback().catch(err => {
+                console.log('Fallback CSRF refresh failed:', err);
+                return null;
+            });
         }
     }
     
@@ -845,14 +898,20 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             console.log('Using fallback CSRF refresh method...');
             
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+            
             const response = await fetch('/login', {
                 method: 'GET',
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest',
                     'Cache-Control': 'no-cache'
                 },
-                credentials: 'same-origin'
+                credentials: 'same-origin',
+                signal: controller.signal
             });
+            
+            clearTimeout(timeoutId);
             
             if (response.ok) {
                 const html = await response.text();
@@ -920,52 +979,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return '';
     }
 
-    // Show CSRF Token Refresh Alert
-    function showCSRFRefreshAlert() {
-        return Swal.fire({
-            title: 'Session Expired',
-            html: `
-                <div style="text-align: left; font-size: 14px;">
-                    <p><i class="fas fa-clock" style="color: #f39c12;"></i> Your session has expired for security reasons.</p>
-                    <p>Click <strong>"Refresh Token"</strong> to get a new security token and try logging in again.</p>
-                    <p style="margin-top: 15px; color: #666;">This helps keep your account secure.</p>
-                </div>
-            `,
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: '<i class="fas fa-sync-alt"></i> Refresh Token',
-            cancelButtonText: '<i class="fas fa-redo"></i> Reload Page',
-            confirmButtonColor: '#3085d6',
-            cancelButtonColor: '#6c757d',
-            allowOutsideClick: false,
-            allowEscapeKey: false,
-            showLoaderOnConfirm: true,
-            preConfirm: async () => {
-                try {
-                    await refreshCSRFToken();
-                    return true;
-                } catch (error) {
-                    Swal.showValidationMessage('Failed to refresh token. Please reload the page.');
-                    return false;
-                }
-            }
-        }).then((result) => {
-            if (result.isConfirmed) {
-                Swal.fire({
-                    title: 'Token Refreshed!',
-                    text: 'Security token updated successfully. You can now try logging in again.',
-                    icon: 'success',
-                    timer: 2000,
-                    showConfirmButton: false
-                });
-                return 'refreshed';
-            } else if (result.isDismissed) {
-                // User chose to reload page
-                window.location.reload();
-                return 'reloaded';
-            }
-        });
-    }
+    // Manual Token Refresh Function
 
     // Cookie helper functions
     function setCookie(name, value, days) {
@@ -2020,6 +2034,31 @@ document.addEventListener('DOMContentLoaded', function() {
                     data = await response.json();
                 } catch (jsonError) {
                     console.error('JSON parse error:', jsonError);
+                    
+                    // Try to get the raw response text to check for lock messages
+                    try {
+                        const responseText = await response.text();
+                        console.log('Raw response text:', responseText);
+                        
+                        // Check if the response contains lock-related keywords
+                        if (responseText.toLowerCase().includes('lock') || 
+                            responseText.toLowerCase().includes('attempt') ||
+                            responseText.toLowerCase().includes('suspended')) {
+                            
+                            Swal.fire({
+                                title: 'Account Issue Detected!',
+                                text: 'Your account may be temporarily locked due to multiple failed login attempts. Please wait a few minutes and try again.',
+                                icon: 'warning',
+                                confirmButtonText: 'OK'
+                            });
+                            
+                            showValidation('username', 'Account may be temporarily locked', 'error');
+                            return;
+                        }
+                    } catch (textError) {
+                        console.error('Could not read response text:', textError);
+                    }
+                    
                     // Fallback to generic error if JSON parsing fails
                     Swal.fire({
                         title: 'Login Failed!',
@@ -2122,25 +2161,139 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 
             } else if (response.status === 500) {
-                // Server error
+                // Server error - check if it's related to account lockout
                 console.error('Server error (500):', response);
-                Swal.fire({
-                    title: 'Server Error!',
-                    text: 'There was a server error. Please try again or contact support if the issue persists.',
-                    icon: 'error',
-                    confirmButtonText: 'Try Again'
-                });
+                
+                let serverErrorHandled = false;
+                
+                try {
+                    const errorData = await response.json();
+                    console.log('500 Error data:', errorData);
+                    
+                    // Check if the 500 error is actually related to account lockout
+                    if (errorData.message && 
+                        (errorData.message.toLowerCase().includes('lock') || 
+                         errorData.message.toLowerCase().includes('attempt') ||
+                         errorData.message.toLowerCase().includes('suspended'))) {
+                        
+                        Swal.fire({
+                            title: 'Account Temporarily Locked!',
+                            html: `
+                                <div style="text-align: left; font-size: 14px;">
+                                    <p><i class="fas fa-lock" style="color: #e74c3c;"></i> Your account appears to be temporarily locked due to multiple failed login attempts.</p>
+                                    <p style="margin-top: 15px;">Please wait a few minutes and try again, or contact our support team for immediate assistance.</p>
+                                    <p style="margin-top: 10px; color: #666; font-size: 12px;">Error details: ${errorData.message}</p>
+                                </div>
+                            `,
+                            icon: 'warning',
+                            confirmButtonText: 'OK',
+                            allowOutsideClick: false
+                        });
+                        
+                        showValidation('username', 'Account temporarily locked - please wait and try again', 'error');
+                        serverErrorHandled = true;
+                    }
+                } catch (jsonError) {
+                    console.log('Could not parse 500 error as JSON:', jsonError);
+                    
+                    // Try to read raw response text for lockout keywords
+                    try {
+                        const responseText = await response.text();
+                        console.log('500 Raw response:', responseText);
+                        
+                        if (responseText.toLowerCase().includes('lock') || 
+                            responseText.toLowerCase().includes('attempt') ||
+                            responseText.toLowerCase().includes('isLocked') ||
+                            responseText.toLowerCase().includes('locked_until')) {
+                            
+                            Swal.fire({
+                                title: 'Account Lock Issue Detected!',
+                                html: `
+                                    <div style="text-align: left; font-size: 14px;">
+                                        <p><i class="fas fa-exclamation-triangle" style="color: #f39c12;"></i> There appears to be an issue with your account status.</p>
+                                        <p><strong>Possible Cause:</strong> Your account may be temporarily locked due to multiple failed login attempts.</p>
+                                        <p style="margin-top: 15px;"><strong>Recommended Actions:</strong></p>
+                                        <ul style="margin: 10px 0; padding-left: 20px;">
+                                            <li>Wait 10-15 minutes before trying again</li>
+                                            <li>Ensure you're using the correct credentials</li>
+                                            <li>Contact support if the issue persists</li>
+                                        </ul>
+                                    </div>
+                                `,
+                                icon: 'warning',
+                                confirmButtonText: 'OK',
+                                allowOutsideClick: false
+                            });
+                            
+                            showValidation('username', 'Possible account lock issue detected', 'error');
+                            serverErrorHandled = true;
+                        }
+                    } catch (textError) {
+                        console.log('Could not read 500 response text:', textError);
+                    }
+                }
+                
+                // If we haven't handled this as a lockout issue, show generic server error
+                if (!serverErrorHandled) {
+                    Swal.fire({
+                        title: 'Server Error!',
+                        text: 'There was a server error. Please try again or contact support if the issue persists.',
+                        icon: 'error',
+                        confirmButtonText: 'Try Again'
+                    });
+                }
                 
             } else {
                 // Handle any other response status
                 console.log('Unhandled response status:', response.status);
+                console.log('Response headers:', response.headers);
+                
                 let errorMessage = 'An unexpected error occurred. Please try again.';
+                let errorData = null;
                 
                 try {
-                    const data = await response.json();
-                    errorMessage = data.message || errorMessage;
+                    errorData = await response.json();
+                    console.log('Error response data:', errorData);
+                    
+                    // Check for account lock information even in unexpected status codes
+                    if (errorData.error_type === 'account_locked' || 
+                        errorData.error_type === 'account_locked_now' ||
+                        (errorData.message && errorData.message.toLowerCase().includes('lock'))) {
+                        
+                        const unlockTime = errorData.unlock_time_human || 'later';
+                        
+                        Swal.fire({
+                            title: 'Account Locked!',
+                            html: `
+                                <div style="text-align: left; font-size: 14px;">
+                                    <p><i class="fas fa-lock" style="color: #e74c3c;"></i> Your account is temporarily locked.</p>
+                                    <p><strong>Try again:</strong> ${unlockTime}</p>
+                                    <p style="margin-top: 15px;">Please wait for the lock to expire or contact support for assistance.</p>
+                                </div>
+                            `,
+                            icon: 'error',
+                            confirmButtonText: 'OK',
+                            allowOutsideClick: false
+                        });
+                        
+                        showValidation('username', errorData.message || 'Account temporarily locked', 'error');
+                        return;
+                    }
+                    
+                    errorMessage = errorData.message || errorMessage;
                 } catch (e) {
-                    // If we can't parse JSON, use default message
+                    console.log('Could not parse error response as JSON:', e);
+                    // Try to get raw text
+                    try {
+                        const responseText = await response.text();
+                        console.log('Raw error response:', responseText);
+                        
+                        if (responseText.toLowerCase().includes('lock')) {
+                            errorMessage = 'Your account may be temporarily locked. Please wait and try again.';
+                        }
+                    } catch (textError) {
+                        console.log('Could not read error response text:', textError);
+                    }
                 }
                 
                 Swal.fire({
@@ -2153,13 +2306,45 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (error) {
             console.error('Login error:', error);
             
-            // Generic error handling - most errors should be handled in the response checking above
-            Swal.fire({
-                title: 'Login Failed!',
-                text: 'An unexpected error occurred. Please try again.',
-                icon: 'error',
-                confirmButtonText: 'Try Again'
-            });
+            // Enhanced error handling - check if this is a network/CORS issue vs actual login failure
+            if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                // Network error
+                Swal.fire({
+                    title: 'Connection Error!',
+                    text: 'Unable to connect to the server. Please check your internet connection and try again.',
+                    icon: 'error',
+                    confirmButtonText: 'Try Again'
+                });
+            } else if (error.name === 'AbortError') {
+                // Request was aborted (timeout)
+                Swal.fire({
+                    title: 'Request Timeout!',
+                    text: 'The login request timed out. Please try again.',
+                    icon: 'error',
+                    confirmButtonText: 'Try Again'
+                });
+            } else {
+                // Check if the error message contains account lock information
+                const errorMessage = error.message || error.toString();
+                
+                if (errorMessage.toLowerCase().includes('lock') || errorMessage.toLowerCase().includes('attempt')) {
+                    // This might be an account lockout scenario that fell through
+                    Swal.fire({
+                        title: 'Account Status Check Required!',
+                        text: 'There may be an issue with your account status. Please wait a moment and try again, or contact support if the issue persists.',
+                        icon: 'warning',
+                        confirmButtonText: 'Try Again'
+                    });
+                } else {
+                    // Generic error handling
+                    Swal.fire({
+                        title: 'Login Failed!',
+                        text: 'An unexpected error occurred during login. Please try again.',
+                        icon: 'error',
+                        confirmButtonText: 'Try Again'
+                    });
+                }
+            }
         } finally {
             submitBtn.disabled = false;
             submitBtn.innerHTML = 'Sign In';

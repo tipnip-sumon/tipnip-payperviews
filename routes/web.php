@@ -233,6 +233,9 @@ Route::get('/login', [App\Http\Controllers\Auth\LoginController::class, 'showLog
 // POST login route
 Route::post('/login', [App\Http\Controllers\Auth\LoginController::class, 'login']);
 
+// Check login attempts route (for real-time feedback)
+Route::post('/check-login-attempts', [App\Http\Controllers\Auth\LoginController::class, 'checkLoginAttempts']);
+
 Route::get('/register', [App\Http\Controllers\Auth\RegisterController::class, 'showRegistrationForm'])
     ->name('register');
 
