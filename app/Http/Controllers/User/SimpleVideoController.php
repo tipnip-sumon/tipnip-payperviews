@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\Auth;
 
 class SimpleVideoController extends Controller 
 {
-    public function simpleGallery()
+    public function simpleGallery(Request $request)
     {
         $user = Auth::user();
         
@@ -25,6 +25,12 @@ class SimpleVideoController extends Controller
         if (!$user) {
             return redirect()->route('login')->with('error', 'Please login to access videos.');
         }
+        
+        // Handle AJAX validation requests
+        if ($request->has('ajax_check')) {
+            return $this->getVideoCountValidation($user);
+        }
+        
         // Check if today's assignments already exist
         $todayAssignments = DailyVideoAssignment::forUser($user->id)
             ->forDate(today())
@@ -55,7 +61,35 @@ class SimpleVideoController extends Controller
             'message' => $result['message'] ?? ''
         ];
 
-        return view('frontend.video-views.gallery-simple', $data);
+        $response = response()->view('frontend.video-views.gallery-simple', $data);
+        
+        // Add cache-busting headers for Firefox and other browsers
+        $response->header('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
+        $response->header('Pragma', 'no-cache');
+        $response->header('Expires', 'Thu, 01 Jan 1970 00:00:00 GMT');
+        $response->header('Last-Modified', gmdate('D, d M Y H:i:s') . ' GMT');
+        
+        return $response;
+    }
+    
+    /**
+     * AJAX endpoint for video count validation (Firefox cache fix)
+     */
+    private function getVideoCountValidation(User $user)
+    {
+        $videoService = new DailyVideoService();
+        $result = $videoService->getTodaysVideos($user);
+        
+        return response()->json([
+            'video_count' => $result['videos']->count(),
+            'video_ids' => $result['videos']->pluck('id')->toArray(),
+            'timestamp' => now()->timestamp,
+            'message' => $result['message'] ?? null
+        ], 200, [
+            'Cache-Control' => 'no-cache, no-store, must-revalidate',
+            'Pragma' => 'no-cache',
+            'Expires' => '0'
+        ]);
     }
 
     /**

@@ -18,6 +18,13 @@
                                 <span id="videoCount">{{ $videos->count() }}</span> Videos Available
                             </span>
                         </div>
+                        <!-- Cache Status & Debug Info -->
+                        <div class="mt-2">
+                            <small class="text-white-50">
+                                <i class="fas fa-clock me-1"></i>Last Updated: <span id="lastUpdateTime">{{ now()->format('H:i:s') }}</span>
+                                | Page Load: <span id="pageLoadId">{{ uniqid() }}</span>
+                            </small>
+                        </div>
                     </div>
                     
                     <div class="card-body">
@@ -161,6 +168,76 @@
     
     <script>
     $(document).ready(function() {
+        // CACHE CONTROL & FIREFOX FIX
+        // Force no-cache for Firefox and other browsers
+        if (window.performance) {
+            // Check if page was loaded from cache
+            if (performance.navigation.type === 1) {
+                console.log('Page reloaded - checking for updated video state');
+                
+                // Add cache-busting parameter to force fresh data
+                const currentUrl = new URL(window.location);
+                if (!currentUrl.searchParams.has('refresh')) {
+                    currentUrl.searchParams.set('refresh', Date.now());
+                    window.location.replace(currentUrl.toString());
+                    return;
+                }
+            }
+        }
+        
+        // Add cache control meta tags dynamically
+        $('head').append('<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">');
+        $('head').append('<meta http-equiv="Pragma" content="no-cache">');
+        $('head').append('<meta http-equiv="Expires" content="0">');
+        
+        // VALIDATE VIDEO STATE FROM SERVER
+        console.log('Validating video state from server...');
+        
+        // Get current video count from server data
+        const serverVideoCount = {{ $videos->count() }};
+        const displayedVideoCount = $('.watch-btn').length;
+        
+        console.log('Server video count:', serverVideoCount);
+        console.log('Displayed video count:', displayedVideoCount);
+        
+        // If counts don't match, there's a cache issue
+        if (serverVideoCount !== displayedVideoCount) {
+            console.warn('Video count mismatch detected - forcing page refresh');
+            setTimeout(() => {
+                window.location.reload(true); // Force reload from server
+            }, 1000);
+            return;
+        }
+        
+        // ENHANCED VIDEO STATE TRACKING
+        let watchedVideosToday = [];
+        
+        // Check for any videos that should be hidden (already watched)
+        $('.watch-btn').each(function() {
+            const videoId = $(this).data('video-id');
+            const videoCard = $(this).closest('[data-video-container]');
+            
+            // Validate this video exists in server data
+            const serverVideoIds = @json($videos->pluck('id')->toArray());
+            if (!serverVideoIds.includes(videoId)) {
+                console.log('Removing video not in server list:', videoId);
+                videoCard.fadeOut(500, function() {
+                    $(this).remove();
+                    updateVideoCounter();
+                });
+            }
+        });
+        
+        // Function to update video counter
+        function updateVideoCounter() {
+            const remainingVideos = $('.watch-btn').length;
+            $('#videoCount').text(remainingVideos);
+            console.log('Updated video counter:', remainingVideos);
+            
+            if (remainingVideos === 0) {
+                $('#videoCounter').html('<i class="fas fa-check-circle me-1"></i>All Videos Completed!');
+            }
+        }
         let watchTimer = null;
         let watchDuration = 0;
         let requiredTime = 20; // Default, will be updated from video duration
@@ -588,8 +665,14 @@
                         // Close modal first
                         $('#videoModal').modal('hide');
                         
-                        // Find the video card that was just watched using multiple selectors
+                        // ENHANCED VIDEO REMOVAL WITH SERVER VALIDATION
                         const videoId = currentVideo.id;
+                        console.log('Successfully watched video:', videoId);
+                        
+                        // Add to local watched list
+                        watchedVideosToday.push(videoId);
+                        
+                        // Find and remove the video elements
                         let watchedVideoButton = $(`.watch-btn[data-video-id="${videoId}"]`);
                         let watchedVideoCard = $(`[data-video-card="${videoId}"]`);
                         let watchedVideoContainer = $(`[data-video-container="${videoId}"]`);
@@ -618,56 +701,88 @@
                                          .html('<i class="fas fa-check me-2"></i>Completed!')
                                          .prop('disabled', true);
                         
-                        // Update UI if needed
+                        // Update UI balance if provided
                         if (response.new_balance) {
                             $('.balance-display').text(response.new_balance);
                         }
                         
-                        // Wait a moment to show success state, then remove
-                        setTimeout(() => {
-                            console.log('Starting removal animation...');
-                            
-                            // Add fade out animation and remove the entire video container
-                            watchedVideoContainer.fadeOut(1000, function() {
-                                console.log('Video container faded out, removing...');
-                                $(this).remove();
+                        // SERVER STATE VALIDATION - Check with server before removing
+                        $.ajax({
+                            url: '{{ route("user.video-views.simple") }}',
+                            method: 'GET',
+                            data: { ajax_check: 1, timestamp: Date.now() },
+                            success: function(serverResponse) {
+                                // Parse server response to check if video still exists
+                                const serverVideoCount = serverResponse.video_count || 0;
+                                const currentDisplayCount = $('.watch-btn').length;
                                 
-                                // Update video counter
-                                const remainingVideos = $('.watch-btn').length;
-                                console.log('Remaining videos:', remainingVideos);
+                                console.log('Server validation - Videos remaining:', serverVideoCount);
+                                console.log('Currently displayed:', currentDisplayCount);
                                 
-                                $('#videoCount').text(remainingVideos);
+                                // If server confirms video is watched, proceed with removal
+                                if (serverVideoCount < currentDisplayCount) {
+                                    proceedWithVideoRemoval();
+                                } else {
+                                    console.warn('Server state mismatch - forcing page refresh');
+                                    setTimeout(() => {
+                                        window.location.reload(true);
+                                    }, 2000);
+                                }
+                            },
+                            error: function() {
+                                // If validation fails, proceed anyway but log warning
+                                console.warn('Server validation failed - proceeding with removal');
+                                proceedWithVideoRemoval();
+                            }
+                        });
+                        
+                        function proceedWithVideoRemoval() {
+                            // Wait a moment to show success state, then remove
+                            setTimeout(() => {
+                                console.log('Starting removal animation...');
                                 
-                                if (remainingVideos === 0) {
-                                    // Hide counter and show completion message
-                                    $('#videoCounter').fadeOut();
-                                    $('.row.g-4').html(`
-                                        <div class="col-12">
-                                            <div class="text-center py-5">
-                                                <i class="fas fa-trophy fa-3x text-warning mb-3"></i>
-                                                <h5 class="text-success">🎉 All Videos Completed!</h5>
-                                                <p class="text-muted">Congratulations! You've watched all available videos today.</p>
-                                                <p class="text-primary"><strong>Come back tomorrow for new earning opportunities!</strong></p>
-                                                <div class="mt-4">
-                                                    <a href="{{ route('user.dashboard') }}" class="btn btn-primary me-2">
-                                                        <i class="fas fa-dashboard me-1"></i>Go to Dashboard
-                                                    </a>
-                                                    <button class="btn btn-outline-primary" onclick="location.reload()">
-                                                        <i class="fas fa-refresh me-1"></i>Check for New Videos
-                                                    </button>
+                                // Add fade out animation and remove the entire video container
+                                watchedVideoContainer.fadeOut(1000, function() {
+                                    console.log('Video container faded out, removing...');
+                                    $(this).remove();
+                                    
+                                    // Update video counter
+                                    const remainingVideos = $('.watch-btn').length;
+                                    console.log('Remaining videos:', remainingVideos);
+                                    
+                                    $('#videoCount').text(remainingVideos);
+                                    
+                                    if (remainingVideos === 0) {
+                                        // Hide counter and show completion message
+                                        $('#videoCounter').fadeOut();
+                                        $('.row.g-4').html(`
+                                            <div class="col-12">
+                                                <div class="text-center py-5">
+                                                    <i class="fas fa-trophy fa-3x text-warning mb-3"></i>
+                                                    <h5 class="text-success">🎉 All Videos Completed!</h5>
+                                                    <p class="text-muted">Congratulations! You've watched all available videos today.</p>
+                                                    <p class="text-primary"><strong>Come back tomorrow for new earning opportunities!</strong></p>
+                                                    <div class="mt-4">
+                                                        <a href="{{ route('user.dashboard') }}" class="btn btn-primary me-2">
+                                                            <i class="fas fa-dashboard me-1"></i>Go to Dashboard
+                                                        </a>
+                                                        <button class="btn btn-outline-primary" onclick="location.reload(true)">
+                                                            <i class="fas fa-refresh me-1"></i>Check for New Videos
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    `);
-                                } else {
-                                    // Update counter text
-                                    $('#videoCounter').html(`
-                                        <i class="fas fa-video me-1"></i>
-                                        <span id="videoCount">${remainingVideos}</span> Videos Remaining
-                                    `);
-                                }
-                            });
-                        }, 2000); // Show success state for 2 seconds
+                                        `);
+                                    } else {
+                                        // Update counter text
+                                        $('#videoCounter').html(`
+                                            <i class="fas fa-video me-1"></i>
+                                            <span id="videoCount">${remainingVideos}</span> Videos Remaining
+                                        `);
+                                    }
+                                });
+                            }, 2000); // Show success state for 2 seconds
+                        }
                         
                     } else {
                         Swal.fire({
