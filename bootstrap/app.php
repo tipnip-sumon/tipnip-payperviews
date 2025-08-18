@@ -59,7 +59,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->appendToGroup('web', [
             DeviceDetectionMiddleware::class,
             TrackModalSession::class,
-            // AutoSessionTimeout::class, // TEMPORARILY DISABLED - Add automatic session timeout monitoring
+            AutoSessionTimeout::class, // RE-ENABLED - Add automatic session timeout monitoring with improved exclusions
             // SessionCleanup::class, // MOVED to alias only - can be applied selectively
         ]);
         

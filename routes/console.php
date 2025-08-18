@@ -21,6 +21,45 @@ Schedule::command('session:clean-guests --hours=1')
         Log::error('Guest session cleanup failed.');
     });
 
+// General session cleanup every 2 hours (expired sessions, duplicates, etc.)
+Schedule::command('session:cleanup --force')
+    ->cron('0 */2 * * *') // Every 2 hours
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->appendOutputTo(storage_path('logs/session-cleanup.log'))
+    ->onSuccess(function () {
+        Log::info('General session cleanup completed successfully.');
+    })
+    ->onFailure(function () {
+        Log::error('General session cleanup failed.');
+    });
+
+// Clean up duplicate sessions every 6 hours to enforce single session per user
+Schedule::command('sessions:cleanup-duplicates --force')
+    ->cron('0 */6 * * *') // Every 6 hours
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->appendOutputTo(storage_path('logs/duplicate-sessions-cleanup.log'))
+    ->onSuccess(function () {
+        Log::info('Duplicate session cleanup completed successfully.');
+    })
+    ->onFailure(function () {
+        Log::error('Duplicate session cleanup failed.');
+    });
+
+// Session health monitoring every 30 minutes
+Schedule::command('session:health-monitor --alert-threshold=50')
+    ->cron('*/30 * * * *') // Every 30 minutes
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->appendOutputTo(storage_path('logs/session-health.log'))
+    ->onSuccess(function () {
+        Log::info('Session health monitoring completed successfully.');
+    })
+    ->onFailure(function () {
+        Log::error('Session health monitoring failed.');
+    });
+
 // Clean up orphaned and old sessions daily
 Schedule::command('session:clean-orphaned --days=1')
     ->dailyAt('03:00')
@@ -61,6 +100,22 @@ Schedule::command('video:cleanup-assignments --days=30')
     ->timezone('Asia/Dhaka')
     ->onSuccess(function () {
         Log::info('Video assignments cleanup completed.');
+    });
+
+// Comprehensive session cleanup weekly - deep clean old sessions
+Schedule::command('session:cleanup --force')
+    ->weekly()
+    ->sundays()
+    ->at('05:00')
+    ->timezone('Asia/Dhaka')
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->appendOutputTo(storage_path('logs/weekly-session-cleanup.log'))
+    ->onSuccess(function () {
+        Log::info('Weekly comprehensive session cleanup completed.');
+    })
+    ->onFailure(function () {
+        Log::error('Weekly comprehensive session cleanup failed.');
     });
 
 // Weekly lottery draw - runs every Sunday at 8 PM Bangladesh time  
