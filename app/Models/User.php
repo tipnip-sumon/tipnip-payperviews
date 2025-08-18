@@ -112,6 +112,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'username_change_requested_at' => 'datetime',
         'current_email_otp_sent_at' => 'datetime',
         'new_email_token_sent_at' => 'datetime',
+        'locked_until' => 'datetime', // Cast account lock timestamp to Carbon datetime
         'password' => 'hashed',
         'notification_settings' => 'array', // Cast notification settings to array
     ];
@@ -728,24 +729,57 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->videoViews()->sum('earned_amount');
     }
-    /**
-     * Lock the user account for a specified number of minutes.
-     *
-     * @param int $minutes
+        /**
+     * Simple account lockout system
      */
-    public function lockAccount($minutes = 10)
-    {
-        $this->update([
-            'locked_until' => now()->addMinutes($minutes),
-        ]);
-    }
     
-    /**
-     * Check if account is locked
-     */
+    // Check if account is locked
     public function isLocked()
     {
-        return $this->locked_until && $this->locked_until->isFuture();
+        if (!$this->locked_until) {
+            return false;
+        }
+        
+        return now()->lt($this->locked_until);
+    }
+    
+    // Lock account for specified minutes
+    public function lockAccount($minutes = 10)
+    {
+        $this->locked_until = now()->addMinutes($minutes);
+        $this->save();
+    }
+    
+    // Add failed login attempt
+    public function addFailedLoginAttempt()
+    {
+        $this->login_attempts = ($this->login_attempts ?? 0) + 1;
+        
+        // Save the updated attempts count first
+        $this->save();
+        
+        // Lock after 5 attempts
+        if ($this->login_attempts >= 5) {
+            $this->lockAccount(10); // 10 minutes
+        }
+    }
+    
+    // Reset login attempts on successful login
+    public function resetLoginAttempts()
+    {
+        $this->login_attempts = 0;
+        $this->locked_until = null;
+        $this->save();
+    }
+    
+    // Get remaining attempts
+    public function getRemainingAttempts()
+    {
+        if ($this->isLocked()) {
+            return 0;
+        }
+        
+        return max(0, 5 - ($this->login_attempts ?? 0));
     }
 
     public function updateLoginAttempts()
@@ -774,9 +808,18 @@ class User extends Authenticatable implements MustVerifyEmail
         $this->updateLoginAttempts();
         $this->increment('login_attempts');
         
+        // Check current attempts and lock if needed
+        $currentAttempts = $this->fresh()->login_attempts; // Get fresh value from DB
+        
         // Lock account after 5 failed attempts
-        if ($this->login_attempts >= 5) {
-            $this->lockAccount();
+        if ($currentAttempts >= 5) {
+            $this->lockAccount(10); // Lock for 10 minutes
+            
+            \Illuminate\Support\Facades\Log::info('Account locked due to failed login attempts', [
+                'user_id' => $this->id,
+                'login_attempts' => $currentAttempts,
+                'locked_until' => $this->fresh()->locked_until
+            ]);
         }
     }
 
