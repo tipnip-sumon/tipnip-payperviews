@@ -934,11 +934,12 @@ class LoginController extends Controller
         }
 
         // Create response with complete cache invalidation headers
-        $redirectUrl = route('login');
+        $redirectUrl = route('login', ['t' => time(), 'refresh' => '1']);
         $response = redirect($redirectUrl)->with([
             'success' => 'You have been logged out successfully. Your session has been completely destroyed.',
             'logout_completed' => true,
-            'session_destroyed' => true
+            'session_destroyed' => true,
+            'force_page_refresh' => true
         ]);
         
         // Add the most comprehensive cache control headers possible
@@ -1043,9 +1044,14 @@ class LoginController extends Controller
         $response->headers->set('X-Session-Destroyed', 'true');
         $response->headers->set('X-Cache-Control', 'no-cache');
         $response->headers->set('Vary', 'Accept-Encoding');
+        $response->headers->set('X-Frame-Options', 'DENY');
+        $response->headers->set('X-Force-Refresh', 'true');
         
-        // Set cookies to expire immediately
+        // Set cookies to expire immediately - including session cookie
+        $sessionCookieName = config('session.cookie', 'laravel_session');
         $response->withCookie(cookie('logout_timestamp', time(), -1));
+        $response->withCookie(cookie($sessionCookieName, '', -1, '/'));
+        $response->withCookie(cookie('XSRF-TOKEN', '', -1, '/'));
         
         return $response;
     }

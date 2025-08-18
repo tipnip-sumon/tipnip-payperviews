@@ -562,8 +562,71 @@
         }
     }
 
+    // Handle post-logout state to force fresh page
+    function handlePostLogoutState() {
+        try {
+            // Check URL parameters for logout indicators
+            const urlParams = new URLSearchParams(window.location.search);
+            const hasRefreshParam = urlParams.has('refresh');
+            const hasLogoutTimestamp = urlParams.has('t');
+            
+            // Check session flash data for logout completion
+            const logoutCompleted = @json(session('logout_completed', false));
+            const sessionDestroyed = @json(session('session_destroyed', false));
+            const forcePageRefresh = @json(session('force_page_refresh', false));
+            
+            // Check if browser indicates this is from logout
+            const referrer = document.referrer;
+            const fromLogout = referrer && (referrer.includes('logout') || referrer.includes('force-logout'));
+            
+            // Detect if we need to force a complete refresh
+            if (hasRefreshParam || logoutCompleted || sessionDestroyed || forcePageRefresh || fromLogout) {
+                console.log('Post-logout state detected, ensuring fresh page state');
+                
+                // Clear any cached form data
+                const form = document.getElementById('loginForm');
+                if (form) {
+                    form.reset();
+                }
+                
+                // Clear localStorage items that might interfere
+                try {
+                    localStorage.removeItem('login_attempt_count');
+                    localStorage.removeItem('last_login_attempt');
+                    localStorage.removeItem('cached_username');
+                } catch (e) {
+                    console.log('Could not clear localStorage:', e);
+                }
+                
+                // Force complete cache refresh if this is the first post-logout load
+                if (!sessionStorage.getItem('post_logout_refresh_done')) {
+                    sessionStorage.setItem('post_logout_refresh_done', 'true');
+                    
+                    // Clean the URL and force refresh
+                    const cleanUrl = window.location.pathname;
+                    if (window.location.search.includes('refresh=1') || window.location.search.includes('t=')) {
+                        console.log('Forcing complete page refresh to clear post-logout state');
+                        window.location.replace(cleanUrl + '?fresh=' + Date.now());
+                        return;
+                    }
+                }
+                
+                // Ensure CSRF token is fresh
+                setTimeout(() => {
+                    refreshCSRFToken();
+                }, 100);
+            }
+            
+        } catch (error) {
+            console.log('Error in handlePostLogoutState:', error);
+        }
+    }
+
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Fresh login page loaded');
+    
+    // CRITICAL: Check if user just logged out and force complete page refresh
+    handlePostLogoutState();
     
     // Proactive session health check to prevent issues
     checkSessionHealth();
