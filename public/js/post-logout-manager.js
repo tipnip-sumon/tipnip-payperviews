@@ -9,7 +9,7 @@
     // Check if we're on a protected page after logout
     function checkLogoutState() {
         // Check for logout indicators in localStorage
-        const logoutTime = localStorage.getItem('logout_time');
+        const logoutTime = localStorage.getItem('logout_time'); 
         const currentTime = Date.now();
         
         // If user logged out recently (within last 30 minutes)
