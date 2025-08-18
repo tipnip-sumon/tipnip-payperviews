@@ -1480,6 +1480,44 @@ Route::middleware(['auth', 'verified'])->group(function () {
     })->name('user.session.extend');
 });
 
+// Session refresh route for handling CSRF and session issues
+Route::post('/session/refresh', function(\Illuminate\Http\Request $request) {
+    try {
+        // Force session regeneration to fix any session issues
+        \Illuminate\Support\Facades\Session::regenerate();
+        
+        // Clear any problematic session data
+        session()->forget(['_flash', 'errors']);
+        
+        // Generate new CSRF token
+        $newToken = csrf_token();
+        
+        \Illuminate\Support\Facades\Log::info('Session refreshed successfully', [
+            'ip' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'new_session_id' => substr(session()->getId(), 0, 8) . '...'
+        ]);
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Session refreshed successfully',
+            'csrf_token' => $newToken,
+            'session_id' => session()->getId()
+        ]);
+        
+    } catch (\Exception $e) {
+        \Illuminate\Support\Facades\Log::error('Session refresh failed', [
+            'error' => $e->getMessage(),
+            'ip' => $request->ip()
+        ]);
+        
+        return response()->json([
+            'success' => false,
+            'error' => 'Session refresh failed'
+        ], 500);
+    }
+})->name('session.refresh');
+
 // =============================================================================
 // POLICIES ROUTES
 // =============================================================================

@@ -15,6 +15,7 @@ use App\Http\Middleware\FreshLogin;
 use App\Http\Middleware\SessionCleanup;
 use App\Http\Middleware\TrackModalSession;
 use App\Http\Middleware\AutoSessionTimeout;
+use App\Http\Middleware\AutoSessionRecovery;
 // use App\Http\Middleware\SessionSecurity; // REMOVED - no longer needed
 use Illuminate\Foundation\Application;
 use App\Http\Middleware\AdminMiddleware;
@@ -49,6 +50,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'session.cleanup' => SessionCleanup::class,
             'track.modal.session' => TrackModalSession::class,
             'auto.timeout' => AutoSessionTimeout::class,
+            'auto.recovery' => AutoSessionRecovery::class,
             // 'session.security' => SessionSecurity::class, // REMOVED - was causing route access issues
         ]);
         $middleware->appendToGroup('ensure.admin', [
@@ -59,7 +61,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->appendToGroup('web', [
             DeviceDetectionMiddleware::class,
             TrackModalSession::class,
-            AutoSessionTimeout::class, // RE-ENABLED - Add automatic session timeout monitoring with improved exclusions
+            AutoSessionRecovery::class, // AUTO SESSION RECOVERY - handles session issues after logout
+            // AutoSessionTimeout::class, // TEMPORARILY DISABLED for login testing - RE-ENABLE after fixing login issues
             // SessionCleanup::class, // MOVED to alias only - can be applied selectively
         ]);
         

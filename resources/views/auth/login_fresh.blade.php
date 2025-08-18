@@ -521,8 +521,52 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
+    // Proactive Session Health Check
+    async function checkSessionHealth() {
+        try {
+            console.log('Checking session health...');
+            
+            // Check if CSRF token exists and is valid
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+            
+            if (!csrfToken) {
+                console.log('No CSRF token found, refreshing session...');
+                await refreshCSRFToken();
+                return;
+            }
+            
+            // Test session with a simple request
+            const response = await fetch('/session/refresh', {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken
+                },
+                credentials: 'same-origin'
+            });
+            
+            if (response.status === 419) {
+                console.log('Session health check detected CSRF issue, fixing...');
+                await refreshCSRFToken();
+            } else if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    console.log('Session health check passed');
+                }
+            }
+            
+        } catch (error) {
+            console.log('Session health check failed, will handle on form submission:', error);
+            // Don't show error to user, just log it and handle later
+        }
+    }
+
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Fresh login page loaded');
+    
+    // Proactive session health check to prevent issues
+    checkSessionHealth();
     
     // Browser Compatibility and Multi-Session Detection
     initBrowserCompatibility();
@@ -685,12 +729,59 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // CSRF Token Refresh Function - Enhanced to actually refresh token
+    // CSRF Token Refresh Function - Enhanced to use session refresh endpoint
     async function refreshCSRFToken() {
         try {
-            console.log('Attempting to refresh CSRF token...');
+            console.log('Attempting to refresh CSRF token via session refresh...');
             
-            // Make a request to get a fresh token without reloading
+            // Use our new session refresh endpoint for more reliable token refresh
+            const response = await fetch('/session/refresh', {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json',
+                    'Cache-Control': 'no-cache'
+                },
+                credentials: 'same-origin'
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                
+                if (data.success && data.csrf_token) {
+                    // Update the current page's CSRF token
+                    const metaTag = document.querySelector('meta[name="csrf-token"]');
+                    if (metaTag) {
+                        metaTag.setAttribute('content', data.csrf_token);
+                    }
+                    
+                    const tokenInput = document.querySelector('input[name="_token"]');
+                    if (tokenInput) {
+                        tokenInput.value = data.csrf_token;
+                    }
+                    
+                    console.log('CSRF token and session refreshed successfully');
+                    return data.csrf_token;
+                } else {
+                    throw new Error('Invalid response format from session refresh');
+                }
+            } else {
+                // Fallback to original method if endpoint fails
+                console.log('Session refresh endpoint failed, trying fallback method...');
+                return await refreshCSRFTokenFallback();
+            }
+        } catch (error) {
+            console.error('CSRF token refresh failed:', error);
+            console.log('Using fallback method...');
+            return await refreshCSRFTokenFallback();
+        }
+    }
+    
+    // Fallback CSRF refresh method
+    async function refreshCSRFTokenFallback() {
+        try {
+            console.log('Using fallback CSRF refresh method...');
+            
             const response = await fetch('/login', {
                 method: 'GET',
                 headers: {
@@ -720,18 +811,21 @@ document.addEventListener('DOMContentLoaded', function() {
                         tokenInput.value = csrfToken;
                     }
                     
-                    console.log('CSRF token refreshed successfully');
+                    console.log('CSRF token refreshed via fallback method');
                     return csrfToken;
                 } else {
                     throw new Error('Could not extract CSRF token from response');
                 }
             } else {
-                throw new Error('Failed to fetch fresh token');
+                throw new Error('Fallback method also failed');
             }
         } catch (error) {
-            console.error('CSRF token refresh failed:', error);
-            console.log('Falling back to page reload...');
-            window.location.reload();
+            console.error('Fallback CSRF token refresh failed:', error);
+            console.log('Final fallback: page reload...');
+            // Only reload as absolute last resort
+            setTimeout(() => {
+                window.location.href = '/login';
+            }, 1000);
             return null;
         }
     }
@@ -1691,22 +1785,43 @@ document.addEventListener('DOMContentLoaded', function() {
                         
                         console.log('Retry response status:', response.status);
                         
-                        // If still 419 after retry, show error instead of reload
+                        // If still 419 after retry, handle gracefully without showing error
                         if (response.status === 419) {
-                            console.log('CSRF token still invalid after retry');
-                            Swal.fire({
-                                title: 'Session Issue!',
-                                text: 'There seems to be a session problem. Please try refreshing the page.',
-                                icon: 'warning',
-                                confirmButtonText: 'Refresh Page',
-                                cancelButtonText: 'Try Again',
-                                showCancelButton: true
-                            }).then((result) => {
-                                if (result.isConfirmed) {
+                            console.log('CSRF token still invalid after retry - handling automatically');
+                            
+                            // Instead of showing error, silently regenerate session and try again
+                            try {
+                                // Clear any session issues by forcing a fresh start
+                                await fetch('/session/refresh', {
+                                    method: 'POST',
+                                    headers: {
+                                        'X-Requested-With': 'XMLHttpRequest',
+                                        'Accept': 'application/json'
+                                    },
+                                    credentials: 'same-origin'
+                                });
+                                
+                                // Auto-reload page to get fresh session without user intervention
+                                console.log('Auto-refreshing page to resolve session issue...');
+                                window.location.reload();
+                                return;
+                                
+                            } catch (error) {
+                                console.log('Session refresh failed, showing user-friendly message');
+                                
+                                // Only show error as last resort, but make it user-friendly
+                                Swal.fire({
+                                    title: 'Login Refresh Needed',
+                                    text: 'Please click OK to refresh the login page automatically.',
+                                    icon: 'info',
+                                    confirmButtonText: 'OK, Refresh',
+                                    allowOutsideClick: false,
+                                    allowEscapeKey: false
+                                }).then(() => {
                                     window.location.reload();
-                                }
-                            });
-                            return;
+                                });
+                                return;
+                            }
                         }
                     } else {
                         throw new Error('Failed to refresh CSRF token');
@@ -1714,18 +1829,34 @@ document.addEventListener('DOMContentLoaded', function() {
                 } catch (refreshError) {
                     console.error('CSRF refresh failed:', refreshError);
                     
-                    Swal.fire({
-                        title: 'Session Problem!',
-                        text: 'Unable to refresh your session. Please try again.',
-                        icon: 'error',
-                        confirmButtonText: 'Try Again',
-                        cancelButtonText: 'Refresh Page',
-                        showCancelButton: true
-                    }).then((result) => {
-                        if (result.isDismissed && result.dismiss === 'cancel') {
-                            window.location.reload();
-                        }
-                    });
+                    // Instead of showing confusing error, handle gracefully
+                    console.log('Handling session refresh failure gracefully...');
+                    
+                    // Try to clear session and restart cleanly
+                    try {
+                        // Clear local storage and session storage
+                        localStorage.clear();
+                        sessionStorage.clear();
+                        
+                        // Show user-friendly message and auto-refresh
+                        Swal.fire({
+                            title: 'Refreshing Login',
+                            text: 'Please wait while we refresh your login page...',
+                            icon: 'info',
+                            showConfirmButton: false,
+                            allowOutsideClick: false,
+                            timer: 2000,
+                            timerProgressBar: true
+                        }).then(() => {
+                            window.location.href = '/login'; // Go to fresh login page
+                        });
+                        
+                    } catch (error) {
+                        // Final fallback - just reload
+                        console.log('Final fallback - reloading page');
+                        window.location.reload();
+                    }
+                    
                     return;
                 }
             }
