@@ -1422,6 +1422,7 @@ Route::controller(VideoViewController::class)->middleware('auth')->group(functio
     Route::get('/user/video-views/earnings', 'earnings')->name('user.video-views.earnings');
     Route::get('/user/video-history','publicGallery')->name('gallery');
     Route::get('/videos/{id}','show')->name('video.show');
+    Route::get('/user/video-views/validate-count', 'getVideoCountValidation')->name('user.video-views.validate-count');
 });
 
 // Simple Video Controller for gallery-simple.blade.php (separate from main VideoViewController)

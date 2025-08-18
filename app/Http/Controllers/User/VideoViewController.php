@@ -358,7 +358,14 @@ class VideoViewController extends Controller
             'message' => $result['message'] ?? ''
         ];
 
-        return view('frontend.video-views.gallery', $data);
+        // Add cache-busting headers for Firefox compatibility
+        $response = response()->view('frontend.video-views.gallery', $data);
+        $response->headers->set('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
+        $response->headers->set('Pragma', 'no-cache');
+        $response->headers->set('Expires', 'Thu, 01 Jan 1970 00:00:00 GMT');
+        $response->headers->set('X-Accel-Expires', '0');
+        
+        return $response;
     }
 
     /**
@@ -628,6 +635,28 @@ class VideoViewController extends Controller
         ];
 
         return view('frontend.public-gallery', $data);
+    }
+
+    /**
+     * Get video count validation for cache-busting
+     */
+    public function getVideoCountValidation()
+    {
+        if (!Auth::check()) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        $user = Auth::user();
+        $videoService = new DailyVideoService();
+        $result = $videoService->getTodaysVideos($user);
+        
+        return response()->json([
+            'video_count' => count($result['videos'] ?? []),
+            'timestamp' => now()->timestamp,
+            'page_load_id' => uniqid('gallery_')
+        ])->header('Cache-Control', 'no-cache, no-store, must-revalidate')
+          ->header('Pragma', 'no-cache')
+          ->header('Expires', 'Thu, 01 Jan 1970 00:00:00 GMT');
     }
     
 
