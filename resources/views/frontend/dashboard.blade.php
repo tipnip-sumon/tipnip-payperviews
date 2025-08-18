@@ -446,12 +446,32 @@
                         
                         <div class="video-actions">
                             <div class="video-action-buttons">
-                                <a href="{{ route('user.video-views.index') }}" class="video-action-btn video-btn-primary">
-                                    <i class="fas fa-play"></i>Watch Videos
+                                <!-- Dropdown approach as backup -->
+                                <div class="btn-group">
+                                    <button type="button" class="video-action-btn video-btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="fas fa-play"></i>Watch Videos
+                                        @if($remainingViews > 0)
+                                            <span class="action-badge">{{ $remainingViews }} left</span>
+                                        @endif
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li><a class="dropdown-item" href="{{ route('user.video-views.index') }}">
+                                            <i class="fas fa-th-large me-2"></i>Gallery-1 (Standard)
+                                        </a></li>
+                                        <li><a class="dropdown-item" href="{{ route('user.video-views.simple') }}">
+                                            <i class="fas fa-list me-2"></i>Gallery-2 (Simple)
+                                        </a></li>
+                                    </ul>
+                                </div>
+                                
+                                <!-- Alternative: Modal button (hidden by default, you can show it if dropdown doesn't work) -->
+                                <button onclick="showVideoGalleryChoice()" class="video-action-btn video-btn-primary d-none" id="modalVideoBtn">
+                                    <i class="fas fa-play"></i>Watch Videos (Modal)
                                     @if($remainingViews > 0)
                                         <span class="action-badge">{{ $remainingViews }} left</span>
                                     @endif
-                                </a>
+                                </button>
+                                
                                 <a href="{{ route('user.video-views.history') }}" class="video-action-btn video-btn-secondary">
                                     <i class="fas fa-history"></i>View History
                                 </a>
@@ -745,6 +765,59 @@
                 </div>
             </div>
         </div>
+
+        <!-- Video Gallery Choice Modal -->
+        <div class="modal fade" id="videoGalleryModal" tabindex="-1" aria-labelledby="videoGalleryModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header bg-gradient-primary text-white">
+                        <h5 class="modal-title" id="videoGalleryModalLabel">
+                            <i class="fas fa-play-circle me-2"></i>Choose Video Gallery
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <p class="text-muted mb-4">Select which video gallery you'd like to access:</p>
+                        
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <a href="{{ route('user.video-views.index') }}" class="text-decoration-none">
+                                    <div class="gallery-choice-card">
+                                        <div class="gallery-choice-icon">
+                                            <i class="fas fa-th-large"></i>
+                                        </div>
+                                        <div class="gallery-choice-content">
+                                            <h6 class="mb-1">Gallery-1</h6>
+                                            <p class="mb-0 text-muted">Standard video gallery view</p>
+                                        </div>
+                                        <div class="gallery-choice-arrow">
+                                            <i class="fas fa-chevron-right"></i>
+                                        </div>
+                                    </div>
+                                </a>
+                            </div>
+                            
+                            <div class="col-12">
+                                <a href="{{ route('user.video-views.simple') }}" class="text-decoration-none">
+                                    <div class="gallery-choice-card">
+                                        <div class="gallery-choice-icon">
+                                            <i class="fas fa-list"></i>
+                                        </div>
+                                        <div class="gallery-choice-content">
+                                            <h6 class="mb-1">Gallery-2</h6>
+                                            <p class="mb-0 text-muted">Simple video gallery view</p>
+                                        </div>
+                                        <div class="gallery-choice-arrow">
+                                            <i class="fas fa-chevron-right"></i>
+                                        </div>
+                                    </div>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     @endsection
 
     @push('style')
@@ -988,6 +1061,98 @@
                 .breakdown-item {
                     margin-bottom: 0.75rem !important;
                 }
+            }
+            
+            /* Video Gallery Choice Modal Styles */
+            .gallery-choice-card {
+                display: flex;
+                align-items: center;
+                padding: 1rem;
+                border: 2px solid #e9ecef;
+                border-radius: 0.5rem;
+                transition: all 0.3s ease;
+                background: #fff;
+            }
+            
+            .gallery-choice-card:hover {
+                border-color: #0d6efd;
+                background: #f8f9ff;
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(13, 110, 253, 0.15);
+            }
+            
+            .gallery-choice-icon {
+                width: 50px;
+                height: 50px;
+                border-radius: 50%;
+                background: linear-gradient(135deg, #0d6efd 0%, #0dcaf0 100%);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                margin-right: 1rem;
+                color: white;
+                font-size: 1.2rem;
+            }
+            
+            .gallery-choice-content {
+                flex-grow: 1;
+            }
+            
+            .gallery-choice-content h6 {
+                color: #495057;
+                font-weight: 600;
+            }
+            
+            .gallery-choice-arrow {
+                color: #6c757d;
+                font-size: 1.1rem;
+                transition: all 0.3s ease;
+            }
+            
+            .gallery-choice-card:hover .gallery-choice-arrow {
+                color: #0d6efd;
+                transform: translateX(5px);
+            }
+            
+            .modal-content {
+                border: none;
+                border-radius: 1rem;
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+            }
+            
+            .modal-header.bg-gradient-primary {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                border-radius: 1rem 1rem 0 0;
+            }
+            
+            /* SweetAlert2 custom styles */
+            .swal-wide {
+                width: 600px !important;
+            }
+            
+            /* Dropdown styling */
+            .btn-group .video-action-btn.dropdown-toggle::after {
+                margin-left: 8px;
+            }
+            
+            .dropdown-menu {
+                border-radius: 10px;
+                border: none;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+                padding: 10px 0;
+            }
+            
+            .dropdown-item {
+                padding: 10px 20px;
+                display: flex;
+                align-items: center;
+                transition: all 0.3s ease;
+            }
+            
+            .dropdown-item:hover {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                transform: translateX(5px);
             }
         </style>
     @endpush
@@ -1594,6 +1759,88 @@
                     console.log('Light fresh login cache clearing completed');
                 } catch (error) {
                     console.error('Fresh login cache clearing error:', error);
+                }
+            }
+            
+            // Video Gallery Choice Modal Function
+            function showVideoGalleryChoice() {
+                console.log('showVideoGalleryChoice function called');
+                
+                // Check if Bootstrap is available
+                if (typeof bootstrap === 'undefined') {
+                    console.error('Bootstrap is not loaded');
+                    // Fallback: show a simple JavaScript confirm dialog
+                    const choice = confirm('Choose Video Gallery:\n\nOK for Gallery-1 (Standard View)\nCancel for Gallery-2 (Simple View)');
+                    if (choice) {
+                        window.location.href = "{{ route('user.video-views.index') }}";
+                    } else {
+                        window.location.href = "{{ route('user.video-views.simple') }}";
+                    }
+                    return;
+                }
+                
+                // Check if modal element exists
+                const modalElement = document.getElementById('videoGalleryModal');
+                if (!modalElement) {
+                    console.error('Modal element not found');
+                    // Fallback to confirm dialog
+                    const choice = confirm('Choose Video Gallery:\n\nOK for Gallery-1 (Standard View)\nCancel for Gallery-2 (Simple View)');
+                    if (choice) {
+                        window.location.href = "{{ route('user.video-views.index') }}";
+                    } else {
+                        window.location.href = "{{ route('user.video-views.simple') }}";
+                    }
+                    return;
+                }
+                
+                console.log('Creating Bootstrap modal');
+                try {
+                    const modal = new bootstrap.Modal(modalElement);
+                    modal.show();
+                    console.log('Modal shown successfully');
+                } catch (error) {
+                    console.error('Error showing modal:', error);
+                    // Fallback to confirm dialog
+                    const choice = confirm('Choose Video Gallery:\n\nOK for Gallery-1 (Standard View)\nCancel for Gallery-2 (Simple View)');
+                    if (choice) {
+                        window.location.href = "{{ route('user.video-views.index') }}";
+                    } else {
+                        window.location.href = "{{ route('user.video-views.simple') }}";
+                    }
+                }
+            }
+            
+            // Alternative function using jQuery if Bootstrap doesn't work
+            function showVideoGalleryChoiceAlt() {
+                // Using SweetAlert2 if available
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        title: 'Choose Video Gallery',
+                        html: `
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-primary btn-lg" onclick="window.location.href='{{ route('user.video-views.index') }}'">
+                                    <i class="fas fa-th-large me-2"></i>Gallery-1 (Standard)
+                                </button>
+                                <button class="btn btn-outline-primary btn-lg" onclick="window.location.href='{{ route('user.video-views.simple') }}'">
+                                    <i class="fas fa-list me-2"></i>Gallery-2 (Simple)
+                                </button>
+                            </div>
+                        `,
+                        showConfirmButton: false,
+                        showCancelButton: true,
+                        cancelButtonText: 'Cancel',
+                        customClass: {
+                            popup: 'swal-wide'
+                        }
+                    });
+                } else {
+                    // Final fallback
+                    const choice = confirm('Choose Video Gallery:\n\nOK for Gallery-1 (Standard View)\nCancel for Gallery-2 (Simple View)');
+                    if (choice) {
+                        window.location.href = "{{ route('user.video-views.index') }}";
+                    } else {
+                        window.location.href = "{{ route('user.video-views.simple') }}";
+                    }
                 }
             }
         </script>

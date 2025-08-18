@@ -155,6 +155,270 @@
             html[data-theme-mode="dark"] p, html[data-theme-mode="dark"] span, html[data-theme-mode="dark"] div:not(.balance-card):not(.card-gradient) {
                 color: #ffffff !important;
             }
+
+            /* BEAUTIFUL VIDEO GALLERY MODAL STYLES */
+            .premium-card {
+                background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%);
+                border: 2px solid transparent;
+                border-radius: 20px;
+                transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                position: relative;
+                overflow: hidden;
+                box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            }
+
+            /* COMPACT VERSION */
+            .premium-card-compact {
+                background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%);
+                border: 2px solid transparent;
+                border-radius: 12px;
+                transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                position: relative;
+                overflow: hidden;
+                box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+            }
+
+            .premium-card::before,
+            .premium-card-compact::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: linear-gradient(145deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+                opacity: 0;
+                transition: opacity 0.3s ease;
+                z-index: 0;
+            }
+
+            .premium-card:hover::before,
+            .premium-card-compact:hover::before {
+                opacity: 1;
+            }
+
+            .premium-card:hover {
+                transform: translateY(-8px) scale(1.02);
+                box-shadow: 0 20px 60px rgba(102, 126, 234, 0.2);
+                border-color: rgba(102, 126, 234, 0.3);
+            }
+
+            .premium-card-compact:hover {
+                transform: translateY(-4px) scale(1.01);
+                box-shadow: 0 12px 30px rgba(102, 126, 234, 0.2);
+                border-color: rgba(102, 126, 234, 0.3);
+            }
+
+            .card-glow {
+                position: absolute;
+                top: -2px;
+                left: -2px;
+                right: -2px;
+                bottom: -2px;
+                background: linear-gradient(45deg, #667eea, #764ba2, #f093fb, #667eea);
+                border-radius: 22px;
+                opacity: 0;
+                z-index: -1;
+                transition: opacity 0.3s ease;
+                animation: glow-rotate 3s linear infinite;
+            }
+
+            .premium-card:hover .card-glow,
+            .premium-card-compact:hover .card-glow {
+                opacity: 0.7;
+            }
+
+            @keyframes glow-rotate {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+
+            .gallery-choice-icon-modern,
+            .gallery-choice-icon-compact {
+                position: relative;
+                z-index: 1;
+            }
+
+            .icon-background {
+                width: 80px;
+                height: 80px;
+                border-radius: 20px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+                transition: all 0.3s ease;
+                position: relative;
+                overflow: hidden;
+            }
+
+            /* COMPACT ICON */
+            .icon-background-compact {
+                width: 50px;
+                height: 50px;
+                border-radius: 12px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+                transition: all 0.3s ease;
+                position: relative;
+                overflow: hidden;
+            }
+
+            .icon-background::before,
+            .icon-background-compact::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: linear-gradient(45deg, rgba(255,255,255,0.2) 0%, transparent 50%, rgba(255,255,255,0.2) 100%);
+                transform: translateX(-100%);
+                transition: transform 0.6s ease;
+            }
+
+            .premium-card:hover .icon-background::before,
+            .premium-card-compact:hover .icon-background-compact::before {
+                transform: translateX(100%);
+            }
+
+            .premium-card:hover .icon-background {
+                transform: scale(1.1) rotate(5deg);
+                box-shadow: 0 12px 35px rgba(0,0,0,0.2);
+            }
+
+            .premium-card-compact:hover .icon-background-compact {
+                transform: scale(1.1) rotate(3deg);
+                box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+            }
+
+            .gallery-choice-content {
+                position: relative;
+                z-index: 1;
+            }
+
+            .gallery-choice-arrow-modern,
+            .gallery-choice-arrow-compact {
+                opacity: 0.6;
+                transition: all 0.3s ease;
+                position: relative;
+                z-index: 1;
+            }
+
+            .premium-card:hover .gallery-choice-arrow-modern,
+            .premium-card-compact:hover .gallery-choice-arrow-compact {
+                opacity: 1;
+                transform: translateX(8px);
+            }
+
+            .card-hover-effect {
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: linear-gradient(145deg, 
+                    rgba(102, 126, 234, 0.05) 0%, 
+                    rgba(118, 75, 162, 0.05) 50%, 
+                    rgba(240, 147, 251, 0.05) 100%);
+                opacity: 0;
+                transition: opacity 0.3s ease;
+                border-radius: 20px;
+                z-index: 0;
+            }
+
+            .premium-card:hover .card-hover-effect,
+            .premium-card-compact:hover .card-hover-effect {
+                opacity: 1;
+            }
+
+            /* Modal Enhancement */
+            #videoGalleryModal .modal-content {
+                backdrop-filter: blur(10px);
+                background: rgba(255, 255, 255, 0.95);
+            }
+
+            #videoGalleryModal .modal-header {
+                position: relative;
+                overflow: hidden;
+            }
+
+            #videoGalleryModal .modal-header::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: -100%;
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+                animation: shimmer 3s infinite;
+            }
+
+            @keyframes shimmer {
+                0% { left: -100%; }
+                100% { left: 100%; }
+            }
+
+            /* Badge Enhancements */
+            .badge {
+                font-weight: 600;
+                letter-spacing: 0.5px;
+                border-radius: 8px;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            }
+
+            /* Responsive Design */
+            @media (max-width: 768px) {
+                .gallery-choice-icon-modern,
+                .gallery-choice-icon-compact {
+                    margin-right: 0.8rem !important;
+                }
+                
+                .icon-background {
+                    width: 60px;
+                    height: 60px;
+                }
+                
+                .icon-background-compact {
+                    width: 40px;
+                    height: 40px;
+                }
+                
+                .icon-background i,
+                .icon-background-compact i {
+                    font-size: 1.2rem !important;
+                }
+                
+                .premium-card .d-flex,
+                .premium-card-compact .d-flex {
+                    flex-direction: row;
+                }
+            }
+
+            /* Dark Mode Support for Modal */
+            [data-theme="dark"] .premium-card,
+            [data-theme="dark"] .premium-card-compact,
+            .dark-theme .premium-card,
+            .dark-theme .premium-card-compact {
+                background: linear-gradient(145deg, #2c3e50 0%, #34495e 100%);
+                color: #ffffff;
+            }
+
+            [data-theme="dark"] .premium-card h4,
+            [data-theme="dark"] .premium-card h6,
+            [data-theme="dark"] .premium-card-compact h6,
+            .dark-theme .premium-card h4,
+            .dark-theme .premium-card h6,
+            .dark-theme .premium-card-compact h6 {
+                color: #ffffff !important;
+            }
+
+            [data-theme="dark"] #videoGalleryModal .modal-content,
+            .dark-theme #videoGalleryModal .modal-content {
+                background: rgba(44, 62, 80, 0.95);
+            }
         </style>
         <!-- Main Statistics Cards -->
         <div class="row mb-4 my-4">
@@ -601,12 +865,12 @@
                         <div class="row mt-3">
                             <div class="col-12">
                                 <div class="d-flex justify-content-center gap-2">
-                                    <a href="{{ route('user.video-views.index') }}" class="btn btn-primary btn-sm">
+                                    <button onclick="showVideoGalleryChoice()" class="btn btn-primary btn-sm">
                                         <i class="fas fa-play me-1"></i>Watch Videos
                                         @if($remainingViews > 0)
                                             <span class="badge bg-light text-dark ms-1">{{ $remainingViews }} left</span>
                                         @endif
-                                    </a>
+                                    </button>
                                     <a href="{{ route('user.video-views.history') }}" class="btn btn-outline-secondary btn-sm">
                                         <i class="fas fa-history me-1"></i>View History
                                     </a>
@@ -900,6 +1164,93 @@
                                 <p class="theme-text-content">Your transaction history will appear here.</p>
                             </div>
                         @endif
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Compact Video Gallery Choice Modal with Beautiful Design -->
+        <div class="modal fade" id="videoGalleryModal" tabindex="-1" aria-labelledby="videoGalleryModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow-xl" style="border-radius: 16px; overflow: hidden;">
+                    <!-- Compact Gradient Header -->
+                    <div class="modal-header border-0 text-white position-relative py-3" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);">
+                        <div class="position-absolute top-0 start-0 w-100 h-100" style="background: rgba(255,255,255,0.1);"></div>
+                        <div class="position-relative z-1 text-center w-100">
+                            <i class="fas fa-play-circle fa-2x text-white mb-2" style="text-shadow: 0 2px 4px rgba(0,0,0,0.3);"></i>
+                            <h5 class="modal-title fw-bold mb-1" id="videoGalleryModalLabel" style="text-shadow: 0 1px 3px rgba(0,0,0,0.3);">
+                                Choose Video Gallery
+                            </h5>
+                            <small class="text-white-50">Select your preferred interface</small>
+                        </div>
+                        <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 m-2" data-bs-dismiss="modal" aria-label="Close" style="z-index: 2;"></button>
+                    </div>
+                    
+                    <!-- Compact Modal Body -->
+                    <div class="modal-body p-3" style="background: linear-gradient(180deg, #f8f9fa 0%, #ffffff 100%);">
+                        <div class="row g-2">
+                            <!-- Gallery-1 Compact Card -->
+                            <div class="col-12">
+                                <a href="{{ route('user.video-views.index') }}" class="text-decoration-none">
+                                    <div class="gallery-choice-card premium-card-compact">
+                                        <div class="card-glow"></div>
+                                        <div class="d-flex align-items-center p-3">
+                                            <div class="gallery-choice-icon-compact me-3">
+                                                <div class="icon-background-compact" style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);">
+                                                    <i class="fas fa-th-large text-white"></i>
+                                                </div>
+                                            </div>
+                                            <div class="gallery-choice-content flex-grow-1">
+                                                <div class="d-flex align-items-center mb-1">
+                                                    <h6 class="mb-0 fw-bold text-dark">Gallery-1</h6>
+                                                    <span class="badge bg-primary ms-2 px-2 py-1 small">Standard</span>
+                                                </div>
+                                                <small class="text-muted">Premium gallery with advanced features</small>
+                                            </div>
+                                            <div class="gallery-choice-arrow-compact">
+                                                <i class="fas fa-chevron-right text-primary"></i>
+                                            </div>
+                                        </div>
+                                        <div class="card-hover-effect"></div>
+                                    </div>
+                                </a>
+                            </div>
+                            
+                            <!-- Gallery-2 Compact Card -->
+                            <div class="col-12">
+                                <a href="{{ route('user.video-views.simple') }}" class="text-decoration-none">
+                                    <div class="gallery-choice-card premium-card-compact">
+                                        <div class="card-glow"></div>
+                                        <div class="d-flex align-items-center p-3">
+                                            <div class="gallery-choice-icon-compact me-3">
+                                                <div class="icon-background-compact" style="background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);">
+                                                    <i class="fas fa-list text-white"></i>
+                                                </div>
+                                            </div>
+                                            <div class="gallery-choice-content flex-grow-1">
+                                                <div class="d-flex align-items-center mb-1">
+                                                    <h6 class="mb-0 fw-bold text-dark">Gallery-2</h6>
+                                                    <span class="badge bg-success ms-2 px-2 py-1 small">Simple</span>
+                                                </div>
+                                                <small class="text-muted">Clean minimalist viewing experience</small>
+                                            </div>
+                                            <div class="gallery-choice-arrow-compact">
+                                                <i class="fas fa-chevron-right text-success"></i>
+                                            </div>
+                                        </div>
+                                        <div class="card-hover-effect"></div>
+                                    </div>
+                                </a>
+                            </div>
+                        </div>
+                        
+                        <!-- Compact Footer Info -->
+                        <div class="text-center mt-3 pt-2 border-top">
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Same earning potential for both galleries
+                            </small>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1304,6 +1655,8 @@
                 }
             }
         </script>
+        @push('style')
+        <style>
             .balance-card {
                 position: relative;
                 overflow: hidden;
@@ -1523,6 +1876,68 @@
                     font-size: 0.8rem;
                     padding: 0.2rem 0.4rem;
                 }
+            }
+            
+            /* Video Gallery Choice Modal Styles */
+            .gallery-choice-card {
+                display: flex;
+                align-items: center;
+                padding: 1rem;
+                border: 2px solid #e9ecef;
+                border-radius: 0.5rem;
+                transition: all 0.3s ease;
+                background: #fff;
+            }
+            
+            .gallery-choice-card:hover {
+                border-color: #0d6efd;
+                background: #f8f9ff;
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(13, 110, 253, 0.15);
+            }
+            
+            .gallery-choice-icon {
+                width: 50px;
+                height: 50px;
+                border-radius: 50%;
+                background: linear-gradient(135deg, #0d6efd 0%, #0dcaf0 100%);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                margin-right: 1rem;
+                color: white;
+                font-size: 1.2rem;
+            }
+            
+            .gallery-choice-content {
+                flex-grow: 1;
+            }
+            
+            .gallery-choice-content h6 {
+                color: #495057;
+                font-weight: 600;
+            }
+            
+            .gallery-choice-arrow {
+                color: #6c757d;
+                font-size: 1.1rem;
+                transition: all 0.3s ease;
+            }
+            
+            .gallery-choice-card:hover .gallery-choice-arrow {
+                color: #0d6efd;
+                transform: translateX(5px);
+            }
+            
+            .modal-content {
+                border: none;
+                border-radius: 1rem;
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+            }
+            
+            .modal-header.bg-gradient-primary {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                border-radius: 1rem 1rem 0 0;
             }
         </style>
     @endpush
@@ -1799,6 +2214,173 @@
         document.addEventListener('DOMContentLoaded', function() {
             loadBalanceVisibility();
         });
+        
+        // Enhanced Video Gallery Choice Modal Function
+        function showVideoGalleryChoice() {
+            console.log('showVideoGalleryChoice function called');
+            
+            // Check if Bootstrap is available
+            if (typeof bootstrap === 'undefined') {
+                console.error('Bootstrap is not loaded');
+                // Fallback: show a beautiful custom alert
+                showCustomChoiceDialog();
+                return;
+            }
+            
+            // Check if modal element exists
+            const modalElement = document.getElementById('videoGalleryModal');
+            if (!modalElement) {
+                console.error('Modal element not found');
+                showCustomChoiceDialog();
+                return;
+            }
+            
+            console.log('Creating Bootstrap modal with enhancements');
+            try {
+                const modal = new bootstrap.Modal(modalElement, {
+                    backdrop: 'static',
+                    keyboard: true,
+                    focus: true
+                });
+                
+                // Add entrance animation
+                modalElement.addEventListener('shown.bs.modal', function() {
+                    console.log('Modal shown successfully');
+                    // Add staggered animation to cards
+                    const cards = modalElement.querySelectorAll('.premium-card');
+                    cards.forEach((card, index) => {
+                        card.style.opacity = '0';
+                        card.style.transform = 'translateY(30px)';
+                        setTimeout(() => {
+                            card.style.transition = 'all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+                            card.style.opacity = '1';
+                            card.style.transform = 'translateY(0)';
+                        }, index * 150);
+                    });
+                    
+                    // Add pulse animation to icons
+                    const icons = modalElement.querySelectorAll('.icon-background');
+                    icons.forEach(icon => {
+                        setTimeout(() => {
+                            icon.style.animation = 'pulse-glow 2s infinite';
+                        }, 500);
+                    });
+                });
+                
+                modal.show();
+                
+                // Add click tracking for analytics
+                const galleryLinks = modalElement.querySelectorAll('a[href*="video-views"]');
+                galleryLinks.forEach((link, index) => {
+                    link.addEventListener('click', function(e) {
+                        const galleryType = index === 0 ? 'Gallery-1' : 'Gallery-2';
+                        console.log(`User selected: ${galleryType}`);
+                        
+                        // Add loading animation
+                        const card = this.querySelector('.premium-card');
+                        card.style.transform = 'scale(0.95)';
+                        card.style.opacity = '0.8';
+                        
+                        // Add a small delay for visual feedback
+                        setTimeout(() => {
+                            // Navigation happens naturally via href
+                        }, 200);
+                    });
+                });
+                
+            } catch (error) {
+                console.error('Error showing modal:', error);
+                showCustomChoiceDialog();
+            }
+        }
+        
+        // Custom choice dialog fallback with beautiful styling
+        function showCustomChoiceDialog() {
+            const overlay = document.createElement('div');
+            overlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.8);
+                backdrop-filter: blur(10px);
+                z-index: 10000;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                animation: fadeIn 0.3s ease;
+            `;
+            
+            const dialog = document.createElement('div');
+            dialog.style.cssText = `
+                background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%);
+                border-radius: 20px;
+                padding: 2rem;
+                box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                max-width: 400px;
+                width: 90%;
+                text-align: center;
+                transform: scale(0.8);
+                animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            `;
+            
+            dialog.innerHTML = `
+                <h3 style="color: #333; margin-bottom: 1rem; font-weight: 700;">Choose Video Gallery</h3>
+                <p style="color: #666; margin-bottom: 2rem;">Select your preferred video interface:</p>
+                <div style="display: flex; gap: 1rem; justify-content: center;">
+                    <button onclick="navigateToGallery('{{ route('user.video-views.index') }}')" 
+                            style="flex: 1; background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%); 
+                                   color: white; border: none; padding: 1rem; border-radius: 12px; 
+                                   font-weight: 600; cursor: pointer; transition: transform 0.2s;">
+                        Gallery-1
+                    </button>
+                    <button onclick="navigateToGallery('{{ route('user.video-views.simple') }}')" 
+                            style="flex: 1; background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%); 
+                                   color: white; border: none; padding: 1rem; border-radius: 12px; 
+                                   font-weight: 600; cursor: pointer; transition: transform 0.2s;">
+                        Gallery-2
+                    </button>
+                </div>
+                <button onclick="closeCustomDialog()" 
+                        style="background: transparent; border: 1px solid #ddd; color: #666; 
+                               padding: 0.5rem 1rem; border-radius: 8px; margin-top: 1rem; 
+                               cursor: pointer;">Cancel</button>
+            `;
+            
+            overlay.appendChild(dialog);
+            document.body.appendChild(overlay);
+            
+            // Add CSS animations
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+                @keyframes popIn { from { transform: scale(0.8); } to { transform: scale(1); } }
+                @keyframes pulse-glow { 
+                    0%, 100% { box-shadow: 0 8px 25px rgba(0,0,0,0.15); }
+                    50% { box-shadow: 0 8px 35px rgba(102, 126, 234, 0.4); }
+                }
+            `;
+            document.head.appendChild(style);
+            
+            window.customDialogOverlay = overlay;
+        }
+        
+        function navigateToGallery(url) {
+            closeCustomDialog();
+            setTimeout(() => window.location.href = url, 200);
+        }
+        
+        function closeCustomDialog() {
+            if (window.customDialogOverlay) {
+                window.customDialogOverlay.style.animation = 'fadeIn 0.3s ease reverse';
+                setTimeout(() => {
+                    if (window.customDialogOverlay && window.customDialogOverlay.parentNode) {
+                        window.customDialogOverlay.parentNode.removeChild(window.customDialogOverlay);
+                    }
+                }, 300);
+            }
+        }
     </script>
     @endpush
 </x-smart_layout>
