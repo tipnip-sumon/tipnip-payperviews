@@ -320,13 +320,6 @@
                                 </div>
                             @endif
                         </div>
-                        <!-- Cache Status & Debug Info -->
-                        <div class="text-center mt-2">
-                            <small class="text-white-50">
-                                <i class="fas fa-clock me-1"></i>Last Updated: <span id="lastUpdateTime">{{ now()->format('H:i:s') }}</span>
-                                | Page Load: <span id="pageLoadId">{{ uniqid() }}</span>
-                            </small>
-                        </div>
 
                     </div>
                     <div class="card-body p-4">
@@ -694,32 +687,65 @@
             document.write('<script src="https://code.jquery.com/jquery-3.7.1.min.js"><\/script>');
         }
         
-        // FIREFOX CACHE FIX & BROWSER COMPATIBILITY
-        // Force no-cache for Firefox and other browsers
-        if (window.performance) {
-            // Check if page was loaded from cache
-            if (performance.navigation.type === 1) {
-                console.log('Page reloaded - checking for updated video state');
-                
-                // Add cache-busting parameter to force fresh data
-                const currentUrl = new URL(window.location);
-                if (!currentUrl.searchParams.has('refresh')) {
-                    currentUrl.searchParams.set('refresh', Date.now());
-                    window.location.replace(currentUrl.toString());
-                    return;
+        // Ensure CSRF token is available
+        $(document).ready(function() {
+            // FIREFOX CACHE FIX - Add cache control and page reload detection
+            // Force no-cache for Firefox and other browsers
+            if (window.performance) {
+                // Check if page was loaded from cache
+                if (performance.navigation.type === 1) {
+                    console.log('Page reloaded - checking for updated video state');
+                    
+                    // Add cache-busting parameter to force fresh data
+                    const currentUrl = new URL(window.location);
+                    if (!currentUrl.searchParams.has('refresh')) {
+                        currentUrl.searchParams.set('refresh', Date.now());
+                        window.location.replace(currentUrl.toString());
+                        return;
+                    }
                 }
             }
-        }
-        
-        // Add cache control meta tags dynamically
-        $(document).ready(function() {
+            
+            // Add cache control meta tags dynamically for Firefox
             $('head').append('<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">');
             $('head').append('<meta http-equiv="Pragma" content="no-cache">');
             $('head').append('<meta http-equiv="Expires" content="0">');
-        });
-        
-        // Ensure CSRF token is available
-        $(document).ready(function() {
+            
+            // VALIDATE VIDEO STATE FROM SERVER - Firefox cache fix
+            console.log('Validating video state from server...');
+            
+            // Get current video count from server data
+            const serverVideoCount = {{ $videos->count() }};
+            const displayedVideoCount = $('.video-card').length;
+            
+            console.log('Server video count:', serverVideoCount);
+            console.log('Displayed video count:', displayedVideoCount);
+            
+            // If counts don't match, there's a cache issue
+            if (serverVideoCount !== displayedVideoCount) {
+                console.warn('Video count mismatch detected - forcing page refresh');
+                setTimeout(() => {
+                    window.location.reload(true); // Force reload from server
+                }, 1000);
+                return;
+            }
+            
+            // Validate each video exists in server data - remove cached videos not in server list
+            const serverVideoIds = @json($videos->pluck('id')->toArray());
+            $('.video-card').each(function() {
+                const videoId = parseInt($(this).data('video-id'));
+                if (!serverVideoIds.includes(videoId)) {
+                    console.log('Removing cached video not in server list:', videoId);
+                    $(this).closest('.col-xl-3, .col-lg-4, .col-md-6, .col-sm-6, .col-12').fadeOut(500, function() {
+                        $(this).remove();
+                        // Update video count badge if function exists
+                        if (typeof updateVideoCountBadge === 'function') {
+                            updateVideoCountBadge();
+                        }
+                    });
+                }
+            });
+            
             // Ensure CSRF meta tag exists
             if (!$('meta[name="csrf-token"]').length) {
                 $('head').append('<meta name="csrf-token" content="{{ csrf_token() }}">');
@@ -742,38 +768,6 @@
             } else {
                 if (isDevelopment) console.error('CSRF token not available for AJAX setup');
             }
-            
-            // VIDEO STATE VALIDATION FOR FIREFOX CACHE FIX
-            console.log('Validating video state from server...');
-            
-            // Get current video count from server data
-            const serverVideoCount = {{ $videos->count() }};
-            const displayedVideoCount = $('.video-card').length;
-            
-            console.log('Server video count:', serverVideoCount);
-            console.log('Displayed video count:', displayedVideoCount);
-            
-            // If counts don't match, there's a cache issue
-            if (serverVideoCount !== displayedVideoCount) {
-                console.warn('Video count mismatch detected - forcing page refresh');
-                setTimeout(() => {
-                    window.location.reload(true); // Force reload from server
-                }, 1000);
-                return;
-            }
-            
-            // Validate each video exists in server data
-            const serverVideoIds = @json($videos->pluck('id')->toArray());
-            $('.video-card').each(function() {
-                const videoId = parseInt($(this).data('video-id'));
-                if (!serverVideoIds.includes(videoId)) {
-                    console.log('Removing video not in server list:', videoId);
-                    $(this).closest('.col-xl-3, .col-lg-4, .col-md-6, .col-sm-6, .col-12').fadeOut(500, function() {
-                        $(this).remove();
-                        updateVideoCountBadge();
-                    });
-                }
-            });
             
             // REAL-TIME SERVER VALIDATION FOR FIREFOX CACHE FIX
             // Cross-check with server to ensure data is fresh
