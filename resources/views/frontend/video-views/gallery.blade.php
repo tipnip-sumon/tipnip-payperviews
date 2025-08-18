@@ -433,6 +433,7 @@
                                             data-earning="{{ $userStats['earning_rate'] ?? $video->cost_per_click ?? 0.001 }}"
                                             data-video-category="{{ $video->category ?? 'general' }}"
                                             data-video-views="{{ $video->views_count ?? 0 }}"
+                                            data-duration="{{ $video->duration ?? 120 }}"
                                             style="border-radius: 0.75rem; padding: 12px 20px;">
                                         <div class="d-flex align-items-center justify-content-center">
                                             <i class="fas fa-play me-2"></i>
