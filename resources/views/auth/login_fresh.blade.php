@@ -526,13 +526,11 @@
     // Proactive Session Health Check
     async function checkSessionHealth() {
         try {
-            console.log('Checking session health...');
-            
             // Check if CSRF token exists and is valid
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
             
             if (!csrfToken) {
-                console.log('No CSRF token found, refreshing session...');
+                // console.log('No CSRF token found, refreshing session...');
                 await refreshCSRFToken().catch(err => console.log('CSRF refresh failed:', err));
                 return;
             }
@@ -555,20 +553,20 @@
             clearTimeout(timeoutId);
             
             if (response.status === 419) {
-                console.log('Session health check detected CSRF issue, fixing...');
+                // console.log('Session health check detected CSRF issue, fixing...');
                 await refreshCSRFToken().catch(err => console.log('CSRF refresh failed:', err));
             } else if (response.ok) {
                 const data = await response.json();
                 if (data.success) {
-                    console.log('Session health check passed');
+                    //console.log('Session health check passed');
                 }
             }
             
         } catch (error) {
             if (error.name === 'AbortError') {
-                console.log('Session health check timed out');
+                //console.log('Session health check timed out');
             } else {
-                console.log('Session health check failed, will handle on form submission:', error);
+                //console.log('Session health check failed, will handle on form submission:', error);
             }
             // Don't show error to user, just log it and handle later
         }
@@ -601,15 +599,6 @@
                     form.reset();
                 }
                 
-                // Clear localStorage items that might interfere
-                try {
-                    localStorage.removeItem('login_attempt_count');
-                    localStorage.removeItem('last_login_attempt');
-                    localStorage.removeItem('cached_username');
-                } catch (e) {
-                    console.log('Could not clear localStorage:', e);
-                }
-                
                 // Force complete cache refresh if this is the first post-logout load
                 if (!sessionStorage.getItem('post_logout_refresh_done')) {
                     sessionStorage.setItem('post_logout_refresh_done', 'true');
@@ -630,13 +619,13 @@
             }
             
         } catch (error) {
-            console.log('Error in handlePostLogoutState:', error);
+            // console.log('Error in handlePostLogoutState:', error);
         }
     }
 
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Fresh login page loaded');
-    
+    // console.log('Fresh login page loaded');
+
     // Wrap everything in try-catch to prevent browser extension errors
     try {
         // CRITICAL: Check if user just logged out and force complete page refresh
@@ -651,15 +640,15 @@ document.addEventListener('DOMContentLoaded', function() {
         // Cache Detection and Warning
         detectCacheIssues();
     } catch (initError) {
-        console.log('Initialization error (possibly browser extension):', initError);
+        // console.log('Initialization error (possibly browser extension):', initError);
         // Continue with basic functionality
     }
     
     // Debug CSRF token
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-    console.log('CSRF Token found:', csrfToken ? 'Yes' : 'No');
+    //console.log('CSRF Token found:', csrfToken ? 'Yes' : 'No');
     if (!csrfToken) {
-        console.error('CSRF token not found in meta tag!');
+        //console.error('CSRF token not found in meta tag!');
     }
 
     // Form elements
@@ -671,15 +660,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const emailVerificationAlert = document.getElementById('emailVerificationAlert');
     const resendBtn = document.getElementById('resendVerificationBtn');
     const forgotPasswordLink = document.getElementById('forgotPasswordLink');
-
-    // Debug form initialization
-    console.log('Login form initialized:', {
-        form: !!form,
-        action: form ? form.action : 'N/A',
-        method: form ? form.method : 'N/A',
-        submitBtn: !!submitBtn,
-        csrfToken: document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')?.substring(0, 10) + '...'
-    });
 
     // Load remember me preference from cookie
     loadRememberPreference();
@@ -754,15 +734,13 @@ document.addEventListener('DOMContentLoaded', function() {
     let usernameCheckTimeout;
     usernameInput.addEventListener('input', function() {
         clearTimeout(usernameCheckTimeout);
-        hideValidation('username'); // Clear previous messages
+        hideValidation('username'); // Clear previous messages  
     });
-
-   
 
     // CSRF Token Refresh Function - Enhanced to use session refresh endpoint
     async function refreshCSRFToken() {
         try {
-            console.log('Attempting to refresh CSRF token via session refresh...');
+            //console.log('Attempting to refresh CSRF token via session refresh...');
             
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
@@ -796,28 +774,28 @@ document.addEventListener('DOMContentLoaded', function() {
                         tokenInput.value = data.csrf_token;
                     }
                     
-                    console.log('CSRF token and session refreshed successfully');
+                    //console.log('CSRF token and session refreshed successfully');
                     return data.csrf_token;
                 } else {
                     throw new Error('Invalid response format from session refresh');
                 }
             } else {
                 // Fallback to original method if endpoint fails
-                console.log('Session refresh endpoint failed, trying fallback method...');
+                //console.log('Session refresh endpoint failed, trying fallback method...');
                 return await refreshCSRFTokenFallback().catch(err => {
-                    console.log('Fallback CSRF refresh failed:', err);
+                    //console.log('Fallback CSRF refresh failed:', err);
                     return null;
                 });
             }
         } catch (error) {
             if (error.name === 'AbortError') {
-                console.log('CSRF token refresh timed out');
+                //console.log('CSRF token refresh timed out');
             } else {
                 console.error('CSRF token refresh failed:', error);
             }
-            console.log('Using fallback method...');
+            //console.log('Using fallback method...');
             return await refreshCSRFTokenFallback().catch(err => {
-                console.log('Fallback CSRF refresh failed:', err);
+                //console.log('Fallback CSRF refresh failed:', err);
                 return null;
             });
         }
@@ -826,7 +804,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Fallback CSRF refresh method
     async function refreshCSRFTokenFallback() {
         try {
-            console.log('Using fallback CSRF refresh method...');
+            //console.log('Using fallback CSRF refresh method...');
             
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
@@ -863,7 +841,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         tokenInput.value = csrfToken;
                     }
                     
-                    console.log('CSRF token refreshed via fallback method');
+                    //console.log('CSRF token refreshed via fallback method');
                     return csrfToken;
                 } else {
                     throw new Error('Could not extract CSRF token from response');
@@ -873,7 +851,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         } catch (error) {
             console.error('Fallback CSRF token refresh failed:', error);
-            console.log('Final fallback: page reload...');
+            //console.log('Final fallback: page reload...');
             // Only reload as absolute last resort
             setTimeout(() => {
                 window.location.href = '/login';
@@ -934,12 +912,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Browser Compatibility and Multi-Session Support Functions
     function initBrowserCompatibility() {
-        console.log('Initializing browser compatibility...');
-        
+        //console.log('Initializing browser compatibility...');
+
         // Detect browser and version
         const browserInfo = detectBrowser();
-        console.log('Browser detected:', browserInfo);
-        
+        //console.log('Browser detected:', browserInfo);
+
         // Initialize session status
         initializeSessionStatus();
         
@@ -964,15 +942,15 @@ document.addEventListener('DOMContentLoaded', function() {
     function initializeSessionStatus() {
         const currentSessionKey = document.querySelector('meta[name="session-key"]')?.getAttribute('content');
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-        
-        console.log('Session initialization:', {
-            sessionKey: currentSessionKey ? 'Present' : 'Missing',
-            csrfToken: csrfToken ? 'Present' : 'Missing'
-        });
-        
+
+        //console.log('Session initialization:', {
+        //    sessionKey: currentSessionKey ? 'Present' : 'Missing',
+        //    csrfToken: csrfToken ? 'Present' : 'Missing'
+        //});
+
         if (currentSessionKey && csrfToken) {
             updateSessionIndicator('active', 'Session active and ready for login');
-            console.log('Session status: Active');
+            //console.log('Session status: Active');
             
             // Add a subtle visual feedback that system is ready
             setTimeout(() => {
@@ -1007,14 +985,14 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(response => {
             if (response.ok) {
-                console.log('Session verification successful');
+                //console.log('Session verification successful');
                 updateSessionIndicator('active', 'Session verified and ready for login');
             } else {
-                console.warn('Session verification failed:', response.status);
+                //console.warn('Session verification failed:', response.status);
                 updateSessionIndicator('warning', 'Session verification failed');
                 
                 if (response.status === 419) {
-                    console.log('CSRF token expired - will refresh on form submission');
+                    //console.log('CSRF token expired - will refresh on form submission');
                     updateSessionIndicator('expired', 'CSRF token expired - will refresh automatically');
                 }
             }
@@ -1026,8 +1004,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function fixInactiveSession() {
-        console.log('Attempting to fix inactive session...');
-        
+        //console.log('Attempting to fix inactive session...');
+
         Swal.fire({
             title: 'Activating Session',
             text: 'Initializing your login session...',
@@ -1095,8 +1073,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const storedSessionKey = localStorage.getItem('login_session_key');
         
         if (storedSessionKey && storedSessionKey !== currentSessionKey) {
-            console.log('Multiple session detected - clearing old session data');
-            
+            //console.log('Multiple session detected - clearing old session data');
+
             // Clear old session data
             localStorage.removeItem('login_session_key');
             localStorage.removeItem('login_cache_timestamp');
@@ -1114,7 +1092,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Listen for storage events (when another tab changes something)
         window.addEventListener('storage', function(e) {
             if (e.key === 'login_session_key' && e.newValue !== e.oldValue) {
-                console.log('Session conflict detected from another tab');
+                //console.log('Session conflict detected from another tab');
                 showMultiTabWarning();
             }
         });
@@ -1125,7 +1103,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const storedSessionKey = localStorage.getItem('login_session_key');
             
             if (storedSessionKey && storedSessionKey !== currentSessionKey) {
-                console.log('Session mismatch detected');
+                //console.log('Session mismatch detected');
                 handleSessionMismatch();
             }
         }, 30000); // Check every 30 seconds
@@ -1136,7 +1114,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const browserInfo = detectBrowser();
         if (browserInfo.isOldBrowser) {
             setInterval(function() {
-                console.log('Auto-refreshing session for old browser compatibility');
+                //console.log('Auto-refreshing session for old browser compatibility');
                 refreshSessionForOldBrowser();
             }, 600000); // 10 minutes
         }
@@ -1210,7 +1188,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function handleSessionMismatch() {
-        console.log('Handling session mismatch - refreshing page');
+        //console.log('Handling session mismatch - refreshing page');
         updateSessionIndicator('conflict', 'Session conflict detected');
         
         Swal.fire({
@@ -1264,7 +1242,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             indicator.title = 'Session Status: ' + message;
-            console.log('Session indicator updated:', status, '-', message);
+            //console.log('Session indicator updated:', status, '-', message);
         }
     }
 
@@ -1319,13 +1297,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 credentials: 'same-origin'
             }).then(response => {
                 if (response.ok) {
-                    console.log('Session refreshed successfully for old browser');
+                    //console.log('Session refreshed successfully for old browser');
                 }
             }).catch(error => {
-                console.log('Session refresh failed for old browser:', error);
+                //console.log('Session refresh failed for old browser:', error);
             });
         } catch (error) {
-            console.log('Session refresh not supported in this browser');
+            //console.log('Session refresh not supported in this browser');
         }
     }
 
@@ -1458,8 +1436,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Cache Issue Detection
     function detectCacheIssues() {
-        console.log('Checking for cache issues...');
-        
+        //console.log('Checking for cache issues...');
+
         // Check if this is a cache-busted reload
         const urlParams = new URLSearchParams(window.location.search);
         const cacheCleared = urlParams.get('_cache_clear');
@@ -1493,7 +1471,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
         } catch (e) {
-            console.log('No localStorage data found');
+            //console.log('No localStorage data found');
         }
         
         // Check for service worker cache
@@ -1514,8 +1492,8 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Show cache warning if issues detected
         if (cacheWarnings.length > 0) {
-            console.log('Cache issues detected:', cacheWarnings);
-            
+            //console.log('Cache issues detected:', cacheWarnings);
+
             setTimeout(() => {
                 const refreshLink = document.getElementById('refreshTokenLink');
                 if (refreshLink) {
@@ -1577,25 +1555,25 @@ document.addEventListener('DOMContentLoaded', function() {
                     if ('caches' in window) {
                         const cacheNames = await caches.keys();
                         await Promise.all(cacheNames.map(name => caches.delete(name)));
-                        console.log('Service worker caches cleared');
+                        //console.log('Service worker caches cleared');
                     }
                     
                     // Step 2: Clear localStorage and sessionStorage
                     if (typeof(Storage) !== "undefined") {
                         localStorage.clear();
                         sessionStorage.clear();
-                        console.log('Browser storage cleared');
+                        //console.log('Browser storage cleared');
                     }
                     
                     // Step 3: Clear cookies for this domain
                     document.cookie.split(";").forEach(function(c) { 
                         document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
                     });
-                    console.log('Cookies cleared');
+                    //console.log('Cookies cleared');
                     
                     // Step 4: Refresh CSRF token
                     await refreshCSRFToken();
-                    console.log('CSRF token refreshed');
+                    //console.log('CSRF token refreshed');
                     
                     return true;
                 } catch (error) {
@@ -1623,8 +1601,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     allowEscapeKey: false
                 }).then(() => {
                     // Force a hard refresh (equivalent to Ctrl+F5)
-                    console.log('Performing hard refresh...');
-                    
+                    //console.log('Performing hard refresh...');
+
                     // Method 1: Try using location.reload with force parameter
                     try {
                         window.location.reload(true);
@@ -1672,7 +1650,7 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .then(response => response.json())
             .then(data => {
-                console.log('Password reset test result:', data);
+                //console.log('Password reset test result:', data);
                 if (data.status === 'passwords.sent') {
                     Swal.fire({
                         title: 'Password Reset Email Sent!',
@@ -1701,13 +1679,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Form submission
     form.addEventListener('submit', async function(e) {
         e.preventDefault();
-        console.log('Form submission started:', {
-            username: usernameInput.value.trim(),
-            hasPassword: !!passwordInput.value,
-            remember: rememberCheckbox ? rememberCheckbox.checked : false,
-            action: form.action,
-            csrfToken: document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')?.substring(0, 10) + '...'
-        });
 
         // Show loading state
         submitBtn.disabled = true;
@@ -1736,7 +1707,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Get fresh CSRF token before submission
             const currentToken = getCSRFToken();
-            console.log('Current CSRF token:', currentToken ? 'Present' : 'Missing');
+            //console.log('Current CSRF token:', currentToken ? 'Present' : 'Missing');
             
             const formData = new FormData(form);
             
@@ -1744,13 +1715,13 @@ document.addEventListener('DOMContentLoaded', function() {
             if (currentToken) {
                 formData.set('_token', currentToken);
             }
-            
-            console.log('Submitting login form...');
-            
+
+            //console.log('Submitting login form...');
+
             // Small delay to ensure all storage operations complete before submission
             await new Promise(resolve => setTimeout(resolve, 100));
-            console.log('🚀 STORAGE DELAY: Completed - proceeding with form submission');
-            
+            //console.log('🚀 STORAGE DELAY: Completed - proceeding with form submission');
+
             let response = await fetch(form.action, {
                 method: 'POST',
                 body: formData,
@@ -1761,13 +1732,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 },
                 credentials: 'same-origin'
             });
-            
-            console.log('Login response status:', response.status);
-            
+
+            //console.log('Login response status:', response.status);
+
             // Handle CSRF token mismatch with ONE retry only
             if (response.status === 419) {
-                console.log('CSRF token mismatch (419) - attempting refresh and retry...');
-                
+                //console.log('CSRF token mismatch (419) - attempting refresh and retry...');
+
                 try {
                     const newToken = await refreshCSRFToken();
                     if (newToken) {
@@ -1779,8 +1750,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         if (rememberCheckbox.checked) {
                             retryFormData.append('remember', '1');
                         }
-                        
-                        console.log('Retrying login with refreshed token...');
+
+                        //console.log('Retrying login with refreshed token...');
                         response = await fetch(form.action, {
                             method: 'POST',
                             body: retryFormData,
@@ -1791,13 +1762,13 @@ document.addEventListener('DOMContentLoaded', function() {
                             },
                             credentials: 'same-origin'
                         });
-                        
-                        console.log('Retry response status:', response.status);
-                        
+
+                        //console.log('Retry response status:', response.status);
+
                         // If still 419 after retry, handle gracefully without showing error
                         if (response.status === 419) {
-                            console.log('CSRF token still invalid after retry - handling automatically');
-                            
+                            //console.log('CSRF token still invalid after retry - handling automatically');
+
                             // Instead of showing error, silently regenerate session and try again
                             try {
                                 // Clear any session issues by forcing a fresh start
@@ -1811,12 +1782,12 @@ document.addEventListener('DOMContentLoaded', function() {
                                 });
                                 
                                 // Auto-reload page to get fresh session without user intervention
-                                console.log('Auto-refreshing page to resolve session issue...');
+                                //console.log('Auto-refreshing page to resolve session issue...');
                                 window.location.reload();
                                 return;
                                 
                             } catch (error) {
-                                console.log('Session refresh failed, showing user-friendly message');
+                                //console.log('Session refresh failed, showing user-friendly message');
                                 
                                 // Only show error as last resort, but make it user-friendly
                                 Swal.fire({
@@ -1839,8 +1810,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.error('CSRF refresh failed:', refreshError);
                     
                     // Instead of showing confusing error, handle gracefully
-                    console.log('Handling session refresh failure gracefully...');
-                    
+                    //console.log('Handling session refresh failure gracefully...');
+
                     // Try to clear session and restart cleanly
                     try {
                         // Clear local storage and session storage
@@ -1862,7 +1833,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         
                     } catch (error) {
                         // Final fallback - just reload
-                        console.log('Final fallback - reloading page');
+                        //console.log('Final fallback - reloading page');
                         window.location.reload();
                     }
                     
@@ -1871,11 +1842,11 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             if (response.ok || response.redirected) {
-                console.log('Login successful! Response:', {
-                    status: response.status,
-                    redirected: response.redirected,
-                    url: response.url
-                });
+                //console.log('Login successful! Response:', {
+                //    status: response.status,
+                //    redirected: response.redirected,
+                //    url: response.url
+                //});
                 
                 // Clear the form for security
                 form.reset();
@@ -1903,11 +1874,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     }
                     
-                    console.log('Redirecting to:', redirectUrl);
+                    //console.log('Redirecting to:', redirectUrl);
                     window.location.href = redirectUrl;
                 });
             } else if (response.status === 403) {
-                console.log('Login failed - Email not verified (403)');
+                //console.log('Login failed - Email not verified (403)');
                 // Email not verified
                 const data = await response.json();
                 
@@ -1933,7 +1904,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             } else if (response.status === 419) {
                 // Final 419 check - this should rarely happen after retry
-                console.log('CSRF token still invalid after retry');
+                //console.log('CSRF token still invalid after retry');
                 Swal.fire({
                     title: 'Session Expired!',
                     text: 'Your session has expired. Please refresh the page and try again.',
@@ -1943,7 +1914,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     window.location.reload();
                 });
             } else if (response.status === 422) {
-                console.log('Validation errors (422)');
+                //console.log('Validation errors (422)');
                 const data = await response.json();
                 
                 // Handle validation errors
@@ -1970,7 +1941,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Try to get the raw response text to check for lock messages
                     try {
                         const responseText = await response.text();
-                        console.log('Raw response text:', responseText);
+                       // console.log('Raw response text:', responseText);
                         
                         // Check if the response contains lock-related keywords
                         if (responseText.toLowerCase().includes('lock') || 
@@ -2000,9 +1971,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     });
                     return;
                 }
-                
-                console.log('401 Response data:', data); // Debug log
-                
+
+                // console.log('401 Response data:', data); // Debug log
+
                 if (data.error_type === 'account_locked') {
                     // Account is currently locked
                     const unlockTime = data.unlock_time_human || 'later';
@@ -2100,7 +2071,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 try {
                     const errorData = await response.json();
-                    console.log('500 Error data:', errorData);
+                   // console.log('500 Error data:', errorData);
                     
                     // Check if the 500 error is actually related to account lockout
                     if (errorData.message && 
@@ -2126,12 +2097,12 @@ document.addEventListener('DOMContentLoaded', function() {
                         serverErrorHandled = true;
                     }
                 } catch (jsonError) {
-                    console.log('Could not parse 500 error as JSON:', jsonError);
-                    
+                    //console.log('Could not parse 500 error as JSON:', jsonError);
+
                     // Try to read raw response text for lockout keywords
                     try {
                         const responseText = await response.text();
-                        console.log('500 Raw response:', responseText);
+                       // console.log('500 Raw response:', responseText);
                         
                         if (responseText.toLowerCase().includes('lock') || 
                             responseText.toLowerCase().includes('attempt') ||
@@ -2161,7 +2132,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             serverErrorHandled = true;
                         }
                     } catch (textError) {
-                        console.log('Could not read 500 response text:', textError);
+                        //console.log('Could not read 500 response text:', textError);
                     }
                 }
                 
@@ -2177,15 +2148,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 
             } else {
                 // Handle any other response status
-                console.log('Unhandled response status:', response.status);
-                console.log('Response headers:', response.headers);
+                //console.log('Unhandled response status:', response.status);
+                //console.log('Response headers:', response.headers);
                 
                 let errorMessage = 'An unexpected error occurred. Please try again.';
                 let errorData = null;
                 
                 try {
                     errorData = await response.json();
-                    console.log('Error response data:', errorData);
+                    //console.log('Error response data:', errorData);
                     
                     // Check for account lock information even in unexpected status codes
                     if (errorData.error_type === 'account_locked' || 
@@ -2214,17 +2185,17 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     errorMessage = errorData.message || errorMessage;
                 } catch (e) {
-                    console.log('Could not parse error response as JSON:', e);
+                    //console.log('Could not parse error response as JSON:', e);
                     // Try to get raw text
                     try {
                         const responseText = await response.text();
-                        console.log('Raw error response:', responseText);
-                        
+                       // console.log('Raw error response:', responseText);
+
                         if (responseText.toLowerCase().includes('lock')) {
                             errorMessage = 'Your account may be temporarily locked. Please wait and try again.';
                         }
                     } catch (textError) {
-                        console.log('Could not read error response text:', textError);
+                        //console.log('Could not read error response text:', textError);
                     }
                 }
                 
@@ -2313,16 +2284,16 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Check if we need to show session expired message (only if explicitly indicated)
-    console.log('Checking URL parameters for session expired...');
-    console.log('session_expired param:', urlParams.get('session_expired'));
-    console.log('csrf_error param:', urlParams.get('csrf_error'));
-    console.log('Current URL:', window.location.href);
-    console.log('Document referrer:', document.referrer);
-    
+    // console.log('Checking URL parameters for session expired...');
+    // console.log('session_expired param:', urlParams.get('session_expired'));
+    // console.log('csrf_error param:', urlParams.get('csrf_error'));
+    // console.log('Current URL:', window.location.href);
+    // console.log('Document referrer:', document.referrer);
+
     // Only show session expired if explicitly indicated by URL parameters
     // Do NOT show it just because user came from a protected route
     if (urlParams.get('session_expired') === '1' || urlParams.get('csrf_error') === '1') {
-        console.log('Showing session expired alert due to URL parameters');
+        // console.log('Showing session expired alert due to URL parameters');
         Swal.fire({
             title: 'Session Expired!',
             text: 'Your session has expired. Please try logging in again.',
@@ -2330,17 +2301,17 @@ document.addEventListener('DOMContentLoaded', function() {
             confirmButtonText: 'OK'
         });
     } else {
-        console.log('No explicit session expired parameters found - not showing alert');
+        // console.log('No explicit session expired parameters found - not showing alert');
     }
 
-    console.log('Login page initialized successfully');
-    console.log('Available test function: testForgotPassword()');
-    console.log('Available help function: showSessionStatusHelp()');
+    // console.log('Login page initialized successfully');
+    // console.log('Available test function: testForgotPassword()');
+    // console.log('Available help function: showSessionStatusHelp()');
     
     // Show success message if everything is working properly
     const sessionIndicator = document.getElementById('sessionIndicator');
     if (sessionIndicator && sessionIndicator.style.background === 'rgb(40, 167, 69)') {
-        console.log('✅ All systems operational - ready for login');
+        // console.log('✅ All systems operational - ready for login');
     }
 
     // Make session status help globally available
@@ -2348,8 +2319,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Fallback submission for very old browsers
     function submitWithFallback() {
-        console.log('Using fallback submission for old browser');
-        
+        // console.log('Using fallback submission for old browser');
+
         Swal.fire({
             title: 'Processing Login...',
             text: 'Using compatibility mode for your browser.',
@@ -2369,7 +2340,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const storedSessionKey = localStorage.getItem('login_session_key');
         
         if (storedSessionKey && currentSessionKey && storedSessionKey !== currentSessionKey) {
-            console.log('Session mismatch detected in health check');
+            // console.log('Session mismatch detected in health check');
             handleSessionMismatch();
         }
     }, 60000); // Check every minute
