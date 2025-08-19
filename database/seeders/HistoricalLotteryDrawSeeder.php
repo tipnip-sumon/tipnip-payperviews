@@ -43,9 +43,9 @@ class HistoricalLotteryDrawSeeder extends Seeder
         $this->command->info('Using ' . $this->users->count() . ' real users for tickets and winners');
         $this->command->info('Real users: ' . $this->users->pluck('username')->take(5)->join(', ') . ($this->users->count() > 5 ? '...' : ''));
 
-        // Start from August 10, 2025 (Sunday) as Draw #50
-        $latestSunday = Carbon::create(2025, 8, 10); // August 10, 2025 (Sunday)
-        
+        // Start from August 17, 2025 (Sunday) as Draw #50
+        $latestSunday = Carbon::create(2025, 8, 17); // August 17, 2025 (Sunday)
+
         DB::beginTransaction();
         
         try {
@@ -79,6 +79,30 @@ class HistoricalLotteryDrawSeeder extends Seeder
         $drawNumberString = 'DRAW_' . $drawNumber;
         $drawTime = $drawDate->copy()->setTime(20, 0, 0); // 8 PM draw time
         
+        // Get prize structure from lottery settings
+        $lotterySettings = LotterySetting::first();
+        $prizeStructure = [];
+        
+        if ($lotterySettings && $lotterySettings->prize_structure) {
+            // Parse the prize structure from settings
+            $settingsPrizeStructure = is_string($lotterySettings->prize_structure) 
+                ? json_decode($lotterySettings->prize_structure, true) 
+                : $lotterySettings->prize_structure;
+            
+            if (is_array($settingsPrizeStructure)) {
+                $prizeStructure = $settingsPrizeStructure;
+            }
+        }
+        
+        // Fallback to default structure if settings not found
+        if (empty($prizeStructure)) {
+            $prizeStructure = [
+                '1' => ['name' => '1st Prize', 'type' => 'fixed_amount', 'amount' => '1000'],
+                '2' => ['name' => '2nd Prize', 'type' => 'fixed_amount', 'amount' => '300'],
+                '3' => ['name' => '3rd Prize', 'type' => 'fixed_amount', 'amount' => '100'],
+            ];
+        }
+        
         // Create the lottery draw
         $draw = LotteryDraw::create([
             'draw_number' => $drawNumberString,
@@ -95,14 +119,10 @@ class HistoricalLotteryDrawSeeder extends Seeder
             'has_manual_winners' => false,
             'prize_distribution_type' => 'fixed_amount',
             'allow_multiple_winners_per_place' => false,
-            'prize_distribution' => json_encode([
-                '1' => ['name' => '1st Prize', 'type' => 'fixed_amount', 'amount' => '1000'],
-                '2' => ['name' => '2nd Prize', 'type' => 'fixed_amount', 'amount' => '300'],
-                '3' => ['name' => '3rd Prize', 'type' => 'fixed_amount', 'amount' => '100'],
-            ]),
+            'prize_distribution' => json_encode($prizeStructure),
             'winning_numbers' => null, // Will be set after winners
             'max_tickets' => rand(500, 2000),
-            'ticket_price' => 2.00,
+            'ticket_price' => $lotterySettings ? ($lotterySettings->ticket_price ?? 2.00) : 2.00,
             'admin_commission_percentage' => 10.00,
             'auto_draw' => true,
             'auto_prize_distribution' => true,
@@ -226,36 +246,80 @@ class HistoricalLotteryDrawSeeder extends Seeder
                 break;
             }
             
-            $winningTicket = $selectedTickets->shift(); // Remove from collection to avoid duplicates
-            $prizeAmount = (float) $prizeData['amount'];
-            
-            // Create winner record - always assign to virtual user (user_id = 1) to avoid conflicts with future real users
-            LotteryWinner::create([
-                'lottery_draw_id' => $draw->id,
-                'lottery_ticket_id' => $winningTicket->id,
-                'winning_ticket_number' => $winningTicket->ticket_number, // Store the ticket number before deletion
-                'user_id' => 1, // Always use virtual user ID = 1 for all historical winners
-                'prize_position' => (int) $position,
-                'winner_index' => 1,
-                'prize_name' => $prizeData['name'],
-                'prize_amount' => $prizeAmount,
-                'claim_status' => ['claimed', 'claimed', 'claimed', 'pending'][rand(0, 3)], // Most are claimed
-                'prize_distributed' => rand(1, 100) <= 85, // 85% chance
-                'is_manual_selection' => false,
-                'selected_at' => $draw->draw_time,
-                'claimed_at' => rand(1, 100) <= 85 ? $this->randomDateBetween($draw->draw_time, $draw->draw_time->copy()->addDays(7)) : null,
-                'claim_method' => 'auto',
-                'created_at' => $draw->draw_time,
-                'updated_at' => $draw->draw_time,
-            ]);
-            
-            // Update winning ticket
-            $winningTicket->update([
-                'status' => 'winner',
-                'prize_amount' => $prizeAmount,
-            ]);
-            
-            $winnerTicketIds[] = $winningTicket->id;
+            // Check if this prize has multiple winners
+            if (isset($prizeData['multiple_winners']) && is_array($prizeData['multiple_winners'])) {
+                // Handle multiple winners for this position
+                $winnerIndex = 1;
+                foreach ($prizeData['multiple_winners'] as $multipleWinner) {
+                    if ($selectedTickets->isEmpty()) {
+                        break;
+                    }
+                    
+                    $winningTicket = $selectedTickets->shift();
+                    $prizeAmount = (float) $multipleWinner['amount'];
+                    
+                    // Create winner record
+                    LotteryWinner::create([
+                        'lottery_draw_id' => $draw->id,
+                        'lottery_ticket_id' => $winningTicket->id,
+                        'winning_ticket_number' => $winningTicket->ticket_number,
+                        'user_id' => 1,
+                        'prize_position' => (int) $position,
+                        'winner_index' => $winnerIndex,
+                        'prize_name' => $prizeData['name'],
+                        'prize_amount' => $prizeAmount,
+                        'claim_status' => ['claimed', 'claimed', 'claimed', 'pending'][rand(0, 3)],
+                        'prize_distributed' => rand(1, 100) <= 85,
+                        'is_manual_selection' => false,
+                        'selected_at' => $draw->draw_time,
+                        'claimed_at' => rand(1, 100) <= 85 ? $this->randomDateBetween($draw->draw_time, $draw->draw_time->copy()->addDays(7)) : null,
+                        'claim_method' => 'auto',
+                        'created_at' => $draw->draw_time,
+                        'updated_at' => $draw->draw_time,
+                    ]);
+                    
+                    // Update winning ticket
+                    $winningTicket->update([
+                        'status' => 'winner',
+                        'prize_amount' => $prizeAmount,
+                    ]);
+                    
+                    $winnerTicketIds[] = $winningTicket->id;
+                    $winnerIndex++;
+                }
+            } else {
+                // Single winner for this position (fallback for old format)
+                $winningTicket = $selectedTickets->shift();
+                $prizeAmount = (float) $prizeData['amount'];
+                
+                // Create winner record
+                LotteryWinner::create([
+                    'lottery_draw_id' => $draw->id,
+                    'lottery_ticket_id' => $winningTicket->id,
+                    'winning_ticket_number' => $winningTicket->ticket_number,
+                    'user_id' => 1,
+                    'prize_position' => (int) $position,
+                    'winner_index' => 1,
+                    'prize_name' => $prizeData['name'],
+                    'prize_amount' => $prizeAmount,
+                    'claim_status' => ['claimed', 'claimed', 'claimed', 'pending'][rand(0, 3)],
+                    'prize_distributed' => rand(1, 100) <= 85,
+                    'is_manual_selection' => false,
+                    'selected_at' => $draw->draw_time,
+                    'claimed_at' => rand(1, 100) <= 85 ? $this->randomDateBetween($draw->draw_time, $draw->draw_time->copy()->addDays(7)) : null,
+                    'claim_method' => 'auto',
+                    'created_at' => $draw->draw_time,
+                    'updated_at' => $draw->draw_time,
+                ]);
+                
+                // Update winning ticket
+                $winningTicket->update([
+                    'status' => 'winner',
+                    'prize_amount' => $prizeAmount,
+                ]);
+                
+                $winnerTicketIds[] = $winningTicket->id;
+            }
         }
         
         // Update all non-winning tickets to 'expired'
