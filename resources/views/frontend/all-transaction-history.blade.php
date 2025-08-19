@@ -202,9 +202,6 @@
                         <button class="btn btn-sm btn-outline-secondary" onclick="refreshTable()">
                             <i class="fe fe-refresh-cw me-1"></i>Refresh
                         </button>
-                        <button class="btn btn-sm btn-outline-info" onclick="showToast('Toast is working correctly!', 'success')">
-                            <i class="fe fe-message-circle me-1"></i>Test Toast
-                        </button>
                     </div>
                 </div>
                 <div class="card-body">
