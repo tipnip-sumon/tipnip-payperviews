@@ -535,16 +535,16 @@
                 return;
             }
             
-            // Test session with a simple request
+            // Simple session validity check using login page itself
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
             
-            const response = await fetch('/session/refresh', {
-                method: 'POST',
+            const response = await fetch('/login', {
+                method: 'GET',
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest',
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': csrfToken
+                    'Accept': 'text/html',
+                    'Cache-Control': 'no-cache'
                 },
                 credentials: 'same-origin',
                 signal: controller.signal
@@ -556,10 +556,7 @@
                 // console.log('Session health check detected CSRF issue, fixing...');
                 await refreshCSRFToken().catch(err => console.log('CSRF refresh failed:', err));
             } else if (response.ok) {
-                const data = await response.json();
-                if (data.success) {
-                    //console.log('Session health check passed');
-                }
+                //console.log('Session health check passed');
             }
             
         } catch (error) {
@@ -737,20 +734,20 @@ document.addEventListener('DOMContentLoaded', function() {
         hideValidation('username'); // Clear previous messages  
     });
 
-    // CSRF Token Refresh Function - Enhanced to use session refresh endpoint
+    // CSRF Token Refresh Function - Enhanced to use login page for token refresh
     async function refreshCSRFToken() {
         try {
-            //console.log('Attempting to refresh CSRF token via session refresh...');
+            //console.log('Attempting to refresh CSRF token via login page...');
             
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
             
-            // Use our new session refresh endpoint for more reliable token refresh
-            const response = await fetch('/session/refresh', { 
-                method: 'POST',
+            // Use login page itself to get fresh CSRF token
+            const response = await fetch('/login', { 
+                method: 'GET',
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest',
-                    'Accept': 'application/json',
+                    'Accept': 'text/html',
                     'Cache-Control': 'no-cache'
                 },
                 credentials: 'same-origin',
@@ -760,13 +757,18 @@ document.addEventListener('DOMContentLoaded', function() {
             clearTimeout(timeoutId);
             
             if (response.ok) {
-                const data = await response.json();
+                const html = await response.text();
                 
-                if (data.success && data.csrf_token) {
+                // Extract CSRF token from the response
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const csrfToken = doc.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                
+                if (csrfToken) {
                     // Update the current page's CSRF token
                     const metaTag = document.querySelector('meta[name="csrf-token"]');
                     if (metaTag) {
-                        metaTag.setAttribute('content', data.csrf_token);
+                        metaTag.setAttribute('content', csrfToken);
                     }
                     
                     const tokenInput = document.querySelector('input[name="_token"]');
@@ -1769,18 +1771,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         if (response.status === 419) {
                             //console.log('CSRF token still invalid after retry - handling automatically');
 
-                            // Instead of showing error, silently regenerate session and try again
+                            // Instead of showing error, simply reload page to get fresh session
                             try {
-                                // Clear any session issues by forcing a fresh start
-                                await fetch('/session/refresh', {
-                                    method: 'POST',
-                                    headers: {
-                                        'X-Requested-With': 'XMLHttpRequest',
-                                        'Accept': 'application/json'
-                                    },
-                                    credentials: 'same-origin'
-                                });
-                                
                                 // Auto-reload page to get fresh session without user intervention
                                 //console.log('Auto-refreshing page to resolve session issue...');
                                 window.location.reload();
