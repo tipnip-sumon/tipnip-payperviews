@@ -486,7 +486,7 @@
                                 <small class="text-muted">{{ $withdrawal->created_at->format('M d, Y') }}</small>
                             </div>
                             <div>
-                                @if($withdrawal->status == 0)
+                                @if($withdrawal->status == 2)
                                     <span class="badge bg-warning">Pending</span>
                                 @elseif($withdrawal->status == 1)
                                     <span class="badge bg-success">Approved</span>
