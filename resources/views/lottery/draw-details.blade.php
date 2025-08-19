@@ -51,111 +51,32 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label class="form-label text-muted">Total Prize Pool</label>
+                                    <label class="form-label text-muted">Ticket Price</label>
                                     <div class="d-flex align-items-center">
-                                        <i class="fe fe-gift text-warning me-2"></i>
-                                        <span class="fw-bold text-success fs-5">
+                                        <i class="fe fe-tag text-info me-2"></i>
+                                        <span class="fw-bold text-primary fs-5">
                                             @php
-                                                // Initialize variables
-                                                $displayPrizePool = 0;
-                                                $calculationMethod = 'fallback';
-                                                $settingsFirstPrize = 0;
-                                                $settingsSecondPrize = 0;
-                                                $settingsThirdPrize = 0;
-                                                $prizeDistribution = [];
+                                                // Get individual ticket price
+                                                $ticketPrice = 2.00; // Default ticket price
                                                 
-                                                // Load prize distribution from draw's prize_distribution column (priority)
-                                                if ($draw->prize_distribution) {
-                                                    $prizeDistribution = is_array($draw->prize_distribution) 
-                                                        ? $draw->prize_distribution 
-                                                        : json_decode($draw->prize_distribution, true);
-                                                    
-                                                    if (is_array($prizeDistribution) && !empty($prizeDistribution)) {
-                                                        $calculationMethod = 'draw_distribution';
-                                                        
-                                                        // Calculate prize amounts per position from distribution
-                                                        $position1Prizes = array_filter($prizeDistribution, function($prize) {
-                                                            return isset($prize['position']) && $prize['position'] == 1;
-                                                        });
-                                                        $position2Prizes = array_filter($prizeDistribution, function($prize) {
-                                                            return isset($prize['position']) && $prize['position'] == 2;
-                                                        });
-                                                        $position3Prizes = array_filter($prizeDistribution, function($prize) {
-                                                            return isset($prize['position']) && $prize['position'] == 3;
-                                                        });
-                                                        
-                                                        // Sum up total amounts per position
-                                                        $settingsFirstPrize = array_sum(array_column($position1Prizes, 'amount'));
-                                                        $settingsSecondPrize = array_sum(array_column($position2Prizes, 'amount'));
-                                                        $settingsThirdPrize = array_sum(array_column($position3Prizes, 'amount'));
-                                                        
-                                                        // Calculate total prize pool
-                                                        $displayPrizePool = array_sum(array_column($prizeDistribution, 'amount'));
-                                                    }
-                                                }
-                                                
-                                                // Fallback to lottery settings if no draw distribution
-                                                if (empty($prizeDistribution)) {
-                                                    $settings = \App\Models\LotterySetting::getSettings();
-                                                    if ($settings && $settings->prize_structure) {
-                                                        $prizeStructure = is_array($settings->prize_structure) 
-                                                            ? $settings->prize_structure 
-                                                            : json_decode($settings->prize_structure, true);
-                                                        
-                                                        if (is_array($prizeStructure)) {
-                                                            // Extract fixed prizes from settings
-                                                            if (isset($prizeStructure['1']['amount'])) {
-                                                                $settingsFirstPrize = (float)$prizeStructure['1']['amount'];
-                                                            }
-                                                            if (isset($prizeStructure['2']['amount'])) {
-                                                                $settingsSecondPrize = (float)$prizeStructure['2']['amount'];
-                                                            }
-                                                            if (isset($prizeStructure['3']['amount'])) {
-                                                                $settingsThirdPrize = (float)$prizeStructure['3']['amount'];
-                                                            }
-                                                            
-                                                            $displayPrizePool = $settingsFirstPrize + $settingsSecondPrize + $settingsThirdPrize;
-                                                            $calculationMethod = 'fallback_settings';
+                                                // Try to get from a ticket in this draw
+                                                $sampleTicket = $draw->tickets()->first();
+                                                if ($sampleTicket && $sampleTicket->ticket_price) {
+                                                    $ticketPrice = $sampleTicket->ticket_price;
+                                                } else {
+                                                    // Try to get from lottery settings
+                                                    try {
+                                                        $settings = \App\Models\LotterySetting::first();
+                                                        if ($settings && $settings->ticket_price) {
+                                                            $ticketPrice = $settings->ticket_price;
                                                         }
+                                                    } catch (Exception $e) {
+                                                        // Keep default if there's an error
                                                     }
                                                 }
-                                                
-                                                // Final fallback with default values
-                                                if ($settingsFirstPrize == 0 && $settingsSecondPrize == 0 && $settingsThirdPrize == 0) {
-                                                    $settingsFirstPrize = 1000;
-                                                    $settingsSecondPrize = 300;
-                                                    $settingsThirdPrize = 100;
-                                                    $displayPrizePool = 1400;
-                                                    $calculationMethod = 'default_fixed';
-                                                }
-                                                
-                                                // Ensure minimum display value
-                                                $displayPrizePool = max($displayPrizePool, 0);
-                                                
-                                                // Calculate total revenue from ticket sales
-                                                $totalRevenue = $draw->tickets()->sum('ticket_price') ?? 0;
                                             @endphp
-                                            ${{ number_format($displayPrizePool, 2) }}
+                                            ${{ number_format($ticketPrice, 2) }}
                                         </span>
-                                        @if($calculationMethod === 'draw_distribution')
-                                            <small class="text-muted ms-2">
-                                                (Prize distribution from draw settings)
-                                            </small>
-                                        @elseif($calculationMethod === 'fallback_settings')
-                                            <small class="text-muted ms-2">
-                                                (Fixed amounts from lottery settings)
-                                            </small>
-                                        @elseif($calculationMethod === 'default_fixed')
-                                            <small class="text-muted ms-2">
-                                                (Default fixed amounts)
-                                            </small>
-                                        @else
-                                            <small class="text-muted ms-2">
-                                                (Fixed prize structure)
-                                            </small>
-                                        @endif
-                                        
-
                                     </div>
                                 </div>
                             </div>
@@ -183,20 +104,15 @@
                             <i class="fas fa-trophy me-2"></i>
                             Prize Breakdown & Distribution
                         </h4>
-                        <small class="text-white-50">
-                            Total Prize Pool: ${{ number_format($displayPrizePool, 2) }}
-                            @if($calculationMethod === 'draw_distribution')
-                                | Prize distribution from draw settings
-                            @elseif($calculationMethod === 'fallback_settings')
-                                | Fixed amounts from lottery settings
-                            @elseif($calculationMethod === 'default_fixed')
-                                | Default fixed amounts
-                            @else
-                                | Fixed prize structure
-                            @endif
-                        </small>
                     </div>
                     <div class="card-body">
+                        @php
+                            // Simplified prize structure - just use default fixed amounts
+                            $settingsFirstPrize = 1000;
+                            $settingsSecondPrize = 300;
+                            $settingsThirdPrize = 100;
+                        @endphp
+                        
                         <!-- Enhanced Prize Cards -->
                         <div class="row g-4">
                             <!-- 1st Prize -->
@@ -271,13 +187,19 @@
                                             <div class="prize-info">Fixed Amount: ${{ number_format($settingsFirstPrize, 0) }}</div>
                                         @endif
                                     </div>
-                                    @if($draw->first_prize_winner_id && $draw->status == 'completed')
+                                    @if($draw->firstPrizeWinner && $draw->status == 'completed')
                                         <div class="winner-info">
                                             <div class="winner-badge">
                                                 <i class="fas fa-check-circle"></i> WON
                                             </div>
                                             <div class="ticket-info">
-                                                Ticket #{{ $draw->firstPrizeWinner->lotteryTicket->ticket_number ?? 'N/A' }}
+                                                @if($draw->firstPrizeWinner->winning_ticket_number)
+                                                    Ticket #{{ $draw->firstPrizeWinner->winning_ticket_number }}
+                                                @elseif($draw->firstPrizeWinner->lotteryTicket)
+                                                    Ticket #{{ $draw->firstPrizeWinner->lotteryTicket->ticket_number }}
+                                                @else
+                                                    Ticket #N/A (Historical)
+                                                @endif
                                             </div>
                                         </div>
                                     @else
@@ -360,13 +282,19 @@
                                             <div class="prize-info">Fixed Amount: ${{ number_format($settingsSecondPrize, 0) }}</div>
                                         @endif
                                     </div>
-                                    @if($draw->second_prize_winner_id && $draw->status == 'completed')
+                                    @if($draw->secondPrizeWinner && $draw->status == 'completed')
                                         <div class="winner-info">
                                             <div class="winner-badge">
                                                 <i class="fas fa-check-circle"></i> WON
                                             </div>
                                             <div class="ticket-info">
-                                                Ticket #{{ $draw->secondPrizeWinner->lotteryTicket->ticket_number ?? 'N/A' }}
+                                                @if($draw->secondPrizeWinner->winning_ticket_number)
+                                                    Ticket #{{ $draw->secondPrizeWinner->winning_ticket_number }}
+                                                @elseif($draw->secondPrizeWinner->lotteryTicket)
+                                                    Ticket #{{ $draw->secondPrizeWinner->lotteryTicket->ticket_number }}
+                                                @else
+                                                    Ticket #N/A (Historical)
+                                                @endif
                                             </div>
                                         </div>
                                     @else
@@ -449,13 +377,19 @@
                                             <div class="prize-info">Fixed Amount: ${{ number_format($settingsThirdPrize, 0) }}</div>
                                         @endif
                                     </div>
-                                    @if($draw->third_prize_winner_id && $draw->status == 'completed')
+                                    @if($draw->thirdPrizeWinner && $draw->status == 'completed')
                                         <div class="winner-info">
                                             <div class="winner-badge">
                                                 <i class="fas fa-check-circle"></i> WON
                                             </div>
                                             <div class="ticket-info">
-                                                Ticket #{{ $draw->thirdPrizeWinner->lotteryTicket->ticket_number ?? 'N/A' }}
+                                                @if($draw->thirdPrizeWinner->winning_ticket_number)
+                                                    Ticket #{{ $draw->thirdPrizeWinner->winning_ticket_number }}
+                                                @elseif($draw->thirdPrizeWinner->lotteryTicket)
+                                                    Ticket #{{ $draw->thirdPrizeWinner->lotteryTicket->ticket_number }}
+                                                @else
+                                                    Ticket #N/A (Historical)
+                                                @endif
                                             </div>
                                         </div>
                                     @else
@@ -463,66 +397,6 @@
                                             <span class="status-badge">{{ $draw->status == 'pending' ? 'AWAITING DRAW' : 'NO WINNER' }}</span>
                                         </div>
                                     @endif
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Prize Distribution Summary -->
-                        <div class="row mt-4">
-                            <div class="col-12">
-                                <div class="prize-summary bg-light border">
-                                    <h6 class="mb-3 text-dark">
-                                        <i class="fas fa-chart-pie me-2 text-primary"></i>
-                                        Prize Distribution Summary
-                                    </h6>
-                                    <div class="row text-center">
-                                        <div class="col-md-3">
-                                            <div class="stat-item bg-white rounded p-3 shadow-sm">
-                                                <div class="stat-value text-success fw-bold">${{ number_format($displayPrizePool, 2) }}</div>
-                                                <div class="stat-label text-dark">Total Prize Pool</div>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-3">
-                                            <div class="stat-item bg-white rounded p-3 shadow-sm">
-                                                <div class="stat-value text-primary fw-bold">${{ number_format($totalRevenue, 2) }}</div>
-                                                <div class="stat-label text-dark">Ticket Price</div>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-3">
-                                            <div class="stat-item bg-white rounded p-3 shadow-sm">
-                                                <div class="stat-value text-info fw-bold">
-                                                    @php
-                                                        $distributedAmount = $settingsFirstPrize + $settingsSecondPrize + $settingsThirdPrize;
-                                                    @endphp
-                                                    ${{ number_format($distributedAmount, 2) }}
-                                                </div>
-                                                <div class="stat-label text-dark">Total Distributed</div>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-3">
-                                            <div class="stat-item bg-white rounded p-3 shadow-sm">
-                                                <div class="stat-value text-warning fw-bold">
-                                                    @php
-                                                        // More realistic prize ratio calculation
-                                                        if ($totalRevenue > 0 && $displayPrizePool > 0) {
-                                                            $prizeRatio = ($displayPrizePool / $totalRevenue) * 100;
-                                                            // Cap the ratio at 100% for display purposes
-                                                            $displayRatio = min($prizeRatio, 100);
-                                                        } else {
-                                                            $displayRatio = 0;
-                                                        }
-                                                    @endphp
-                                                    {{ number_format($displayRatio, 1) }}%
-                                                    @if($displayRatio >= 100 && $totalRevenue > 0)
-                                                        <small class="d-block text-muted" style="font-size: 10px;">
-                                                            (Actual: {{ number_format(($displayPrizePool / $totalRevenue) * 100, 0) }}%)
-                                                        </small>
-                                                    @endif
-                                                </div>
-                                                <div class="stat-label text-dark">Prize Ratio</div>
-                                            </div>
-                                        </div>
-                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -539,15 +413,21 @@
                             </h4>
                         </div>
                         <div class="card-body">
-                            @foreach($draw->winners->sortBy('position') as $winner)
-                                <div class="d-flex align-items-center mb-3 p-3 border rounded {{ $winner->position == 1 ? 'border-warning bg-warning-light' : ($winner->position == 2 ? 'border-secondary' : 'border-bronze') }}">
-                                    <div class="avatar {{ $winner->position == 1 ? 'bg-warning' : ($winner->position == 2 ? 'bg-secondary' : 'bg-bronze') }} me-3">
-                                        <i class="fas fa-{{ $winner->position == 1 ? 'trophy' : 'medal' }}"></i>
-                                    </div>>
+                            @foreach($draw->winners->sortBy('prize_position') as $winner)
+                                <div class="d-flex align-items-center mb-3 p-3 border rounded {{ $winner->prize_position == 1 ? 'border-warning bg-warning-light' : ($winner->prize_position == 2 ? 'border-secondary' : 'border-bronze') }}">
+                                    <div class="avatar {{ $winner->prize_position == 1 ? 'bg-warning' : ($winner->prize_position == 2 ? 'bg-secondary' : 'bg-bronze') }} me-3">
+                                        <i class="fas fa-{{ $winner->prize_position == 1 ? 'trophy' : 'medal' }}"></i>
+                                    </div>
                                     <div class="flex-grow-1">
-                                        <h6 class="mb-1">{{ $winner->position }}{{ $winner->position == 1 ? 'st' : ($winner->position == 2 ? 'nd' : 'rd') }} Prize Winner</h6>
+                                        <h6 class="mb-1">{{ $winner->prize_position }}{{ $winner->prize_position == 1 ? 'st' : ($winner->prize_position == 2 ? 'nd' : 'rd') }} Prize Winner</h6>
                                         <div class="text-muted">
-                                            <span>Ticket #{{ $winner->lotteryTicket->ticket_number }}</span>
+                                            @if($winner->winning_ticket_number)
+                                                <span>Ticket #{{ $winner->winning_ticket_number }}</span>
+                                            @elseif($winner->lotteryTicket && $winner->lotteryTicket->ticket_number)
+                                                <span>Ticket #{{ $winner->lotteryTicket->ticket_number }}</span>
+                                            @else
+                                                <span class="text-muted">Ticket #N/A (Historical)</span>
+                                            @endif
                                         </div>
                                     </div>
                                     <div class="text-end">
@@ -561,82 +441,6 @@
                         </div>
                     </div>
                 @endif
-
-                <!-- All Tickets -->
-                <div class="card">
-                    <div class="card-header">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h4 class="card-title">
-                                <i class="fas fa-ticket-alt me-2"></i>
-                                All Tickets ({{ $draw->tickets()->count() }})
-                            </h4>
-                            <div>
-                                <span class="badge badge-info">{{ $draw->tickets()->count() }} tickets</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        @if($draw->tickets && $draw->tickets->count() > 0)
-                            <div class="table-responsive">
-                                <table class="table table-hover">
-                                    <thead>
-                                        <tr>
-                                            <th>Ticket #</th>
-                                            <th>Draw Time</th>
-                                            <th>Ticket Price</th>
-                                            <th>Status</th>
-                                            <th>Winner Prize</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach($draw->tickets()->with(['user', 'winner'])->get() as $ticket)
-                                            <tr class="{{ $ticket->winner ? 'table-success' : '' }}">
-                                                <td>
-                                                    <span class="fw-bold {{ $ticket->winner ? 'text-success' : 'text-primary' }}">
-                                                        #{{ $ticket->ticket_number }}
-                                                        @if($ticket->winner)
-                                                            <i class="fas fa-trophy text-warning ms-1"></i>
-                                                        @endif
-                                                    </span>
-                                                </td>
-                                                <td>
-                                                    {{ $draw->draw_date->format('M d, Y h:i A') }}
-                                                </td>
-                                                <td>
-                                                    <span class="text-success">${{ number_format($ticket->ticket_price, 2) }}</span>
-                                                </td>
-                                                <td>
-                                                    @if($ticket->winner)
-                                                        <span class="badge bg-success">Winner</span>
-                                                    @elseif($draw->status == 'completed')
-                                                        <span class="badge bg-secondary">No Prize</span>
-                                                    @else
-                                                        <span class="badge bg-info">Active</span>
-                                                    @endif
-                                                </td>
-                                                <td>
-                                                    @if($ticket->winner)
-                                                        <span class="text-success fw-bold">
-                                                            ${{ number_format($ticket->winner->prize_amount, 2) }}
-                                                        </span>
-                                                    @else
-                                                        <span class="text-muted">-</span>
-                                                    @endif
-                                                </td>
-                                            </tr>
-                                        @endforeach
-                                    </tbody>
-                                </table>
-                            </div>
-                        @else
-                            <div class="text-center py-4">
-                                <i class="fas fa-ticket-alt text-muted" style="font-size: 3rem;"></i>
-                                <h5 class="text-muted mt-3">No Tickets Sold</h5>
-                                <p class="text-muted">No tickets have been sold for this draw yet.</p>
-                            </div>
-                        @endif
-                    </div>
-                </div>
 
                 @auth
                     <!-- Your Tickets for This Draw -->

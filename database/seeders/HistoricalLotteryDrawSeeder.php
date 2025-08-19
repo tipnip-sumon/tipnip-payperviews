@@ -233,6 +233,7 @@ class HistoricalLotteryDrawSeeder extends Seeder
             LotteryWinner::create([
                 'lottery_draw_id' => $draw->id,
                 'lottery_ticket_id' => $winningTicket->id,
+                'winning_ticket_number' => $winningTicket->ticket_number, // Store the ticket number before deletion
                 'user_id' => 1, // Always use virtual user ID = 1 for all historical winners
                 'prize_position' => (int) $position,
                 'winner_index' => 1,
@@ -282,18 +283,23 @@ class HistoricalLotteryDrawSeeder extends Seeder
 
     private function deleteTicketsAfterDraw($draw)
     {
+        // Store the ticket counts before deletion for display purposes
+        $originalTotalTickets = $draw->total_tickets_sold;
+        $originalVirtualTickets = $draw->virtual_tickets_sold;
+        $originalDisplayTickets = $draw->display_tickets_sold;
+        
         // Delete all lottery tickets for this draw after it's completed
         // This simulates the system where tickets are removed after each draw
         $deletedCount = LotteryTicket::where('lottery_draw_id', $draw->id)->delete();
         
         $this->command->info("Deleted {$deletedCount} tickets for {$draw->draw_number} after draw completion");
         
-        // Update draw statistics to reflect that tickets were deleted
+        // Update draw statistics to reflect that tickets were deleted but preserve display counts
         $draw->update([
             'cleanup_performed' => true,
             'total_tickets_sold' => 0, // Reset since tickets are deleted
             'virtual_tickets_sold' => 0, // Reset since tickets are deleted
-            'display_tickets_sold' => 0, // Reset since tickets are deleted
+            'display_tickets_sold' => $originalDisplayTickets, // Keep original count for display
         ]);
     }
 

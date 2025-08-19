@@ -6,12 +6,12 @@
         <div class="col-12">
             <!-- Page Header -->
             <div class="page-header">
-                <div class="d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
                     <div>
                         <h1 class="page-title">🏆 Lottery Results</h1>
                         <p class="text-muted">View lottery draw results and winners</p>
                     </div>
-                    <div>
+                    <div class="d-flex gap-2 flex-wrap">
                         <a href="{{ route('lottery.index') }}" class="btn btn-primary">
                             <i class="fe fe-plus me-2"></i>Buy Tickets
                         </a>
@@ -26,7 +26,7 @@
             <div class="card">
                 <div class="card-body">
                     <form method="GET" action="{{ route('lottery.results') }}" class="row g-3">
-                        <div class="col-md-3">
+                        <div class="col-xl-3 col-lg-4 col-md-6 col-12">
                             <label for="status" class="form-label">Status</label>
                             <select name="status" id="status" class="form-control">
                                 <option value="">All Draws</option>
@@ -35,21 +35,21 @@
                                 <option value="cancelled" {{ request('status') == 'cancelled' ? 'selected' : '' }}>Cancelled</option>
                             </select>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-xl-3 col-lg-4 col-md-6 col-12">
                             <label for="date_from" class="form-label">From Date</label>
                             <input type="date" name="date_from" id="date_from" class="form-control" value="{{ request('date_from') }}">
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-xl-3 col-lg-4 col-md-6 col-12">
                             <label for="date_to" class="form-label">To Date</label>
                             <input type="date" name="date_to" id="date_to" class="form-control" value="{{ request('date_to') }}">
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-xl-3 col-lg-12 col-md-6 col-12">
                             <label class="form-label">&nbsp;</label>
-                            <div>
-                                <button type="submit" class="btn btn-primary">
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-primary flex-fill">
                                     <i class="fe fe-filter me-2"></i>Filter
                                 </button>
-                                <a href="{{ route('lottery.results') }}" class="btn btn-secondary">
+                                <a href="{{ route('lottery.results') }}" class="btn btn-secondary flex-fill">
                                     <i class="fe fe-refresh-cw me-2"></i>Clear
                                 </a>
                             </div>
@@ -68,49 +68,61 @@
                         </h4>
                     </div>
                     <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Draw Date</label>
-                                    <div class="d-flex align-items-center">
-                                        <i class="fe fe-calendar text-primary me-2"></i>
-                                        <span class="fw-bold">{{ $latestDraw->draw_date->format('M d, Y h:i A') }}</span>
+                        <div class="row g-3">
+                            <div class="col-lg-6 col-md-6 col-12">
+                                <div class="row g-3">
+                                    <div class="col-12">
+                                        <div class="d-flex flex-column">
+                                            <label class="form-label small text-muted mb-1">Draw Date</label>
+                                            <div class="d-flex align-items-center">
+                                                <i class="fe fe-calendar text-primary me-2"></i>
+                                                <span class="fw-bold">{{ $latestDraw->draw_date->format('M d, Y h:i A') }}</span>
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Total Tickets Sold</label>
-                                    <div class="d-flex align-items-center">
-                                        <i class="fe fe-ticket text-info me-2"></i>
-                                        @php
-                                            $latestTotalTickets = $latestDraw->tickets ? $latestDraw->tickets->count() : $latestDraw->total_tickets_sold;
-                                            $latestRealTickets = $latestDraw->tickets ? $latestDraw->tickets->where('is_virtual', false)->count() : 0;
-                                            $latestVirtualTickets = $latestDraw->tickets ? $latestDraw->tickets->where('is_virtual', true)->count() : 0;
-                                        @endphp
-                                        <span class="fw-bold">{{ $latestTotalTickets }}</span>
-                                        @if($latestDraw->tickets && $latestDraw->tickets->count() > 0)
-                                            <small class="text-muted ms-2">
-                                                ({{ $latestRealTickets }} real + {{ $latestVirtualTickets }} virtual)
-                                            </small>
-                                        @endif
+                                    <div class="col-12">
+                                        <div class="d-flex flex-column">
+                                            <label class="form-label small text-muted mb-1">Total Tickets Sold</label>
+                                            <div class="d-flex align-items-center">
+                                                <i class="fe fe-ticket text-info me-2"></i>
+                                                @php
+                                                    // Show actual historical ticket counts when available
+                                                    $latestTotalTickets = $latestDraw->display_tickets_sold > 0 ? $latestDraw->display_tickets_sold : 
+                                                                         ($latestDraw->tickets ? $latestDraw->tickets->count() : $latestDraw->total_tickets_sold);
+                                                @endphp
+                                                <span class="fw-bold">{{ number_format($latestTotalTickets) }}</span>
+                                                @if($latestDraw->cleanup_performed)
+                                                    <small class="text-muted ms-2">
+                                                        <span class="badge badge-info badge-sm ms-1">Historical</span>
+                                                    </small>
+                                                @endif
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Total Prize Pool</label>
-                                    <div class="d-flex align-items-center">
-                                        <i class="fe fe-gift text-warning me-2"></i>
-                                        @php
-                                            // Use the new helper method for consistent calculation
-                                            $latestCalculatedPrizePool = $latestDraw->actual_prize_pool;
-                                        @endphp
-                                        <span class="fw-bold text-success">${{ number_format($latestCalculatedPrizePool, 2) }}</span>
+                            <div class="col-lg-6 col-md-6 col-12">
+                                <div class="row g-3">
+                                    <div class="col-12">
+                                        <div class="d-flex flex-column">
+                                            <label class="form-label small text-muted mb-1">Total Prize Pool</label>
+                                            <div class="d-flex align-items-center">
+                                                <i class="fe fe-gift text-warning me-2"></i>
+                                                @php
+                                                    // Use the new helper method for consistent calculation
+                                                    $latestCalculatedPrizePool = $latestDraw->actual_prize_pool;
+                                                @endphp
+                                                <span class="fw-bold text-success">${{ number_format($latestCalculatedPrizePool, 2) }}</span>
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Status</label>
-                                    <div class="d-flex align-items-center">
-                                        <span class="badge badge-success">{{ ucfirst($latestDraw->status) }}</span>
+                                    <div class="col-12">
+                                        <div class="d-flex flex-column">
+                                            <label class="form-label small text-muted mb-1">Status</label>
+                                            <div class="d-flex align-items-center">
+                                                <span class="badge badge-success">{{ ucfirst($latestDraw->status) }}</span>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -123,27 +135,39 @@
                                     <i class="fas fa-crown me-2"></i>
                                     Winners
                                 </h5>
-                                <div class="row">
-                                    @foreach($latestDraw->winners->sortBy('position') as $winner)
-                                        @if($winner->position)
-                                            <div class="col-md-4 mb-3">
-                                            <div class="card {{ ($winner->position ?? 0) == 1 ? 'border-warning bg-light' : (($winner->position ?? 0) == 2 ? 'border-secondary' : 'border-bronze') }}">
-                                                <div class="card-body text-center">
-                                                    <div class="mb-2">
-                                                        @if(($winner->position ?? 0) == 1)
-                                                            <i class="fas fa-trophy text-warning fs-2"></i>
-                                                        @elseif(($winner->position ?? 0) == 2)
-                                                            <i class="fas fa-medal text-secondary fs-2"></i>
-                                                        @else
-                                                            <i class="fas fa-medal text-bronze fs-2"></i>
-                                                        @endif
+                                <div class="row g-3">
+                                    @foreach($latestDraw->winners->sortBy('prize_position') as $winner)
+                                        @if($winner->prize_position)
+                                            <div class="col-lg-4 col-md-6 col-12">
+                                                <div class="card h-100 {{ $winner->prize_position == 1 ? 'border-warning bg-light' : ($winner->prize_position == 2 ? 'border-secondary' : 'border-bronze') }}">
+                                                    <div class="card-body text-center">
+                                                        <div class="mb-2">
+                                                            @if($winner->prize_position == 1)
+                                                                <i class="fas fa-trophy text-warning" style="font-size: 2rem;"></i>
+                                                            @elseif($winner->prize_position == 2)
+                                                                <i class="fas fa-medal text-secondary" style="font-size: 2rem;"></i>
+                                                            @else
+                                                                <i class="fas fa-medal text-bronze" style="font-size: 2rem;"></i>
+                                                            @endif
+                                                        </div>
+                                                        <h6 class="mb-1">{{ $winner->prize_position }}{{ $winner->prize_position == 1 ? 'st' : ($winner->prize_position == 2 ? 'nd' : 'rd') }} Prize</h6>
+                                                        <h5 class="text-success mb-2">${{ number_format($winner->prize_amount, 2) }}</h5>
+                                                        <div class="mb-2">
+                                                            <small class="text-muted d-block">Winning Ticket</small>
+                                                            <code class="fs-6">
+                                                                @if($winner->winning_ticket_number)
+                                                                    {{ $winner->winning_ticket_number }}
+                                                                @elseif($winner->lotteryTicket)
+                                                                    {{ $winner->lotteryTicket->ticket_number }}
+                                                                @else
+                                                                    <span class="text-muted">Ticket Deleted</span>
+                                                                @endif
+                                                            </code>
+                                                        </div>
+                                                        <span class="badge bg-{{ $winner->claim_status == 'claimed' ? 'success' : 'warning' }}">
+                                                            {{ ucfirst($winner->claim_status) }}
+                                                        </span>
                                                     </div>
-                                                    <h5 class="mb-1">{{ $winner->position }} Prize</h5>
-                                                    <h6 class="mb-2 text-muted">W-{{ $winner->position }}</h6>
-                                                    <h4 class="text-success mb-2">${{ number_format($winner->prize_amount, 2) }}</h4>
-                                                    <p class="mb-1 font-monospace">
-                                                        #{{ $winner->lotteryTicket ? $winner->lotteryTicket->ticket_number : 'N/A' }}
-                                                    </p>
                                                 </div>
                                             </div>
                                         @endif
@@ -153,7 +177,7 @@
                         @endif
 
                         <div class="text-center mt-3">
-                            <a href="{{ route('lottery.draw.details', $latestDraw->id) }}" class="btn btn-primary">
+                            <a href="{{ route('lottery.draw.detail', $latestDraw->id) }}" class="btn btn-primary">
                                 <i class="fe fe-eye me-2"></i>View Full Details
                             </a>
                         </div>
@@ -184,13 +208,13 @@
                 </div>
                 <div class="card-body">
                     @if(isset($draws) && $draws->count() > 0)
-                        <div class="row">
+                        <div class="row g-4">
                             @foreach($draws as $draw)
-                                <div class="col-lg-3 col-md-6 mb-4">
+                                <div class="col-xl-3 col-lg-4 col-md-6 col-12">
                                     <div class="card h-100 {{ $draw->status == 'completed' ? 'border-success' : ($draw->status == 'pending' ? 'border-warning' : 'border-secondary') }}">
                                         <div class="card-header d-flex justify-content-between align-items-center">
                                             <h6 class="mb-0">Draw #{{ $draw->display_draw_number }}</h6>
-                                            <span class="badge badge-{{ $draw->status == 'completed' ? 'success' : ($draw->status == 'pending' ? 'warning' : 'secondary') }}">
+                                            <span class="badge bg-{{ $draw->status == 'completed' ? 'success' : ($draw->status == 'pending' ? 'warning' : 'secondary') }}">
                                                 {{ ucfirst($draw->status) }}
                                             </span>
                                         </div>
@@ -210,24 +234,32 @@
                                             <div class="mb-3">
                                                 <small class="text-muted">Tickets Sold</small>
                                                 @php
-                                                    $totalTickets = $draw->tickets ? $draw->tickets->count() : $draw->total_tickets_sold;
-                                                    $realTickets = $draw->tickets ? $draw->tickets->where('is_virtual', false)->count() : 0;
-                                                    $virtualTickets = $draw->tickets ? $draw->tickets->where('is_virtual', true)->count() : 0;
+                                                    $totalTickets = $draw->display_tickets_sold > 0 ? $draw->display_tickets_sold : 
+                                                                   ($draw->tickets ? $draw->tickets->count() : $draw->total_tickets_sold);
                                                 @endphp
                                                 <div>
-                                                    <span class="fw-bold">{{ $totalTickets }}</span>
+                                                    <span class="fw-bold">{{ number_format($totalTickets) }}</span>
                                                 </div>
                                             </div>
 
                                             @if($draw->status == 'completed' && $draw->winners && $draw->winners->count() > 0)
                                                 <div class="mb-3">
-                                                    <small class="text-muted">Winners</small>
-                                                    <div class="d-flex flex-wrap gap-1">
-                                                        @foreach($draw->winners->sortBy('position') as $winner)
-                                                            @if($winner->position)
-                                                                <span class="badge badge-sm {{ ($winner->position ?? 0) == 1 ? 'badge-warning' : (($winner->position ?? 0) == 2 ? 'badge-secondary' : 'badge-info') }}">
-                                                                    {{ $winner->position }} Prize: ${{ number_format($winner->prize_amount, 2) }}
-                                                                </span>
+                                                    <small class="text-muted">Winners & Tickets</small>
+                                                    <div class="d-flex flex-column gap-1">
+                                                        @foreach($draw->winners->sortBy('prize_position') as $winner)
+                                                            @if($winner->prize_position)
+                                                                <div class="d-flex justify-content-between align-items-center">
+                                                                    <span class="badge bg-{{ ($winner->prize_position ?? 0) == 1 ? 'warning' : (($winner->prize_position ?? 0) == 2 ? 'secondary' : 'info') }}">
+                                                                        {{ $winner->prize_position }}{{ $winner->prize_position == 1 ? 'st' : ($winner->prize_position == 2 ? 'nd' : 'rd') }} Prize: ${{ number_format($winner->prize_amount, 2) }}
+                                                                    </span>
+                                                                    <small class="text-muted">
+                                                                        @if($winner->winning_ticket_number)
+                                                                            <code class="fs-7">{{ $winner->winning_ticket_number }}</code>
+                                                                        @else
+                                                                            <span class="text-muted">No Ticket</span>
+                                                                        @endif
+                                                                    </small>
+                                                                </div>
                                                             @endif
                                                         @endforeach
                                                     </div>
@@ -242,7 +274,7 @@
                                             @endif
                                         </div>
                                         <div class="card-footer">
-                                            <a href="{{ route('lottery.draw.details', $draw->id) }}" class="btn btn-outline-primary btn-sm w-100">
+                                            <a href="{{ route('lottery.draw.detail', $draw->id) }}" class="btn btn-outline-primary btn-sm w-100">
                                                 <i class="fe fe-eye me-1"></i>View Details
                                             </a>
                                         </div>
@@ -359,6 +391,61 @@ document.addEventListener('DOMContentLoaded', function() {
 }
 .badge-sm {
     font-size: 0.75em;
+}
+.fs-7 {
+    font-size: 0.8rem;
+}
+
+/* Mobile responsive improvements */
+@media (max-width: 768px) {
+    .page-title {
+        font-size: 1.5rem;
+    }
+    
+    .card-body {
+        padding: 1rem;
+    }
+    
+    .btn {
+        font-size: 0.9rem;
+        padding: 0.5rem 1rem;
+    }
+    
+    .fs-6 {
+        font-size: 0.875rem !important;
+    }
+    
+    .d-flex.gap-2 {
+        gap: 0.5rem !important;
+    }
+}
+
+@media (max-width: 576px) {
+    .container-fluid {
+        padding: 0.5rem;
+    }
+    
+    .card {
+        margin-bottom: 1rem;
+    }
+    
+    .card-header h4 {
+        font-size: 1.1rem;
+    }
+    
+    .btn {
+        font-size: 0.85rem;
+        padding: 0.4rem 0.8rem;
+    }
+    
+    /* Stack buttons vertically on very small screens */
+    .d-flex.gap-2.flex-wrap {
+        flex-direction: column;
+    }
+    
+    .d-flex.gap-2.flex-wrap .btn {
+        width: 100%;
+    }
 }
 </style>
 @endsection
