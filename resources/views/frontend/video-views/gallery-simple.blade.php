@@ -67,7 +67,7 @@
                                                         <i class="fas fa-clock me-1"></i>Duration: {{ $video->duration ?? 30 }}s
                                                     </small>
                                                     <small class="text-success">
-                                                        <i class="fas fa-eye me-1"></i>{{ $video->views_count ?? 0 }} views
+                                                        Earning: <strong class="text-success small"><i class="fas fa-dollar-sign me-1"></i>{{ number_format($userStats['earning_rate'] ?? $video->cost_per_click, 2) }}</strong>
                                                     </small>
                                                 </div>
                                                 

@@ -2461,7 +2461,7 @@ class UserController extends Controller
             ]);
         }
 
-        return view('frontend.deposit-history', $data);
+        return view('frontend.deposit-history', $data); 
     }
 
     /**

@@ -211,7 +211,7 @@
                                                         <img src="{{ asset('assets/images/gateway/' . $deposit->gateway->image) }}" 
                                                              alt="{{ $deposit->gateway->name }}" class="me-2" style="width: 24px; height: 24px;">
                                                     @endif
-                                                    <span>{{ $deposit->gateway->name ?? 'Manual' }}</span>
+                                                    <span>{{ $deposit->gateway->name ?? 'NowPayments' }}</span>
                                                 </div>
                                             </td>
                                             <td>
@@ -268,7 +268,7 @@
                                                                             </tr>
                                                                             <tr>
                                                                                 <td><strong>Gateway:</strong></td>
-                                                                                <td>{{ $deposit->gateway->name ?? 'Manual' }}</td>
+                                                                                <td>{{ $deposit->gateway->name ?? 'NowPayments' }}</td>
                                                                             </tr>
                                                                             <tr>
                                                                                 <td><strong>Amount:</strong></td>
@@ -301,21 +301,50 @@
                                                                                 </td>
                                                                             </tr>
                                                                         </table>
-                                                                        
+
                                                                         @if($deposit->admin_feedback)
                                                                             <div class="mt-3">
-                                                                                <strong>Admin Feedback:</strong>
+                                                                                <strong>Payment Link:</strong>
                                                                                 <div class="border p-2 mt-1 bg-light">
                                                                                     {{ $deposit->admin_feedback }}
                                                                                 </div>
                                                                             </div>
                                                                         @endif
 
-                                                                        @if($deposit->detail)
-                                                                            <div class="mt-3">
+                                                                        @if($deposit->detail && $deposit->status != 1)
+                                                                            <div class="mt-3" style="display: none;">
                                                                                 <strong>Payment Details:</strong>
-                                                                                <div class="border p-2 mt-1 bg-light">
-                                                                                    <small>{{ $deposit->detail }}</small>
+                                                                                <div class="border p-3 mt-1 bg-light rounded">
+                                                                                    @php
+                                                                                        $details = json_decode($deposit->detail, true);
+                                                                                    @endphp
+                                                                                    
+                                                                                    @if($details && is_array($details))
+                                                                                        <div class="row g-2">
+                                                                                            @foreach($details as $key => $value)
+                                                                                                <div class="col-md-6">
+                                                                                                    <div class="d-flex flex-column">
+                                                                                                        <small class="text-muted fw-bold">{{ ucwords(str_replace('_', ' ', $key)) }}:</small>
+                                                                                                        <span class="text-dark">
+                                                                                                            @if($key === 'payment_status')
+                                                                                                                <span class="badge bg-{{ $value === 'waiting' ? 'warning' : ($value === 'finished' ? 'success' : 'info') }}">
+                                                                                                                    {{ ucfirst($value) }}
+                                                                                                                </span>
+                                                                                                            @elseif(str_contains($key, 'amount'))
+                                                                                                                <strong class="text-primary">{{ $value }}</strong>
+                                                                                                            @elseif($key === 'pay_address')
+                                                                                                                <code class="small text-break">{{ $value }}</code>
+                                                                                                            @else
+                                                                                                                {{ $value }}
+                                                                                                            @endif
+                                                                                                        </span>
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                            @endforeach
+                                                                                        </div>
+                                                                                    @else
+                                                                                        <small class="text-muted">{{ $deposit->detail }}</small>
+                                                                                    @endif
                                                                                 </div>
                                                                             </div>
                                                                         @endif
