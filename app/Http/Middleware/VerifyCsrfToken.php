@@ -18,13 +18,9 @@ class VerifyCsrfToken extends Middleware
         '/admin/logout',
         'admin/emergency-logout',
         '/admin/emergency-logout',
-        'logout',
-        '/logout',
-        'simple-logout',
-        '/simple-logout',
+        'admin/simple-logout',
+        '/admin/simple-logout',
         'api/*', // API routes typically don't need CSRF
-        'user/withdraw', // Temporarily exclude withdrawal POST to test CSRF issues
-        '/user/withdraw', // Temporarily exclude withdrawal POST to test CSRF issues
     ];
 
     /**
@@ -41,9 +37,9 @@ class VerifyCsrfToken extends Middleware
         try {
             return parent::handle($request, $next);
         } catch (TokenMismatchException $e) {
-            // Special handling for logout requests - allow them to proceed even with CSRF mismatch
-            if ($this->isLogoutRequest($request)) {
-                \Illuminate\Support\Facades\Log::info('CSRF bypassed for logout request', [
+            // Special handling for admin logout requests only
+            if ($this->isAdminLogoutRequest($request)) {
+                \Illuminate\Support\Facades\Log::info('CSRF bypassed for admin logout request', [
                     'url' => $request->fullUrl(),
                     'method' => $request->method(),
                     'ip' => $request->ip(),
@@ -82,17 +78,15 @@ class VerifyCsrfToken extends Middleware
     }
 
     /**
-     * Check if the request is a logout request
+     * Check if the request is an admin logout request
      */
-    protected function isLogoutRequest($request): bool
+    protected function isAdminLogoutRequest($request): bool
     {
-        $logoutPaths = [
-            'logout',
-            '/logout',
-            'simple-logout',
-            '/simple-logout',
+        $adminLogoutPaths = [
             'admin/logout',
             '/admin/logout',
+            'admin/simple-logout',
+            '/admin/simple-logout',
             'admin/emergency-logout',
             '/admin/emergency-logout'
         ];
@@ -100,8 +94,8 @@ class VerifyCsrfToken extends Middleware
         $currentPath = $request->path();
         $currentUri = $request->getRequestUri();
         
-        return in_array($currentPath, $logoutPaths) || 
-               in_array($currentUri, $logoutPaths) ||
-               in_array('/' . $currentPath, $logoutPaths);
+        return in_array($currentPath, $adminLogoutPaths) || 
+               in_array($currentUri, $adminLogoutPaths) ||
+               in_array('/' . $currentPath, $adminLogoutPaths);
     }
 }

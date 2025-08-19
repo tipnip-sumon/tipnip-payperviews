@@ -66,15 +66,6 @@ return Application::configure(basePath: dirname(__DIR__))
             // SessionCleanup::class, // MOVED to alias only - can be applied selectively
         ]);
         
-        // Custom logout middleware group (web without CSRF)
-        $middleware->appendToGroup('logout', [
-            \Illuminate\Cookie\Middleware\EncryptCookies::class,
-            \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
-            \Illuminate\Session\Middleware\StartSession::class,
-            \Illuminate\View\Middleware\ShareErrorsFromSession::class,
-            // NOTE: Explicitly excluding VerifyCsrfToken for logout routes
-        ]);
-        
         // $middleware->appendToGroup('auth', [
         //     AdminMiddleware::class,
         // ]);

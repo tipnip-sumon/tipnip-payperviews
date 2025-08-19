@@ -2530,11 +2530,8 @@
                                         <span class="fw-semibold">Sign Out</span>
                                     </a>
                                     
-                                    <!-- Hidden fallback logout forms -->
-                                    <form id="simple-logout-form" action="{{ route('simple.logout') }}" method="GET" style="display: none;">
-                                    </form>
-                                    
-                                    <form id="fallback-logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">
+                                    <!-- Hidden logout form with proper CSRF -->
+                                    <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">
                                         @csrf
                                     </form>
                                 </div>
