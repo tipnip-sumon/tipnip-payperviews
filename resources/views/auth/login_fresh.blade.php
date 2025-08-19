@@ -1736,110 +1736,110 @@ document.addEventListener('DOMContentLoaded', function() {
             //console.log('Login response status:', response.status);
 
             // Handle CSRF token mismatch with ONE retry only
-            // if (response.status === 419) {
-            //     //console.log('CSRF token mismatch (419) - attempting refresh and retry...');
+            if (response.status === 419) {
+                //console.log('CSRF token mismatch (419) - attempting refresh and retry...');
 
-            //     try {
-            //         const newToken = await refreshCSRFToken();
-            //         if (newToken) {
-            //             // Create completely fresh form data with new token
-            //             const retryFormData = new FormData();
-            //             retryFormData.append('_token', newToken);
-            //             retryFormData.append('username', usernameInput.value.trim());
-            //             retryFormData.append('password', passwordInput.value);
-            //             if (rememberCheckbox.checked) {
-            //                 retryFormData.append('remember', '1');
-            //             }
+                try {
+                    const newToken = await refreshCSRFToken();
+                    if (newToken) {
+                        // Create completely fresh form data with new token
+                        const retryFormData = new FormData();
+                        retryFormData.append('_token', newToken);
+                        retryFormData.append('username', usernameInput.value.trim());
+                        retryFormData.append('password', passwordInput.value);
+                        if (rememberCheckbox.checked) {
+                            retryFormData.append('remember', '1');
+                        }
 
-            //             //console.log('Retrying login with refreshed token...');
-            //             response = await fetch(form.action, {
-            //                 method: 'POST',
-            //                 body: retryFormData,
-            //                 headers: {
-            //                     'X-Requested-With': 'XMLHttpRequest',
-            //                     'Accept': 'application/json',
-            //                     'Cache-Control': 'no-cache'
-            //                 },
-            //                 credentials: 'same-origin'
-            //             });
+                        //console.log('Retrying login with refreshed token...');
+                        response = await fetch(form.action, {
+                            method: 'POST',
+                            body: retryFormData,
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'Accept': 'application/json',
+                                'Cache-Control': 'no-cache'
+                            },
+                            credentials: 'same-origin'
+                        });
 
-            //             //console.log('Retry response status:', response.status);
+                        //console.log('Retry response status:', response.status);
 
-            //             // If still 419 after retry, handle gracefully without showing error
-            //             if (response.status === 419) {
-            //                 //console.log('CSRF token still invalid after retry - handling automatically');
+                        // If still 419 after retry, handle gracefully without showing error
+                        if (response.status === 419) {
+                            //console.log('CSRF token still invalid after retry - handling automatically');
 
-            //                 // Instead of showing error, silently regenerate session and try again
-            //                 try {
-            //                     // Clear any session issues by forcing a fresh start
-            //                     await fetch('/session/refresh', {
-            //                         method: 'POST',
-            //                         headers: {
-            //                             'X-Requested-With': 'XMLHttpRequest',
-            //                             'Accept': 'application/json'
-            //                         },
-            //                         credentials: 'same-origin'
-            //                     });
+                            // Instead of showing error, silently regenerate session and try again
+                            try {
+                                // Clear any session issues by forcing a fresh start
+                                await fetch('/session/refresh', {
+                                    method: 'POST',
+                                    headers: {
+                                        'X-Requested-With': 'XMLHttpRequest',
+                                        'Accept': 'application/json'
+                                    },
+                                    credentials: 'same-origin'
+                                });
                                 
-            //                     // Auto-reload page to get fresh session without user intervention
-            //                     //console.log('Auto-refreshing page to resolve session issue...');
-            //                     window.location.reload();
-            //                     return;
+                                // Auto-reload page to get fresh session without user intervention
+                                //console.log('Auto-refreshing page to resolve session issue...');
+                                window.location.reload();
+                                return;
                                 
-            //                 } catch (error) {
-            //                     //console.log('Session refresh failed, showing user-friendly message');
+                            } catch (error) {
+                                //console.log('Session refresh failed, showing user-friendly message');
                                 
-            //                     // Only show error as last resort, but make it user-friendly
-            //                     Swal.fire({
-            //                         title: 'Login Refresh Needed',
-            //                         text: 'Please click OK to refresh the login page automatically.',
-            //                         icon: 'info',
-            //                         confirmButtonText: 'OK, Refresh',
-            //                         allowOutsideClick: false,
-            //                         allowEscapeKey: false
-            //                     }).then(() => {
-            //                         window.location.reload();
-            //                     });
-            //                     return;
-            //                 }
-            //             }
-            //         } else {
-            //             throw new Error('Failed to refresh CSRF token');
-            //         }
-            //     } catch (refreshError) {
-            //         console.error('CSRF refresh failed:', refreshError);
+                                // Only show error as last resort, but make it user-friendly
+                                Swal.fire({
+                                    title: 'Login Refresh Needed',
+                                    text: 'Please click OK to refresh the login page automatically.',
+                                    icon: 'info',
+                                    confirmButtonText: 'OK, Refresh',
+                                    allowOutsideClick: false,
+                                    allowEscapeKey: false
+                                }).then(() => {
+                                    window.location.reload();
+                                });
+                                return;
+                            }
+                        }
+                    } else {
+                        throw new Error('Failed to refresh CSRF token');
+                    }
+                } catch (refreshError) {
+                    console.error('CSRF refresh failed:', refreshError);
                     
-            //         // Instead of showing confusing error, handle gracefully
-            //         //console.log('Handling session refresh failure gracefully...');
+                    // Instead of showing confusing error, handle gracefully
+                    //console.log('Handling session refresh failure gracefully...');
 
-            //         // Try to clear session and restart cleanly
-            //         try {
-            //             // Clear local storage and session storage
-            //             localStorage.clear();
-            //             sessionStorage.clear();
+                    // Try to clear session and restart cleanly
+                    try {
+                        // Clear local storage and session storage
+                        localStorage.clear();
+                        sessionStorage.clear();
                         
-            //             // Show user-friendly message and auto-refresh
-            //             Swal.fire({
-            //                 title: 'Refreshing Login',
-            //                 text: 'Please wait while we refresh your login page...',
-            //                 icon: 'info',
-            //                 showConfirmButton: false,
-            //                 allowOutsideClick: false,
-            //                 timer: 2000,
-            //                 timerProgressBar: true
-            //             }).then(() => {
-            //                 window.location.href = '/login'; // Go to fresh login page
-            //             });
+                        // Show user-friendly message and auto-refresh
+                        Swal.fire({
+                            title: 'Refreshing Login',
+                            text: 'Please wait while we refresh your login page...',
+                            icon: 'info',
+                            showConfirmButton: false,
+                            allowOutsideClick: false,
+                            timer: 2000,
+                            timerProgressBar: true
+                        }).then(() => {
+                            window.location.href = '/login'; // Go to fresh login page
+                        });
                         
-            //         } catch (error) {
-            //             // Final fallback - just reload
-            //             //console.log('Final fallback - reloading page');
-            //             window.location.reload();
-            //         }
+                    } catch (error) {
+                        // Final fallback - just reload
+                        //console.log('Final fallback - reloading page');
+                        window.location.reload();
+                    }
                     
-            //         return;
-            //     }
-            // }
+                    return;
+                }
+            }
 
             if (response.ok || response.redirected) {
                 //console.log('Login successful! Response:', {
