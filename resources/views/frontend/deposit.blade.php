@@ -1,6 +1,6 @@
 <x-smart_layout>
-    @section('top_title',$pageTitle)
-    
+    @section('top_title',$pageTitle) 
+    @section('title','Add Funds')
     @push('styles')
     <style>
         /* Compact header styles */
@@ -73,380 +73,384 @@
     @endpush
     
     @section('content') 
-    
-    <!-- Refresh Overlay -->
-    <div class="refresh-overlay" id="refreshOverlay">
-        <div class="spinner">
-            <i class="fas fa-sync-alt fa-spin"></i>
-            <div><strong>Refreshing page...</strong></div>
-            <small>Please wait while we update your payment status</small>
-        </div>
-    </div>
-    
-    <!-- Add Funds Page Header --> 
-    <div class="row mb-2 my-4">
-        <div class="col-12">
-            <div class="card bg-gradient-primary text-white border-0 shadow position-relative overflow-hidden">
-                <div class="position-absolute top-0 end-0 opacity-10">
-                    <i class="fas fa-coins fa-4x mt-n2 me-n2 d-none d-md-block"></i>
-                    <i class="fas fa-coins fa-3x mt-n1 me-n1 d-block d-md-none"></i>
-                </div>
-                <div class="card-body py-2">
-                    <div class="d-flex flex-column flex-md-row align-items-center">
-                        <div class="me-md-3 mb-1 mb-md-0 text-center text-md-start">
-                            <div class="bg-white bg-opacity-25 rounded-circle p-1 d-flex align-items-center justify-content-center mx-auto mx-md-0" style="width: 48px; height: 48px;">
-                                <i class="fas fa-wallet fa-lg text-white"></i>
-                            </div>
-                        </div>
-                        <div class="text-center text-md-start">
-                            <h2 class="mb-0 fw-bold fs-4 fs-md-3">Add Funds to Your Account</h2>
-                            <p class="mb-1 fs-6">Deposit money to access premium features and increase your earning potential.</p>
-                            <div class="d-flex flex-wrap justify-content-center justify-content-md-start">
-                                <span class="badge bg-white text-primary p-1 me-2 mb-1"><i class="fas fa-shield-alt me-1"></i> Secure</span>
-                                <span class="badge bg-white text-primary p-1 me-2 mb-1"><i class="fas fa-bolt me-1"></i> Instant</span>
-                                <span class="badge bg-white text-primary p-1 mb-1"><i class="fas fa-clock me-1"></i> 24/7</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row mb-2 my-4">
-        <!-- Payment Method Selection -->
-        <div class="col-lg-8">
-            <div class="card border-0 shadow-sm mb-3">
-                <div class="card-header bg-white py-2 border-bottom">
-                    <h5 class="card-title mb-0 d-flex align-items-center">
-                        <span class="bg-primary bg-opacity-10 p-2 rounded-circle me-2 text-primary">
-                            <i class="fas fa-credit-card"></i>
-                        </span>
-                        Create Payment
-                    </h5>
-                </div>
-                <div class="card-body" id="step-1">
-                    @php $pendingDeposit = App\Models\Deposit::Pending()->where('user_id', $user->id)->first(); @endphp
-                    @if ($pendingDeposit)
-                        <div class="alert alert-info border-start border-info border-4 mb-3 d-flex flex-column flex-sm-row align-items-start align-items-sm-center">
-                            <i class="fas fa-info-circle fa-lg me-0 me-sm-3 mb-2 mb-sm-0 text-info"></i> 
-                            <div>
-                                <strong>Pending Payment Detected</strong>
-                                <p class="mb-0">You have a pending payment. Please complete it or cancel to create a new one.</p>
-                            </div>
-                        </div>
-                        
-                        <div class="payment-details p-3 bg-light rounded-3 border mb-3 position-relative">
-                            <div class="ribbon ribbon-top-right d-none d-md-block">
-                                <span class="bg-primary">PENDING</span>
-                            </div>
-                            <span class="badge bg-primary position-absolute top-0 start-0 mt-2 ms-2 d-block d-md-none">PENDING</span>
-                            <h5 class="text-primary mb-3 border-bottom pb-2 d-flex align-items-center">
-                                <i class="fas fa-file-invoice-dollar me-2"></i> Payment Details
-                            </h5>
-                            
-                            <div class="row">
-                                <div class="col-12 col-md-6 mb-3">
-                                    <div class="d-flex flex-column flex-sm-row align-items-start align-items-sm-center">
-                                        <div class="text-muted me-0 me-sm-3 mb-1 mb-sm-0" style="min-width: 100px;">
-                                            <strong>Order ID:</strong>
-                                        </div>
-                                        <div class="bg-white p-2 rounded w-100 border">
-                                            <code class="fs-6 text-break">{{ $pendingDeposit->trx }}</code>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="col-12 col-md-6 mb-3">
-                                    <div class="d-flex flex-column flex-sm-row align-items-start align-items-sm-center">
-                                        <div class="text-muted me-0 me-sm-3 mb-1 mb-sm-0" style="min-width: 100px;">
-                                            <strong>Amount:</strong>
-                                        </div>
-                                        <div class="bg-white p-2 rounded w-100 border">
-                                            <span class="text-success fw-bold">${{ showAmount($pendingDeposit->amount) }}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="col-12 col-md-6 mb-3">
-                                    <div class="d-flex flex-column flex-sm-row align-items-start align-items-sm-center">
-                                        <div class="text-muted me-0 me-sm-3 mb-1 mb-sm-0" style="min-width: 100px;">
-                                            <strong>Currency:</strong>
-                                        </div>
-                                        <div class="bg-white p-2 rounded w-100 border">
-                                            <span class="badge bg-secondary">{{ strtoupper($pendingDeposit->method_currency) }}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="col-12 col-md-6 mb-3">
-                                    <div class="d-flex flex-column flex-sm-row align-items-start align-items-sm-center">
-                                        <div class="text-muted me-0 me-sm-3 mb-1 mb-sm-0" style="min-width: 100px;">
-                                            <strong>Pay Amount:</strong>
-                                        </div>
-                                        <div class="bg-white p-2 rounded w-100 border">
-                                            <span class="fw-bold">{{ $pendingDeposit->final_amo }}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label class="form-label text-muted">
-                                    <i class="fas fa-link me-1 text-primary"></i> Payment Link:
-                                </label>
-                                <div class="input-group">
-                                    <input type="text" class="form-control text-truncate" id="payment-link" value="{{ $pendingDeposit->admin_feedback }}" readonly>
-                                    <button class="btn btn-primary d-flex align-items-center" type="button" id="copy-btn" onclick="copyPaymentLink()">
-                                        <i class="fas fa-copy me-1 d-none d-sm-inline"></i> <span>Copy</span>
-                                    </button>
-                                </div>
-                                <small class="text-muted mt-1 d-block">Use this link to complete your payment</small>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label class="form-label text-muted">
-                                    <i class="fas fa-wallet me-1 text-primary"></i> Payment Wallet:
-                                </label>
-                                <div class="input-group">
-                                    <input type="text" class="form-control text-truncate" id="payment-wallet" value="{{ $pendingDeposit->btc_wallet }}" readonly>
-                                    <button class="btn btn-primary d-flex align-items-center" type="button" id="copy-wallet" onclick="copyPaymentWallet()">
-                                        <i class="fas fa-copy me-1 d-none d-sm-inline"></i> <span>Copy</span>
-                                    </button>
-                                </div>
-                                <small class="text-muted mt-1 d-block">Send your payment to this wallet address</small>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label class="form-label text-muted">
-                                    <i class="fas fa-info-circle me-1 text-primary"></i> Status:
-                                </label>
-                                <div>
-                                    @if ($pendingDeposit->btc_amo == 'waiting')
-                                        <div class="alert alert-warning py-2 d-flex flex-column flex-sm-row align-items-center status-waiting">
-                                            <div class="me-0 me-sm-3 mb-2 mb-sm-0 text-center">
-                                                <i class="fas fa-clock fa-2x text-warning"></i>
-                                            </div>
-                                            <div class="text-center text-sm-start">
-                                                <strong>Waiting for payment</strong>
-                                                <p class="mb-0 small">We're waiting for your payment to be confirmed.</p>
-                                            </div>
-                                        </div>
-                                    @elseif ($pendingDeposit->btc_amo == 'finished')
-                                        <div class="alert alert-success py-2 d-flex flex-column flex-sm-row align-items-center status-finished">
-                                            <div class="me-0 me-sm-3 mb-2 mb-sm-0 text-center">
-                                                <i class="fas fa-check-circle fa-2x text-success"></i>
-                                            </div>
-                                            <div class="text-center text-sm-start">
-                                                <strong>Payment completed</strong>
-                                                <p class="mb-0 small">Your payment has been successfully processed.</p>
-                                            </div>
-                                        </div>
-                                    @else
-                                        <div class="alert alert-primary py-2 d-flex flex-column flex-sm-row align-items-center status-processing">
-                                            <div class="me-0 me-sm-3 mb-2 mb-sm-0 text-center">
-                                                <i class="fas fa-spinner fa-spin fa-2x text-primary"></i>
-                                            </div>
-                                            <div class="text-center text-sm-start">
-                                                <strong>Processing payment</strong>
-                                                <p class="mb-0 small">Your payment is being processed. This may take a few minutes.</p>
-                                            </div>
-                                        </div>
-                                    @endif
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="d-flex flex-column flex-sm-row justify-content-between gap-3">
-                            <button type="button" class="btn btn-primary btn-lg refresh-btn w-100">
-                                <i class="fas fa-sync-alt me-2"></i> Refresh Status
-                            </button>
-                            <form method="DELETE" enctype="multipart/form-data" class="w-100">
-                                @csrf
-                                @method('DELETE')
-                                <button class="btn btn-outline-danger btn-lg sw-btn-pay w-100" data-id="@auth{{ $user->id }}@endauth">
-                                    <i class="fas fa-times-circle me-2"></i> Cancel Payment
-                                </button>
-                            </form>
-                        </div>
-                    @else
-                        <div class="row mb-4">
-                            <div class="col-md-7 col-lg-7">
-                                <div class="mb-4">
-                                    <h5 class="text-primary border-bottom pb-2 mb-3">
-                                        <i class="fas fa-money-bill-wave me-2"></i> Create a New Payment
-                                    </h5>
-                                    <p class="text-muted">Fill in the details below to add funds to your account. Select your preferred payment method and enter the amount.</p>
-                                </div>
-                                
-                                <form action="{{route('pay')}}" method="POST" enctype="multipart/form-data" class="payment-form">
-                                    @csrf
-                                    <input type="hidden" name="method_code">
-                                    <input type="hidden" name="currency">
-                                    <input type="hidden" name="user_id" value="@auth{{ $user->id }}@endauth">
-                                    {{-- <input type="hidden" name="plan_id" class="form-control" id="plan_id" value="{{ old('pay_amount') }}"> --}}
-                                    @error('plan_id')
-                                        <span class="text-danger" role="alert">
-                                            {{ $message }}
-                                        </span>
-                                    @enderror
-                                    
-                                    <div class="form-group mb-3">
-                                        <label class="form-label fw-bold">
-                                            <i class="fas fa-exchange-alt text-primary me-1"></i> Payment Method
-                                        </label>
-                                        <select class="form-select form-control qursy" name="pay_currency" required>
-                                            <option value="">Select Payment Method</option>
-                                            <option value="usdtbsc">USDT (BSC Network)</option>
-                                            <option value="usdttrc20">USDT (TRC20 Network)</option>
-                                            <option value="usdterc20">USDT (ERC20 Network)</option>
-                                            <option value="btc">Bitcoin (BTC)</option>
-                                            <option value="eth">Ethereum (ETH)</option>
-                                            <option value="trx">TRON (TRX)</option>
-                                        </select>
-                                    </div>
-                                    
-                                    <div class="form-group mb-4">
-                                        <label for="pay_amount" class="form-label fw-bold">
-                                            <i class="fas fa-dollar-sign text-primary me-1"></i> Payment Amount
-                                        </label>
-                                        <div class="input-group">
-                                            <span class="input-group-text"><i class="fas fa-dollar-sign"></i></span>
-                                            <input type="text" class="form-control validAmount" name="pay_amount" id="pay_amount" 
-                                                value="{{ old('pay_amount') }}" placeholder="Enter amount (minimum $10)" required>
-                                        </div>
-                                        <small class="text-muted">Minimum deposit amount is $10</small>
-                                    </div>
-                                    
-                                    <div class="card-footer bg-transparent border-0 px-0 pt-3">
-                                        <button class="btn btn-primary btn-lg sw-btn-next w-100" type="submit">
-                                            <i class="fas fa-check-circle me-2"></i> Create Payment
-                                        </button>
-                                    </div>
-                                    
-                                    <div id='Medds' class="mt-3"></div>
-                                </form>
-                            </div>
-                            
-                            <div class="col-md-5 col-lg-5 mt-4 mt-md-0">
-                                <div class="bg-light p-4 rounded-3 border h-100">
-                                    <h5 class="text-primary border-bottom pb-2 mb-3">
-                                        <i class="fas fa-info-circle me-2"></i> Payment Information
-                                    </h5>
-                                    
-                                    <div class="mb-4">
-                                        <h6 class="mb-2"><i class="fas fa-shield-alt text-success me-2"></i> Secure Transactions</h6>
-                                        <p class="text-muted small">All transactions are secured with encryption to protect your financial information.</p>
-                                    </div>
-                                    
-                                    <div class="mb-4">
-                                        <h6 class="mb-2"><i class="fas fa-clock text-success me-2"></i> Processing Time</h6>
-                                        <p class="text-muted small">Most payments are processed instantly, but some may take up to 30 minutes depending on network conditions.</p>
-                                    </div>
-                                    
-                                    <div class="mb-4">
-                                        <h6 class="mb-2"><i class="fas fa-question-circle text-success me-2"></i> Need Help?</h6>
-                                        <p class="text-muted small">If you encounter any issues during payment, please contact our support team for assistance.</p>
-                                    </div>
-                                    
-                                    <div class="alert alert-primary mt-3 mb-0">
-                                        <div class="d-flex flex-column flex-sm-row">
-                                            <div class="me-0 me-sm-3 mb-2 mb-sm-0 text-center">
-                                                <i class="fas fa-lightbulb fa-2x text-primary"></i>
-                                            </div>
-                                            <div class="text-center text-sm-start">
-                                                <strong>Tip:</strong>
-                                                <p class="mb-0 small">Adding more funds unlocks higher earning potential and premium features!</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        @endif
-                    </div>
-                    <div class="col-12">
-                        <div id='Medds2'></div>
-                    </div>
-                </div>
+    <div class="card custom-card user-pro-list overflow-hidden">
+        <div class="card-body">
+        <!-- Refresh Overlay -->
+        <div class="refresh-overlay" id="refreshOverlay">
+            <div class="spinner">
+                <i class="fas fa-sync-alt fa-spin"></i>
+                <div><strong>Refreshing page...</strong></div>
+                <small>Please wait while we update your payment status</small>
             </div>
         </div>
         
-        <!-- Right sidebar - How it works -->
-        <div class="col-lg-4">
-            <div class="card border-0 shadow-sm mb-3 position-sticky" style="top: 85px;">
-                <div class="card-header bg-white py-2 border-bottom">
-                    <h5 class="card-title mb-0 d-flex align-items-center">
-                        <span class="bg-primary bg-opacity-10 p-2 rounded-circle me-2 text-primary">
-                            <i class="fas fa-question-circle"></i>
-                        </span>
-                        How It Works
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="steps">
-                        <div class="step d-flex mb-3">
-                            <div class="step-icon me-3">
-                                <div class="bg-primary rounded-circle text-white d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
-                                    <span>1</span>
+        <!-- Add Funds Page Header --> 
+        <div class="row mb-2 my-4">
+            <div class="col-12">
+                <div class="card bg-gradient-primary text-white border-0 shadow position-relative overflow-hidden">
+                    <div class="position-absolute top-0 end-0 opacity-10">
+                        <i class="fas fa-coins fa-4x mt-n2 me-n2 d-none d-md-block"></i>
+                        <i class="fas fa-coins fa-3x mt-n1 me-n1 d-block d-md-none"></i>
+                    </div>
+                    <div class="card-body py-2">
+                        <div class="d-flex flex-column flex-md-row align-items-center">
+                            <div class="me-md-3 mb-1 mb-md-0 text-center text-md-start">
+                                <div class="bg-white bg-opacity-25 rounded-circle p-1 d-flex align-items-center justify-content-center mx-auto mx-md-0" style="width: 48px; height: 48px;">
+                                    <i class="fas fa-wallet fa-lg text-white"></i>
                                 </div>
                             </div>
-                            <div class="step-content">
-                                <h6 class="fw-bold">Select Payment Method</h6>
-                                <p class="text-muted small">Choose your preferred cryptocurrency payment option from the dropdown menu.</p>
-                            </div>
-                        </div>
-                        
-                        <div class="step d-flex mb-3">
-                            <div class="step-icon me-3">
-                                <div class="bg-primary rounded-circle text-white d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
-                                    <span>2</span>
+                            <div class="text-center text-md-start">
+                                <h2 class="mb-0 fw-bold fs-4 fs-md-3">Add Funds to Your Account</h2>
+                                <p class="mb-1 fs-6">Deposit money to access premium features and increase your earning potential.</p>
+                                <div class="d-flex flex-wrap justify-content-center justify-content-md-start">
+                                    <span class="badge bg-white text-primary p-1 me-2 mb-1"><i class="fas fa-shield-alt me-1"></i> Secure</span>
+                                    <span class="badge bg-white text-primary p-1 me-2 mb-1"><i class="fas fa-bolt me-1"></i> Instant</span>
+                                    <span class="badge bg-white text-primary p-1 mb-1"><i class="fas fa-clock me-1"></i> 24/7</span>
                                 </div>
-                            </div>
-                            <div class="step-content">
-                                <h6 class="fw-bold">Enter Amount</h6>
-                                <p class="text-muted small">Specify how much you want to deposit (minimum $10).</p>
-                            </div>
-                        </div>
-                        
-                        <div class="step d-flex mb-3">
-                            <div class="step-icon me-3">
-                                <div class="bg-primary rounded-circle text-white d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
-                                    <span>3</span>
-                                </div>
-                            </div>
-                            <div class="step-content">
-                                <h6 class="fw-bold">Complete Payment</h6>
-                                <p class="text-muted small">Follow the instructions to send the crypto payment to the provided wallet address.</p>
-                            </div>
-                        </div>
-                        
-                        <div class="step d-flex">
-                            <div class="step-icon me-3">
-                                <div class="bg-primary rounded-circle text-white d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
-                                    <span>4</span>
-                                </div>
-                            </div>
-                            <div class="step-content">
-                                <h6 class="fw-bold">Funds Added</h6>
-                                <p class="text-muted small">Once payment is confirmed, funds will be added to your account automatically.</p>
                             </div>
                         </div>
                     </div>
                 </div>
-                
-                <!-- Recent Deposits Section -->
-                <div class="card-footer bg-white">
-                    <div class="d-flex justify-content-center mt-3">
-                        <a href="{{ route('deposit.index') }}" class="btn btn-outline-primary">
-                            <i class="fas fa-arrow-left me-2"></i> Back to Dashboard
-                        </a>
+            </div>
+        </div>
+
+        <div class="row mb-2 my-4">
+            <!-- Payment Method Selection -->
+            <div class="col-lg-8">
+                <div class="card border-0 shadow-sm mb-3">
+                    <div class="card-header bg-white py-2 border-bottom">
+                        <h5 class="card-title mb-0 d-flex align-items-center">
+                            <span class="bg-primary bg-opacity-10 p-2 rounded-circle me-2 text-primary">
+                                <i class="fas fa-credit-card"></i>
+                            </span>
+                            Create Payment
+                        </h5>
+                    </div>
+                    <div class="card-body" id="step-1">
+                        @php $pendingDeposit = App\Models\Deposit::Pending()->where('user_id', $user->id)->first(); @endphp
+                        @if ($pendingDeposit)
+                            <div class="alert alert-info border-start border-info border-4 mb-3 d-flex flex-column flex-sm-row align-items-start align-items-sm-center">
+                                <i class="fas fa-info-circle fa-lg me-0 me-sm-3 mb-2 mb-sm-0 text-info"></i> 
+                                <div>
+                                    <strong>Pending Payment Detected</strong>
+                                    <p class="mb-0">You have a pending payment. Please complete it or cancel to create a new one.</p>
+                                </div>
+                            </div>
+                            
+                            <div class="payment-details p-3 bg-light rounded-3 border mb-3 position-relative">
+                                <div class="ribbon ribbon-top-right d-none d-md-block">
+                                    <span class="bg-primary">PENDING</span>
+                                </div>
+                                <span class="badge bg-primary position-absolute top-0 start-0 mt-2 ms-2 d-block d-md-none">PENDING</span>
+                                <h5 class="text-primary mb-3 border-bottom pb-2 d-flex align-items-center">
+                                    <i class="fas fa-file-invoice-dollar me-2"></i> Payment Details
+                                </h5>
+                                
+                                <div class="row">
+                                    <div class="col-12 col-md-6 mb-3">
+                                        <div class="d-flex flex-column flex-sm-row align-items-start align-items-sm-center">
+                                            <div class="text-muted me-0 me-sm-3 mb-1 mb-sm-0" style="min-width: 100px;">
+                                                <strong>Order ID:</strong>
+                                            </div>
+                                            <div class="bg-white p-2 rounded w-100 border">
+                                                <code class="fs-6 text-break">{{ $pendingDeposit->trx }}</code>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-12 col-md-6 mb-3">
+                                        <div class="d-flex flex-column flex-sm-row align-items-start align-items-sm-center">
+                                            <div class="text-muted me-0 me-sm-3 mb-1 mb-sm-0" style="min-width: 100px;">
+                                                <strong>Amount:</strong>
+                                            </div>
+                                            <div class="bg-white p-2 rounded w-100 border">
+                                                <span class="text-success fw-bold">${{ showAmount($pendingDeposit->amount) }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-12 col-md-6 mb-3">
+                                        <div class="d-flex flex-column flex-sm-row align-items-start align-items-sm-center">
+                                            <div class="text-muted me-0 me-sm-3 mb-1 mb-sm-0" style="min-width: 100px;">
+                                                <strong>Currency:</strong>
+                                            </div>
+                                            <div class="bg-white p-2 rounded w-100 border">
+                                                <span class="badge bg-secondary">{{ strtoupper($pendingDeposit->method_currency) }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-12 col-md-6 mb-3">
+                                        <div class="d-flex flex-column flex-sm-row align-items-start align-items-sm-center">
+                                            <div class="text-muted me-0 me-sm-3 mb-1 mb-sm-0" style="min-width: 100px;">
+                                                <strong>Pay Amount:</strong>
+                                            </div>
+                                            <div class="bg-white p-2 rounded w-100 border">
+                                                <span class="fw-bold">{{ $pendingDeposit->final_amo }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label text-muted">
+                                        <i class="fas fa-link me-1 text-primary"></i> Payment Link:
+                                    </label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control text-truncate" id="payment-link" value="{{ $pendingDeposit->admin_feedback }}" readonly>
+                                        <button class="btn btn-primary d-flex align-items-center" type="button" id="copy-btn" onclick="copyPaymentLink()">
+                                            <i class="fas fa-copy me-1 d-none d-sm-inline"></i> <span>Copy</span>
+                                        </button>
+                                    </div>
+                                    <small class="text-muted mt-1 d-block">Use this link to complete your payment</small>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label text-muted">
+                                        <i class="fas fa-wallet me-1 text-primary"></i> Payment Wallet:
+                                    </label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control text-truncate" id="payment-wallet" value="{{ $pendingDeposit->btc_wallet }}" readonly>
+                                        <button class="btn btn-primary d-flex align-items-center" type="button" id="copy-wallet" onclick="copyPaymentWallet()">
+                                            <i class="fas fa-copy me-1 d-none d-sm-inline"></i> <span>Copy</span>
+                                        </button>
+                                    </div>
+                                    <small class="text-muted mt-1 d-block">Send your payment to this wallet address</small>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label text-muted">
+                                        <i class="fas fa-info-circle me-1 text-primary"></i> Status:
+                                    </label>
+                                    <div>
+                                        @if ($pendingDeposit->btc_amo == 'waiting')
+                                            <div class="alert alert-warning py-2 d-flex flex-column flex-sm-row align-items-center status-waiting">
+                                                <div class="me-0 me-sm-3 mb-2 mb-sm-0 text-center">
+                                                    <i class="fas fa-clock fa-2x text-warning"></i>
+                                                </div>
+                                                <div class="text-center text-sm-start">
+                                                    <strong>Waiting for payment</strong>
+                                                    <p class="mb-0 small">We're waiting for your payment to be confirmed.</p>
+                                                </div>
+                                            </div>
+                                        @elseif ($pendingDeposit->btc_amo == 'finished')
+                                            <div class="alert alert-success py-2 d-flex flex-column flex-sm-row align-items-center status-finished">
+                                                <div class="me-0 me-sm-3 mb-2 mb-sm-0 text-center">
+                                                    <i class="fas fa-check-circle fa-2x text-success"></i>
+                                                </div>
+                                                <div class="text-center text-sm-start">
+                                                    <strong>Payment completed</strong>
+                                                    <p class="mb-0 small">Your payment has been successfully processed.</p>
+                                                </div>
+                                            </div>
+                                        @else
+                                            <div class="alert alert-primary py-2 d-flex flex-column flex-sm-row align-items-center status-processing">
+                                                <div class="me-0 me-sm-3 mb-2 mb-sm-0 text-center">
+                                                    <i class="fas fa-spinner fa-spin fa-2x text-primary"></i>
+                                                </div>
+                                                <div class="text-center text-sm-start">
+                                                    <strong>Processing payment</strong>
+                                                    <p class="mb-0 small">Your payment is being processed. This may take a few minutes.</p>
+                                                </div>
+                                            </div>
+                                        @endif
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex flex-column flex-sm-row justify-content-between gap-3">
+                                <button type="button" class="btn btn-primary btn-lg refresh-btn w-100">
+                                    <i class="fas fa-sync-alt me-2"></i> Refresh Status
+                                </button>
+                                <form method="DELETE" enctype="multipart/form-data" class="w-100">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button class="btn btn-outline-danger btn-lg sw-btn-pay w-100" data-id="@auth{{ $user->id }}@endauth">
+                                        <i class="fas fa-times-circle me-2"></i> Cancel Payment
+                                    </button>
+                                </form>
+                            </div>
+                        @else
+                            <div class="row mb-4">
+                                <div class="col-md-7 col-lg-7">
+                                    <div class="mb-4">
+                                        <h5 class="text-primary border-bottom pb-2 mb-3">
+                                            <i class="fas fa-money-bill-wave me-2"></i> Create a New Payment
+                                        </h5>
+                                        <p class="text-muted">Fill in the details below to add funds to your account. Select your preferred payment method and enter the amount.</p>
+                                    </div>
+                                    
+                                    <form action="{{route('pay')}}" method="POST" enctype="multipart/form-data" class="payment-form">
+                                        @csrf
+                                        <input type="hidden" name="method_code">
+                                        <input type="hidden" name="currency">
+                                        <input type="hidden" name="user_id" value="@auth{{ $user->id }}@endauth">
+                                        {{-- <input type="hidden" name="plan_id" class="form-control" id="plan_id" value="{{ old('pay_amount') }}"> --}}
+                                        @error('plan_id')
+                                            <span class="text-danger" role="alert">
+                                                {{ $message }}
+                                            </span>
+                                        @enderror
+                                        
+                                        <div class="form-group mb-3">
+                                            <label class="form-label fw-bold">
+                                                <i class="fas fa-exchange-alt text-primary me-1"></i> Payment Method
+                                            </label>
+                                            <select class="form-select form-control qursy" name="pay_currency" required>
+                                                <option value="">Select Payment Method</option>
+                                                <option value="usdtbsc">USDT (BSC Network)</option>
+                                                <option value="usdttrc20">USDT (TRC20 Network)</option>
+                                                <option value="usdterc20">USDT (ERC20 Network)</option>
+                                                <option value="btc">Bitcoin (BTC)</option>
+                                                <option value="eth">Ethereum (ETH)</option>
+                                                <option value="trx">TRON (TRX)</option>
+                                            </select>
+                                        </div>
+                                        
+                                        <div class="form-group mb-4">
+                                            <label for="pay_amount" class="form-label fw-bold">
+                                                <i class="fas fa-dollar-sign text-primary me-1"></i> Payment Amount
+                                            </label>
+                                            <div class="input-group">
+                                                <span class="input-group-text"><i class="fas fa-dollar-sign"></i></span>
+                                                <input type="text" class="form-control validAmount" name="pay_amount" id="pay_amount" 
+                                                    value="{{ old('pay_amount') }}" placeholder="Enter amount (minimum $10)" required>
+                                            </div>
+                                            <small class="text-muted">Minimum deposit amount is $10</small>
+                                        </div>
+                                        
+                                        <div class="card-footer bg-transparent border-0 px-0 pt-3">
+                                            <button class="btn btn-primary btn-lg sw-btn-next w-100" type="submit">
+                                                <i class="fas fa-check-circle me-2"></i> Create Payment
+                                            </button>
+                                        </div>
+                                        
+                                        <div id='Medds' class="mt-3"></div>
+                                    </form>
+                                </div>
+                                
+                                <div class="col-md-5 col-lg-5 mt-4 mt-md-0">
+                                    <div class="bg-light p-4 rounded-3 border h-100">
+                                        <h5 class="text-primary border-bottom pb-2 mb-3">
+                                            <i class="fas fa-info-circle me-2"></i> Payment Information
+                                        </h5>
+                                        
+                                        <div class="mb-4">
+                                            <h6 class="mb-2"><i class="fas fa-shield-alt text-success me-2"></i> Secure Transactions</h6>
+                                            <p class="text-muted small">All transactions are secured with encryption to protect your financial information.</p>
+                                        </div>
+                                        
+                                        <div class="mb-4">
+                                            <h6 class="mb-2"><i class="fas fa-clock text-success me-2"></i> Processing Time</h6>
+                                            <p class="text-muted small">Most payments are processed instantly, but some may take up to 30 minutes depending on network conditions.</p>
+                                        </div>
+                                        
+                                        <div class="mb-4">
+                                            <h6 class="mb-2"><i class="fas fa-question-circle text-success me-2"></i> Need Help?</h6>
+                                            <p class="text-muted small">If you encounter any issues during payment, please contact our support team for assistance.</p>
+                                        </div>
+                                        
+                                        <div class="alert alert-primary mt-3 mb-0">
+                                            <div class="d-flex flex-column flex-sm-row">
+                                                <div class="me-0 me-sm-3 mb-2 mb-sm-0 text-center">
+                                                    <i class="fas fa-lightbulb fa-2x text-primary"></i>
+                                                </div>
+                                                <div class="text-center text-sm-start">
+                                                    <strong>Tip:</strong>
+                                                    <p class="mb-0 small">Adding more funds unlocks higher earning potential and premium features!</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            @endif
+                        </div>
+                        <div class="col-12">
+                            <div id='Medds2'></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right sidebar - How it works -->
+            <div class="col-lg-4">
+                <div class="card border-0 shadow-sm mb-3 position-sticky" style="top: 85px;">
+                    <div class="card-header bg-white py-2 border-bottom">
+                        <h5 class="card-title mb-0 d-flex align-items-center">
+                            <span class="bg-primary bg-opacity-10 p-2 rounded-circle me-2 text-primary">
+                                <i class="fas fa-question-circle"></i>
+                            </span>
+                            How It Works
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="steps">
+                            <div class="step d-flex mb-3">
+                                <div class="step-icon me-3">
+                                    <div class="bg-primary rounded-circle text-white d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                        <span>1</span>
+                                    </div>
+                                </div>
+                                <div class="step-content">
+                                    <h6 class="fw-bold">Select Payment Method</h6>
+                                    <p class="text-muted small">Choose your preferred cryptocurrency payment option from the dropdown menu.</p>
+                                </div>
+                            </div>
+                            
+                            <div class="step d-flex mb-3">
+                                <div class="step-icon me-3">
+                                    <div class="bg-primary rounded-circle text-white d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                        <span>2</span>
+                                    </div>
+                                </div>
+                                <div class="step-content">
+                                    <h6 class="fw-bold">Enter Amount</h6>
+                                    <p class="text-muted small">Specify how much you want to deposit (minimum $10).</p>
+                                </div>
+                            </div>
+                            
+                            <div class="step d-flex mb-3">
+                                <div class="step-icon me-3">
+                                    <div class="bg-primary rounded-circle text-white d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                        <span>3</span>
+                                    </div>
+                                </div>
+                                <div class="step-content">
+                                    <h6 class="fw-bold">Complete Payment</h6>
+                                    <p class="text-muted small">Follow the instructions to send the crypto payment to the provided wallet address.</p>
+                                </div>
+                            </div>
+                            
+                            <div class="step d-flex">
+                                <div class="step-icon me-3">
+                                    <div class="bg-primary rounded-circle text-white d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                        <span>4</span>
+                                    </div>
+                                </div>
+                                <div class="step-content">
+                                    <h6 class="fw-bold">Funds Added</h6>
+                                    <p class="text-muted small">Once payment is confirmed, funds will be added to your account automatically.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Recent Deposits Section -->
+                    <div class="card-footer bg-white">
+                        <div class="d-flex justify-content-center mt-3">
+                            <a href="{{ route('deposit.index') }}" class="btn btn-outline-primary">
+                                <i class="fas fa-arrow-left me-2"></i> Back to Dashboard
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    @push('style')
+    </div>
+    @endsection
+    @push('styles')
     <style>
         /* Custom Styles for Deposit Page */
         .ribbon {
@@ -657,7 +661,6 @@
         }
     </style>
     @endpush
-    @endsection
     @push('script')
         <!-- SweetAlert2 -->
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>

@@ -410,7 +410,7 @@
     </li>
 
     <!-- SESSION MANAGEMENT -->
-    <li class="slide has-sub">
+    <li class="slide has-sub" style="display: none;">
         <a href="javascript:void(0);" class="side-menu__item">
             <i class="fe fe-monitor side-menu__icon"></i>
             <span class="side-menu__label">Session Management</span>

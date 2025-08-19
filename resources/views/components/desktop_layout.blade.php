@@ -21,7 +21,7 @@
             $faviconUrl = getMediaUrl($settings->favicon, 'favicon');
         }
     @endphp
-    <link rel="icon" href="{{ $faviconUrl }}" type="image/x-icon">
+    <link rel="icon" href="{{ $faviconUrl }}" type="image/x-icon"> 
 
     <!-- Choices JS -->
     {{-- <script src="{{asset('assets/libs/choices.js/public/assets/scripts/choices.min.js')}}"></script> --}}
