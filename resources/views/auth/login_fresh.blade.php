@@ -481,6 +481,8 @@
                 </label>
             </div>
 
+
+
             <!-- Forgot Password Link -->
             <div class="forgot-password-link">
                 <a href="{{ route('password.request') }}" id="forgotPasswordLink">Forgot your password?</a>
@@ -716,7 +718,6 @@ document.addEventListener('DOMContentLoaded', function() {
             validation.style.display = 'none';
         }
     }
-
     // Load remember me preference from cookie
     function loadRememberPreference() {
         const rememberCookie = getCookie('remember_me_preference');
@@ -754,80 +755,9 @@ document.addEventListener('DOMContentLoaded', function() {
     usernameInput.addEventListener('input', function() {
         clearTimeout(usernameCheckTimeout);
         hideValidation('username'); // Clear previous messages
-        
-        // Wait 1 second after user stops typing to check attempts
-        usernameCheckTimeout = setTimeout(() => {
-            const username = this.value.trim();
-            if (username.length >= 3) { // Only check if username/email is at least 3 characters
-                checkUserLoginAttempts(username);
-            }
-        }, 1000);
     });
 
-    // Check user login attempts function
-    async function checkUserLoginAttempts(username) {
-        if (!username || username.length < 3) {
-            return;
-        }
-        
-        try {
-            const response = await fetch('/check-login-attempts', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': getCSRFToken(),
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify({ username: username }),
-                credentials: 'same-origin'
-            });
-            
-            if (response.ok) {
-                const data = await response.json();
-                
-                // Handle different response scenarios
-                if (data.is_locked) {
-                    if (data.lock_reason === 'Multiple failed login attempts') {
-                        // Account-level lock
-                        showValidation('username', data.message || `Account locked. Try again ${data.unlock_time_human}`, 'error');
-                    } else if (data.lock_reason === 'IP rate limiting') {
-                        // IP-level lock
-                        showValidation('username', data.message || `Too many attempts. Try again ${data.unlock_time_human}`, 'error');
-                    } else {
-                        // Generic lock
-                        showValidation('username', data.message || 'Account temporarily locked', 'error');
-                    }
-                } else if (data.remaining_attempts !== undefined) {
-                    if (data.remaining_attempts === 0 && !data.is_locked) {
-                        showValidation('username', 'Next failed attempt will lock your account', 'error');
-                    } else if (data.remaining_attempts <= 1) {
-                        showValidation('username', data.message || `Warning: Only ${data.remaining_attempts} attempt remaining`, 'error');
-                    } else if (data.remaining_attempts <= 2) {
-                        showValidation('username', data.message || `Caution: ${data.remaining_attempts} attempts remaining`, 'warning');
-                    } else if (data.remaining_attempts < 5) {
-                        showValidation('username', data.message || `${data.remaining_attempts} attempts remaining`, 'info');
-                    } else {
-                        // All good - clear any previous messages
-                        hideValidation('username');
-                    }
-                }
-                
-                // Handle fallback responses
-                if (data.fallback) {
-                    console.log('Login attempt check fallback:', data.message);
-                    // Don't show fallback messages to user, just log them
-                }
-                
-            } else {
-                console.log('Could not check login attempts - server response:', response.status);
-                // Don't show error to user for attempt checking failures
-            }
-        } catch (error) {
-            console.log('Could not check login attempts:', error);
-            // Don't show error to user, just log it
-        }
-    }
+   
 
     // CSRF Token Refresh Function - Enhanced to use session refresh endpoint
     async function refreshCSRFToken() {
@@ -978,9 +908,6 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('No CSRF token found!');
         return '';
     }
-
-    // Manual Token Refresh Function
-
     // Cookie helper functions
     function setCookie(name, value, days) {
         const date = new Date();
@@ -1003,6 +930,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function deleteCookie(name) {
         document.cookie = name + "=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
     }
+    
 
     // Browser Compatibility and Multi-Session Support Functions
     function initBrowserCompatibility() {
@@ -1776,7 +1704,7 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('Form submission started:', {
             username: usernameInput.value.trim(),
             hasPassword: !!passwordInput.value,
-            remember: rememberCheckbox.checked,
+            remember: rememberCheckbox ? rememberCheckbox.checked : false,
             action: form.action,
             csrfToken: document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')?.substring(0, 10) + '...'
         });
@@ -1796,7 +1724,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Use fallback for very old browsers
                 return submitWithFallback();
             }
-
+            
             // Save email for remember me if checked
             if (rememberCheckbox.checked) {
                 setCookie('saved_email', usernameInput.value.trim(), 30);
@@ -1818,6 +1746,10 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             console.log('Submitting login form...');
+            
+            // Small delay to ensure all storage operations complete before submission
+            await new Promise(resolve => setTimeout(resolve, 100));
+            console.log('🚀 STORAGE DELAY: Completed - proceeding with form submission');
             
             let response = await fetch(form.action, {
                 method: 'POST',
