@@ -26,6 +26,12 @@ class DatabaseSeeder extends Seeder
                     VideoLinkSeeder::class, // Video links data
                     GatewaySeeder::class, // Payment gateways like NOWPayments, CoinPayments etc.
                     GatewayCurrencySeeder::class, // Gateway currencies for payment methods
+                    MarkdownFileSeeder::class, // Markdown files
+                    HistoricalLotteryDrawSeeder::class, // Historical lottery draws
+                    ModalSettingsSeeder::class, // Modal settings
+                    DemoModalSeeder::class, // Demo modals
+                    WithdrawMethodSeeder::class,
+                    ModalSettingsSeeder::class,
             ]);
     }
 }
