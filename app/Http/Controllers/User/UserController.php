@@ -653,9 +653,228 @@ class UserController extends Controller
         }
     }
     
+    public function allTransactionHistory(Request $request)
+    {
+        $pageTitle = "All Transaction History";
+        
+        // Handle export request
+        if ($request->has('export') && $request->export === 'true') {
+            return $this->exportTransactions($request);
+        }
+        
+        if($request->ajax()){
+            $user = Auth::id();
+            
+            // Build the query with filters for ALL transactions
+            $query = Transaction::where('user_id', $user);
+            
+            // Apply remark/type filter if provided
+            if ($request->remark_filter && $request->remark_filter !== 'all') {
+                $query->where('remark', $request->remark_filter);
+            }
+            
+            // Apply type filter
+            if ($request->type_filter) {
+                $query->where('trx_type', $request->type_filter);
+            }
+            
+            // Apply date range filter
+            if ($request->from_date) {
+                $query->whereDate('created_at', '>=', $request->from_date);
+            }
+            
+            if ($request->to_date) {
+                $query->whereDate('created_at', '<=', $request->to_date);
+            }
+            
+            // Apply search filter
+            if ($request->search_input) {
+                $search = $request->search_input;
+                $query->where(function($q) use ($search) {
+                    $q->where('trx', 'like', "%{$search}%")
+                      ->orWhere('details', 'like', "%{$search}%")
+                      ->orWhere('note', 'like', "%{$search}%")
+                      ->orWhere('remark', 'like', "%{$search}%");
+                });
+            }
+            
+            $data = $query->orderBy('id', 'desc')->get();
+            
+            return Datatables::of($data)
+                ->addColumn('created_at', function ($row) {
+                    return '<div><p class="mb-0">' . $row->created_at->format('M d, Y') . '</p><small class="text-muted">' . $row->created_at->format('h:i A') . '</small></div>';
+                })
+                ->addColumn('trx_type', function ($row) {
+                    $badge = $row->trx_type == '+' ? 'bg-success' : 'bg-danger';
+                    $text = $row->trx_type == '+' ? 'Credit' : 'Debit';
+                    return '<span class="badge ' . $badge . '">' . $row->trx_type . ' ' . $text . '</span>';
+                })
+                ->addColumn('remark', function ($row) {
+                    $remarkBadges = [
+                        'balance_transfer' => 'bg-info',
+                        'balance_received' => 'bg-success',
+                        'deposit' => 'bg-primary', 
+                        'withdraw' => 'bg-warning',
+                        'interest' => 'bg-success',
+                        'referral_commission' => 'bg-info',
+                        'video_earning' => 'bg-success',
+                        'investment' => 'bg-primary',
+                        'bonus' => 'bg-success'
+                    ];
+                    $badgeClass = $remarkBadges[$row->remark] ?? 'bg-secondary';
+                    $remarkText = ucwords(str_replace('_', ' ', $row->remark));
+                    return '<span class="badge ' . $badgeClass . '">' . $remarkText . '</span>';
+                })
+                ->addColumn('trx', function ($row) {
+                    return '<code>' . $row->trx . '</code>';
+                })
+                ->addColumn('amount', function ($row) {
+                    $color = $row->trx_type == '+' ? 'text-success' : 'text-danger';
+                    return '<span class="' . $color . ' fw-bold">' . $row->trx_type . '$' . number_format($row->amount, 2) . '</span>';
+                })
+                ->addColumn('charge', function ($row) {
+                    return $row->charge > 0 ? '<span class="text-warning">$' . number_format($row->charge, 2) . '</span>' : '<span class="text-muted">$0.00</span>';
+                })
+                ->addColumn('post_balance', function ($row) {
+                    return '<span class="text-primary fw-bold">$' . number_format($row->post_balance, 2) . '</span>';
+                })
+                ->addColumn('wallet_type', function ($row) {
+                    if($row->wallet_type) {
+                        $walletText = ucwords(str_replace('_', ' ', $row->wallet_type));
+                        return '<span class="badge bg-light text-dark">' . $walletText . '</span>';
+                    }
+                    return '<span class="text-muted">N/A</span>';
+                })
+                ->addColumn('details', function ($row) {
+                    $details = $row->details ?: 'Transaction';
+                    if(strlen($details) > 50) {
+                        return '<span title="' . htmlspecialchars($details) . '">' . substr($details, 0, 50) . '...</span>';
+                    }
+                    return $details;
+                })
+                ->addColumn('note', function ($row) {
+                    if($row->note) {
+                        if(strlen($row->note) > 30) {
+                            return '<span title="' . htmlspecialchars($row->note) . '">' . substr($row->note, 0, 30) . '...</span>';
+                        }
+                        return $row->note;
+                    }
+                    return '<span class="text-muted">N/A</span>';
+                })
+                ->rawColumns(['created_at', 'trx_type', 'remark', 'trx', 'amount', 'charge', 'post_balance', 'wallet_type', 'details', 'note'])
+                ->addIndexColumn()
+                ->make(true);
+        }
+        
+        // Get transaction statistics for the page
+        $user = Auth::user();
+        $transactionStats = $this->calculateTransactionStats($user);
+        
+        // Get unique transaction types for filter dropdown
+        $transactionTypes = Transaction::where('user_id', $user->id)
+            ->distinct()
+            ->pluck('remark')
+            ->sort()
+            ->values();
+        
+        return view('frontend.all-transaction-history', compact('pageTitle', 'transactionStats', 'transactionTypes'));
+    }
+
+    /**
+     * Export transactions to CSV
+     */
+    private function exportTransactions(Request $request)
+    {
+        try {
+            $user = Auth::user();
+            
+            // Build the query with same filters as the main method
+            $query = Transaction::where('user_id', $user->id);
+            
+            if ($request->remark_filter && $request->remark_filter !== 'all') {
+                $query->where('remark', $request->remark_filter);
+            }
+            
+            if ($request->type_filter) {
+                $query->where('trx_type', $request->type_filter);
+            }
+            
+            if ($request->from_date) {
+                $query->whereDate('created_at', '>=', $request->from_date);
+            }
+            
+            if ($request->to_date) {
+                $query->whereDate('created_at', '<=', $request->to_date);
+            }
+            
+            if ($request->search_input) {
+                $search = $request->search_input;
+                $query->where(function($q) use ($search) {
+                    $q->where('trx', 'like', "%{$search}%")
+                      ->orWhere('details', 'like', "%{$search}%")
+                      ->orWhere('note', 'like', "%{$search}%")
+                      ->orWhere('remark', 'like', "%{$search}%");
+                });
+            }
+            
+            $transactions = $query->orderBy('created_at', 'desc')->get();
+            
+            $filename = 'transactions_' . $user->username . '_' . now()->format('Y-m-d_H-i-s') . '.csv';
+            
+            $headers = [
+                'Content-Type' => 'text/csv',
+                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+                'Pragma' => 'no-cache',
+                'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
+                'Expires' => '0'
+            ];
+            
+            $callback = function() use ($transactions) {
+                $file = fopen('php://output', 'w');
+                
+                // Add CSV headers
+                fputcsv($file, [
+                    'Date', 'Time', 'Transaction ID', 'Type', 'Category', 
+                    'Amount', 'Charge', 'Net Amount', 'Balance After', 
+                    'Wallet Type', 'Details', 'Note'
+                ]);
+                
+                // Add data rows
+                foreach ($transactions as $transaction) {
+                    $netAmount = $transaction->trx_type == '+' ? 
+                        $transaction->amount : 
+                        -($transaction->amount + $transaction->charge);
+                    
+                    fputcsv($file, [
+                        $transaction->created_at->format('Y-m-d'),
+                        $transaction->created_at->format('H:i:s'),
+                        $transaction->trx,
+                        $transaction->trx_type == '+' ? 'Credit' : 'Debit',
+                        ucwords(str_replace('_', ' ', $transaction->remark)),
+                        number_format($transaction->amount, 2),
+                        number_format($transaction->charge, 2),
+                        number_format($netAmount, 2),
+                        number_format($transaction->post_balance, 2),
+                        $transaction->wallet_type ? ucwords(str_replace('_', ' ', $transaction->wallet_type)) : 'N/A',
+                        $transaction->details ?: 'N/A',
+                        $transaction->note ?: 'N/A'
+                    ]);
+                }
+                
+                fclose($file);
+            };
+            
+            return response()->stream($callback, 200, $headers);
+            
+        } catch (\Exception $e) {
+            Log::error('Transaction export failed: ' . $e->getMessage());
+            return back()->with('error', 'Export failed. Please try again.');
+        }
+    }
+
     public function transferHistory(Request $request)
     {
-        $pageTitle = "Transaction History";
+        $pageTitle = "Transfer Transaction History";
         
         if($request->ajax()){
             $user = Auth::id();
@@ -1126,6 +1345,85 @@ class UserController extends Controller
         return view('frontend.sponsor-list', compact('pageTitle', 'sponsorStats'));
     }
     
+    /**
+     * Calculate transaction statistics for all transactions
+     */
+    private function calculateTransactionStats($user)
+    {
+        try {
+            // Get all transaction stats
+            $allStats = Transaction::where('user_id', $user->id)
+                ->selectRaw('
+                    COUNT(*) as total_transactions,
+                    SUM(CASE WHEN trx_type = "+" THEN amount ELSE 0 END) as total_credits,
+                    SUM(CASE WHEN trx_type = "-" THEN amount ELSE 0 END) as total_debits,
+                    COUNT(CASE WHEN trx_type = "+" THEN 1 END) as credit_count,
+                    COUNT(CASE WHEN trx_type = "-" THEN 1 END) as debit_count,
+                    SUM(charge) as total_charges
+                ')
+                ->first();
+
+            // Get monthly stats (current month)
+            $monthlyStats = Transaction::where('user_id', $user->id)
+                ->whereMonth('created_at', now()->month)
+                ->whereYear('created_at', now()->year)
+                ->selectRaw('
+                    COUNT(*) as monthly_transactions,
+                    SUM(CASE WHEN trx_type = "+" THEN amount ELSE 0 END) as monthly_credits,
+                    SUM(CASE WHEN trx_type = "-" THEN amount ELSE 0 END) as monthly_debits
+                ')
+                ->first();
+
+            // Get transaction type breakdown
+            $typeBreakdown = Transaction::where('user_id', $user->id)
+                ->selectRaw('remark, COUNT(*) as count, SUM(amount) as total_amount')
+                ->groupBy('remark')
+                ->orderBy('count', 'desc')
+                ->get();
+
+            // Get recent activity (last 7 days)
+            $recentActivity = Transaction::where('user_id', $user->id)
+                ->where('created_at', '>=', now()->subDays(7))
+                ->count();
+
+            return [
+                'total_transactions' => $allStats->total_transactions ?? 0,
+                'total_credits' => $allStats->total_credits ?? 0,
+                'total_debits' => $allStats->total_debits ?? 0,
+                'credit_count' => $allStats->credit_count ?? 0,
+                'debit_count' => $allStats->debit_count ?? 0,
+                'total_charges' => $allStats->total_charges ?? 0,
+                'net_amount' => ($allStats->total_credits ?? 0) - ($allStats->total_debits ?? 0),
+                'monthly_transactions' => $monthlyStats->monthly_transactions ?? 0,
+                'monthly_credits' => $monthlyStats->monthly_credits ?? 0,
+                'monthly_debits' => $monthlyStats->monthly_debits ?? 0,
+                'monthly_net' => ($monthlyStats->monthly_credits ?? 0) - ($monthlyStats->monthly_debits ?? 0),
+                'type_breakdown' => $typeBreakdown,
+                'recent_activity' => $recentActivity,
+                'average_transaction' => $allStats->total_transactions > 0 ? 
+                    (($allStats->total_credits ?? 0) + ($allStats->total_debits ?? 0)) / $allStats->total_transactions : 0
+            ];
+        } catch (\Exception $e) {
+            Log::error('Error calculating transaction stats: ' . $e->getMessage());
+            return [
+                'total_transactions' => 0,
+                'total_credits' => 0,
+                'total_debits' => 0,
+                'credit_count' => 0,
+                'debit_count' => 0,
+                'total_charges' => 0,
+                'net_amount' => 0,
+                'monthly_transactions' => 0,
+                'monthly_credits' => 0,
+                'monthly_debits' => 0,
+                'monthly_net' => 0,
+                'type_breakdown' => collect(),
+                'recent_activity' => 0,
+                'average_transaction' => 0
+            ];
+        }
+    }
+
     /**
      * Calculate sponsor statistics
      * 

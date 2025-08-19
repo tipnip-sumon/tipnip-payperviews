@@ -15,10 +15,14 @@
             </nav>
             <p class="fw-semibold fs-18 mb-0">Your Transfer Transaction History</p>
         </div>
-        <div>
+        <div class="d-flex gap-2">
             <a href="{{ route('user.transfer_funds') }}" class="btn btn-primary">
                 <i class="fe fe-send me-2"></i>
                 New Transfer
+            </a>
+            <a href="{{ route('user.all_transaction_history') }}" class="btn btn-outline-success">
+                <i class="fe fe-list me-2"></i>
+                All Transactions
             </a>
         </div>
     </div>

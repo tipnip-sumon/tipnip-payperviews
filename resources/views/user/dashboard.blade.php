@@ -1121,7 +1121,7 @@
                 <div class="card custom-card border-0 shadow-sm">
                     <div class="card-header bg-transparent border-bottom d-flex justify-content-between align-items-center">
                         <h5 class="card-title mb-0 theme-text-header">Recent Transactions</h5>
-                        <a href="{{ route('user.transfer_history') }}" class="btn btn-sm btn-outline-primary">View All</a>
+                        <a href="{{ route('user.all_transaction_history') }}" class="btn btn-sm btn-outline-primary">View All</a>
                     </div>
                     <div class="card-body">
                         @if($transactions && count($transactions) > 0)

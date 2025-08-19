@@ -826,6 +826,7 @@ Route::controller(UserController::class)->middleware('auth')->group(function () 
     Route::post('transfer-balance','transferBalanceSubmit')->name('transfer-balance');
     Route::get('/user/transactions','transfer_funds')->name('user.transfer_funds');
     Route::get('/user/transactions/history','transferHistory')->name('user.transfer_history');
+    Route::get('/user/transactions/all','allTransactionHistory')->name('user.all_transaction_history');
     Route::get('/user/refferral-history','referralEarnings')->name('user.refferral-history');
     Route::get('/user/generation-history','generationHistory')->name('user.generation-history');
     Route::get('/user/referral','referralIndex')->name('referral.index');
